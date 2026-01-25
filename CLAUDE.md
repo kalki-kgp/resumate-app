@@ -22,7 +22,7 @@
 ```
 src/
 ├── app/                        # Next.js App Router
-│   ├── _components/            # Page-specific components (private)
+│   ├── _components/            # Homepage-specific components (private)
 │   │   ├── Hero.tsx
 │   │   ├── Features.tsx
 │   │   ├── Templates.tsx
@@ -31,6 +31,23 @@ src/
 │   │   ├── CTA.tsx
 │   │   ├── ThreeBackground.tsx
 │   │   └── index.ts            # Barrel export
+│   ├── dashboard/              # Dashboard route
+│   │   ├── _components/        # Dashboard-specific components
+│   │   │   ├── views/          # Dashboard view components
+│   │   │   │   ├── OverviewView.tsx
+│   │   │   │   ├── ResumesView.tsx
+│   │   │   │   ├── JobsView.tsx
+│   │   │   │   ├── TemplatesView.tsx
+│   │   │   │   └── index.ts
+│   │   │   ├── DashboardBackground.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   ├── DashboardTopbar.tsx
+│   │   │   ├── ResumeCard.tsx
+│   │   │   ├── JobCard.tsx
+│   │   │   ├── ATSScore.tsx
+│   │   │   ├── ExtractContentModal.tsx
+│   │   │   └── index.ts
+│   │   └── page.tsx            # Dashboard page
 │   ├── globals.css             # Global styles + custom animations
 │   ├── layout.tsx              # Root layout (metadata, fonts)
 │   └── page.tsx                # Homepage
@@ -96,17 +113,20 @@ import type { Theme } from '@/types';
   - `animate-pulse-slow`
   - `animate-gradient`
 
-### 5. Theme System
-- Theme state managed in `useTheme` hook
+### 5. Theme System (Tailwind CSS v4)
+- **IMPORTANT**: Tailwind v4 requires explicit dark mode configuration
+- Dark mode is enabled via `@custom-variant dark (&:where(.dark, .dark *));` in `globals.css`
+- Theme state managed in `useTheme` hook with proper SSR handling
 - Persisted to `localStorage`
-- Toggle via `document.documentElement.classList.toggle('dark')`
-- Pass `theme` and `toggleTheme` props to components that need it
+- The hook uses `applyTheme()` helper to add/remove `.dark` class on `<html>`
+- Pass `theme` and `toggleTheme` props to components that need theme awareness
 
 ## Key Files Reference
 
 | File | Purpose |
 |------|---------|
 | `src/app/page.tsx` | Homepage - composes all sections |
+| `src/app/dashboard/page.tsx` | Dashboard - user's main workspace |
 | `src/app/layout.tsx` | Root layout, metadata, fonts |
 | `src/app/globals.css` | Global styles, CSS variables, animations |
 | `src/types/index.ts` | All TypeScript interfaces |
@@ -163,11 +183,5 @@ Currently using React's built-in state (`useState`, `useEffect`). For future:
 4. **Keep components focused** - split large components
 5. **Type everything** - no `any` types unless absolutely necessary
 6. **Follow existing naming** - PascalCase for components, camelCase for hooks/utils
+7. **NEVER run `npm run dev`** - Do not start the dev server unless explicitly requested by the user
 
-## Future Integration Points
-
-- [ ] Authentication (Supabase/Auth.js)
-- [ ] Resume data storage (Database)
-- [ ] AI generation APIs
-- [ ] Payment integration (Stripe)
-- [ ] File export (PDF generation)

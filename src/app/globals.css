@@ -1,15 +1,17 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode in Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #020617;
-    --foreground: #f8fafc;
-  }
+/* Dark mode class-based switching */
+.dark {
+  --background: #020617;
+  --foreground: #f8fafc;
 }
 
 @theme inline {
@@ -17,12 +19,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-/* Dark mode class-based switching */
-.dark {
-  --background: #020617;
-  --foreground: #f8fafc;
 }
 
 html {
@@ -115,14 +111,31 @@ body {
   color: rgb(219 234 254);
 }
 
-/* Smooth transitions for theme switching */
-* {
-  transition-property: background-color, border-color, color;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+/* 
+ * Note: We removed the global * transition rule that was blocking 
+ * component-level transition-all classes. Theme transitions are now
+ * handled by Tailwind's transition utilities on individual components.
+ */
+
+/* Disable transitions for media elements */
+canvas, video {
+  transition: none !important;
 }
 
-/* Disable transitions for elements that shouldn't transition */
-canvas, video, img, svg {
-  transition: none;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
 }
