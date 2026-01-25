@@ -52,8 +52,13 @@ src/
 │   │   │   └── index.ts
 │   │   └── page.tsx            # Dashboard page (with onboarding flow)
 │   ├── editor/                 # Resume Editor route
-│   │   ├── _components/        # Editor-specific components (TODO)
-│   │   └── page.tsx            # Editor page (placeholder)
+│   │   ├── _components/        # Editor-specific components
+│   │   │   ├── EditorBackground.tsx  # 3D animated background
+│   │   │   ├── InputGroup.tsx        # Collapsible form section
+│   │   │   ├── InputField.tsx        # Form input component
+│   │   │   ├── TemplatePreview.tsx   # Mini template previews
+│   │   │   └── index.ts
+│   │   └── page.tsx            # Full resume editor with live preview
 │   ├── globals.css             # Global styles + custom animations
 │   ├── layout.tsx              # Root layout (metadata, fonts)
 │   └── page.tsx                # Homepage
@@ -118,6 +123,13 @@ import type { Theme } from '@/types';
   - `animate-bounce-subtle`
   - `animate-pulse-slow`
   - `animate-gradient`
+  - `animate-float`
+  - `animate-confetti`
+  - `animate-shimmer`
+  - `animate-scale-in`
+  - `animate-bounce-x`
+  - `animate-pulse-border`
+  - `animate-slide-up-fade`
 
 ### 5. Theme System (Tailwind CSS v4)
 - **IMPORTANT**: Tailwind v4 requires explicit dark mode configuration
@@ -133,6 +145,7 @@ import type { Theme } from '@/types';
 |------|---------|
 | `src/app/page.tsx` | Homepage - composes all sections |
 | `src/app/dashboard/page.tsx` | Dashboard - user's main workspace |
+| `src/app/editor/page.tsx` | Resume editor with live preview |
 | `src/app/layout.tsx` | Root layout, metadata, fonts |
 | `src/app/globals.css` | Global styles, CSS variables, animations |
 | `src/types/index.ts` | All TypeScript interfaces |

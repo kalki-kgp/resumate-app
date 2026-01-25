@@ -147,3 +147,37 @@ export interface DevToggleProps {
   isOnboardingComplete: boolean;
   onToggle: () => void;
 }
+
+// Editor Types
+export interface PersonalInfo {
+  fullName: string;
+  role: string;
+  email: string;
+  phone: string;
+  location: string;
+  summary: string;
+}
+
+export interface Experience {
+  id: number;
+  role: string;
+  company: string;
+  date: string;
+  description: string;
+}
+
+export interface Education {
+  id: number;
+  degree: string;
+  school: string;
+  date: string;
+}
+
+export interface ResumeData {
+  personal: PersonalInfo;
+  experience: Experience[];
+  education: Education[];
+  skills: string[];
+}
+
+export type TemplateType = 'modern' | 'classic' | 'creative' | 'minimal';
