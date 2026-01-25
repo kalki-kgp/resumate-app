@@ -8,6 +8,8 @@ import {
   Sidebar,
   DashboardTopbar,
   ExtractContentModal,
+  OnboardingWizard,
+  DevToggle,
   OverviewView,
   ResumesView,
   JobsView,
@@ -47,6 +49,10 @@ export default function DashboardPage() {
   const [isExtractOpen, setIsExtractOpen] = useState(false);
   const [loading] = useState(false);
 
+  // Onboarding state - will be replaced with API/auth state later
+  // When backend is ready, this should come from user profile/database
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
+
   const handleCreateNew = useCallback(() => {
     const newResume: Resume = {
       id: `${Date.now()}`,
@@ -83,6 +89,36 @@ export default function DashboardPage() {
   const handleLogout = useCallback(() => {
     // TODO: Implement logout
     window.location.href = '/';
+  }, []);
+
+  // Onboarding handlers
+  const handleOnboardingComplete = useCallback(() => {
+    setIsOnboardingComplete(true);
+    // TODO: Save to backend when available
+    // api.updateUserProfile({ onboardingComplete: true });
+  }, []);
+
+  const handleOnboardingStepAction = useCallback((stepId: number) => {
+    // Handle each step's action
+    // These will trigger actual actions when backend is ready
+    switch (stepId) {
+      case 1:
+        // Upload Resume - could open extract modal
+        console.log('Step 1: Upload Resume action');
+        break;
+      case 2:
+        // AI Analysis
+        console.log('Step 2: AI Analysis action');
+        break;
+      case 3:
+        // Find Jobs
+        console.log('Step 3: Find Jobs action');
+        break;
+      case 4:
+        // Apply & Track
+        console.log('Step 4: Apply & Track action');
+        break;
+    }
   }, []);
 
   const renderView = () => {
@@ -128,27 +164,48 @@ export default function DashboardPage() {
     >
       <DashboardBackground theme={theme} />
 
-      {/* Sidebar */}
-      <Sidebar
-        currentView={currentView}
-        setView={setCurrentView}
-        collapsed={sidebarCollapsed}
-        setCollapsed={setSidebarCollapsed}
-        onLogout={handleLogout}
+      {/* Dev Toggle - Remove in production */}
+      <DevToggle
+        isOnboardingComplete={isOnboardingComplete}
+        onToggle={() => setIsOnboardingComplete(!isOnboardingComplete)}
       />
 
-      {/* Main Area */}
-      <div className="flex-1 flex flex-col h-full relative z-10">
-        {/* Topbar */}
-        <DashboardTopbar
-          currentView={currentView}
-          theme={theme}
-          toggleTheme={toggleTheme}
-        />
+      {/* Conditional Rendering: Onboarding vs Dashboard */}
+      {!isOnboardingComplete ? (
+        // Onboarding Wizard (Full Screen)
+        <div className="flex-1 relative z-10">
+          <OnboardingWizard
+            onComplete={handleOnboardingComplete}
+            onStepAction={handleOnboardingStepAction}
+          />
+        </div>
+      ) : (
+        // Main Dashboard
+        <>
+          {/* Sidebar */}
+          <Sidebar
+            currentView={currentView}
+            setView={setCurrentView}
+            collapsed={sidebarCollapsed}
+            setCollapsed={setSidebarCollapsed}
+            onLogout={handleLogout}
+          />
 
-        {/* Content Scroll Area */}
-        <div className="flex-1 overflow-y-auto p-8">{renderView()}</div>
-      </div>
+          {/* Main Area */}
+          <div className="flex-1 flex flex-col h-full relative z-10">
+            {/* Topbar */}
+            <DashboardTopbar
+              currentView={currentView}
+              theme={theme}
+              toggleTheme={toggleTheme}
+              onLogout={handleLogout}
+            />
+
+            {/* Content Scroll Area */}
+            <div className="flex-1 overflow-y-auto p-8">{renderView()}</div>
+          </div>
+        </>
+      )}
 
       {/* Modals */}
       <ExtractContentModal

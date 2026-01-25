@@ -1,15 +1,17 @@
 'use client';
 
-import { Search, Sun, Moon } from 'lucide-react';
+import { Search } from 'lucide-react';
 import type { DashboardTopbarProps } from '@/types';
+import { UserProfileDropdown } from './UserProfileDropdown';
 
 export const DashboardTopbar = ({
   currentView,
   theme,
   toggleTheme,
+  onLogout,
 }: DashboardTopbarProps) => {
   return (
-    <header className="h-20 px-8 flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
+    <header className="h-20 px-8 flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md relative z-50">
       <div className="flex items-center gap-4">
         <h1 className="text-2xl font-bold capitalize">
           {currentView.replace('-', ' ')}
@@ -32,15 +34,11 @@ export const DashboardTopbar = ({
             placeholder="Search..."
           />
         </div>
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-full hover:bg-white dark:hover:bg-slate-800 transition-colors"
-        >
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
-        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold shadow-md">
-          JD
-        </div>
+        <UserProfileDropdown
+          theme={theme}
+          toggleTheme={toggleTheme}
+          onLogout={onLogout}
+        />
       </div>
     </header>
   );

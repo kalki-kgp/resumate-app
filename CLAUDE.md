@@ -42,12 +42,18 @@ src/
 │   │   │   ├── DashboardBackground.tsx
 │   │   │   ├── Sidebar.tsx
 │   │   │   ├── DashboardTopbar.tsx
+│   │   │   ├── UserProfileDropdown.tsx
+│   │   │   ├── OnboardingWizard.tsx
+│   │   │   ├── DevToggle.tsx
 │   │   │   ├── ResumeCard.tsx
 │   │   │   ├── JobCard.tsx
 │   │   │   ├── ATSScore.tsx
 │   │   │   ├── ExtractContentModal.tsx
 │   │   │   └── index.ts
-│   │   └── page.tsx            # Dashboard page
+│   │   └── page.tsx            # Dashboard page (with onboarding flow)
+│   ├── editor/                 # Resume Editor route
+│   │   ├── _components/        # Editor-specific components (TODO)
+│   │   └── page.tsx            # Editor page (placeholder)
 │   ├── globals.css             # Global styles + custom animations
 │   ├── layout.tsx              # Root layout (metadata, fonts)
 │   └── page.tsx                # Homepage

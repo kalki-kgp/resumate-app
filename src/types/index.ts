@@ -106,4 +106,44 @@ export interface DashboardTopbarProps {
   currentView: DashboardView;
   theme: Theme;
   toggleTheme: () => void;
+  onLogout: () => void;
+}
+
+// User Profile Types
+export type PlanType = 'Free' | 'Pro' | 'Enterprise';
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  avatar: string | null;
+  memberSince: string;
+  plan: PlanType;
+  resumesUsed: number;
+  resumesLimit: number;
+}
+
+export interface UserProfileDropdownProps {
+  theme: Theme;
+  toggleTheme: () => void;
+  onLogout: () => void;
+}
+
+// Onboarding Types
+export interface OnboardingStep {
+  id: number;
+  title: string;
+  description: string;
+  icon: string;
+  action: string;
+  completed: boolean;
+}
+
+export interface OnboardingWizardProps {
+  onComplete: () => void;
+  onStepAction: (stepId: number) => void;
+}
+
+export interface DevToggleProps {
+  isOnboardingComplete: boolean;
+  onToggle: () => void;
 }

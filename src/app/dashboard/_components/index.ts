@@ -1,8 +1,11 @@
 export { DashboardBackground } from './DashboardBackground';
 export { Sidebar } from './Sidebar';
 export { DashboardTopbar } from './DashboardTopbar';
+export { UserProfileDropdown } from './UserProfileDropdown';
 export { ResumeCard } from './ResumeCard';
 export { JobCard } from './JobCard';
 export { ATSScore } from './ATSScore';
 export { ExtractContentModal } from './ExtractContentModal';
+export { OnboardingWizard } from './OnboardingWizard';
+export { DevToggle } from './DevToggle';
 export { OverviewView, ResumesView, JobsView, TemplatesView } from './views';
