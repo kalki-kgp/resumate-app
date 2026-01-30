@@ -10,6 +10,7 @@
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
+| Bun | 1.x | Package manager & runtime (NOT npm) |
 | Next.js | 16.x | React framework with App Router |
 | React | 19.x | UI library |
 | TypeScript | 5.x | Type safety |
@@ -154,13 +155,16 @@ import type { Theme } from '@/types';
 
 ## Development Commands
 
+**IMPORTANT: This project uses Bun, NOT npm. Always use `bun` commands.**
+
 ```bash
-npm run dev          # Start development server (port 3000)
-npm run build        # Production build
-npm run start        # Start production server
-npm run lint         # Run ESLint
-npm run lint:fix     # Fix ESLint issues
-npm run type-check   # TypeScript type checking
+bun install          # Install dependencies
+bun run dev          # Start development server (port 3000)
+bun run build        # Production build
+bun run start        # Start production server
+bun run lint         # Run ESLint
+bun run lint:fix     # Fix ESLint issues
+bun run type-check   # TypeScript type checking
 ```
 
 ## When Adding New Features
@@ -196,11 +200,12 @@ Currently using React's built-in state (`useState`, `useEffect`). For future:
 
 ## Notes for AI Assistants
 
-1. **Always check existing patterns** before adding new code
-2. **Use barrel exports** - don't import from deep paths
-3. **Mark client components** with `'use client'`
-4. **Keep components focused** - split large components
-5. **Type everything** - no `any` types unless absolutely necessary
-6. **Follow existing naming** - PascalCase for components, camelCase for hooks/utils
-7. **NEVER run `npm run dev`** - Do not start the dev server unless explicitly requested by the user
+1. **Use Bun, NOT npm** - This project uses Bun as package manager. Never use `npm` commands.
+2. **Always check existing patterns** before adding new code
+3. **Use barrel exports** - don't import from deep paths
+4. **Mark client components** with `'use client'`
+5. **Keep components focused** - split large components
+6. **Type everything** - no `any` types unless absolutely necessary
+7. **Follow existing naming** - PascalCase for components, camelCase for hooks/utils
+8. **NEVER run `bun run dev`** - Do not start the dev server unless explicitly requested by the user
 

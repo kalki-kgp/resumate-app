@@ -8,4 +8,8 @@ export { ATSScore } from './ATSScore';
 export { ExtractContentModal } from './ExtractContentModal';
 export { OnboardingWizard } from './OnboardingWizard';
 export { DevToggle } from './DevToggle';
+export { ProfileModal } from './ProfileModal';
+export { SettingsModal } from './SettingsModal';
+export { BillingModal } from './BillingModal';
+export { HelpModal } from './HelpModal';
 export { OverviewView, ResumesView, JobsView, TemplatesView } from './views';

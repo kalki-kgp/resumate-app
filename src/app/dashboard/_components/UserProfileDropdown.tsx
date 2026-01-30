@@ -14,7 +14,17 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import type { UserProfileDropdownProps, UserProfile } from '@/types';
+import type { UserProfile } from '@/types';
+
+interface UserProfileDropdownProps {
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
+  onLogout: () => void;
+  onOpenProfile: () => void;
+  onOpenSettings: () => void;
+  onOpenBilling: () => void;
+  onOpenHelp: () => void;
+}
 
 // Mock user data - will be replaced with API data later
 const mockUser: UserProfile = {
@@ -31,6 +41,10 @@ export const UserProfileDropdown = ({
   theme,
   toggleTheme,
   onLogout,
+  onOpenProfile,
+  onOpenSettings,
+  onOpenBilling,
+  onOpenHelp,
 }: UserProfileDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -197,7 +211,7 @@ export const UserProfileDropdown = ({
             <button
               onClick={() => {
                 setIsOpen(false);
-                // TODO: Navigate to profile
+                onOpenProfile();
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
             >
@@ -215,7 +229,7 @@ export const UserProfileDropdown = ({
             <button
               onClick={() => {
                 setIsOpen(false);
-                // TODO: Navigate to settings
+                onOpenSettings();
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
             >
@@ -233,7 +247,7 @@ export const UserProfileDropdown = ({
             <button
               onClick={() => {
                 setIsOpen(false);
-                // TODO: Navigate to billing
+                onOpenBilling();
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
             >
@@ -251,7 +265,7 @@ export const UserProfileDropdown = ({
             <button
               onClick={() => {
                 setIsOpen(false);
-                // TODO: Open help
+                onOpenHelp();
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
             >

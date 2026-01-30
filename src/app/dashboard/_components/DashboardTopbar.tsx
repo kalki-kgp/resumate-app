@@ -1,14 +1,29 @@
 'use client';
 
 import { Search } from 'lucide-react';
-import type { DashboardTopbarProps } from '@/types';
+import type { DashboardView, Theme } from '@/types';
 import { UserProfileDropdown } from './UserProfileDropdown';
+
+interface DashboardTopbarProps {
+  currentView: DashboardView;
+  theme: Theme;
+  toggleTheme: () => void;
+  onLogout: () => void;
+  onOpenProfile: () => void;
+  onOpenSettings: () => void;
+  onOpenBilling: () => void;
+  onOpenHelp: () => void;
+}
 
 export const DashboardTopbar = ({
   currentView,
   theme,
   toggleTheme,
   onLogout,
+  onOpenProfile,
+  onOpenSettings,
+  onOpenBilling,
+  onOpenHelp,
 }: DashboardTopbarProps) => {
   return (
     <header className="h-20 px-8 flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md relative z-50">
@@ -38,6 +53,10 @@ export const DashboardTopbar = ({
           theme={theme}
           toggleTheme={toggleTheme}
           onLogout={onLogout}
+          onOpenProfile={onOpenProfile}
+          onOpenSettings={onOpenSettings}
+          onOpenBilling={onOpenBilling}
+          onOpenHelp={onOpenHelp}
         />
       </div>
     </header>

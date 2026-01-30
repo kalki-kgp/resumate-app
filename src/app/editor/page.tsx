@@ -93,7 +93,7 @@ export default function EditorPage() {
   const [theme] = useTheme();
   const [data, setData] = useState<ResumeData>(INITIAL_DATA);
   const [activeSection, setActiveSection] = useState<string | null>('personal');
-  const [zoom, setZoom] = useState(0.7);
+  const [zoom, setZoom] = useState(0.75);
   const [template, setTemplate] = useState<TemplateType>('modern');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -196,7 +196,7 @@ export default function EditorPage() {
     setSaving(false);
   };
 
-  // Render the selected template preview at full scale
+  // Render the selected template preview with zoom scale
   const renderLivePreview = () => {
     const PreviewComponent = {
       modern: ModernPreview,
@@ -205,7 +205,7 @@ export default function EditorPage() {
       minimal: MinimalPreview,
     }[template];
 
-    return <PreviewComponent data={data} scale={0.45} />;
+    return <PreviewComponent data={data} scale={zoom} />;
   };
 
   return (
@@ -469,11 +469,11 @@ export default function EditorPage() {
       </aside>
 
       {/* Center - Live Preview */}
-      <main className="flex-1 h-full relative flex flex-col items-center justify-center bg-slate-200/50 dark:bg-slate-950/50 overflow-hidden">
+      <main className="flex-1 h-full relative flex flex-col items-center bg-slate-200/50 dark:bg-slate-950/50 overflow-auto pt-20 pb-8">
         {/* Toolbar */}
         <div className="absolute top-6 flex items-center gap-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur rounded-full px-4 py-2 shadow-lg z-30 border border-white/50 dark:border-slate-700">
           <button
-            onClick={() => setZoom(Math.max(0.3, zoom - 0.1))}
+            onClick={() => setZoom(Math.max(0.35, zoom - 0.05))}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-600 dark:text-slate-400 transition-colors"
           >
             <ZoomOut size={16} />
@@ -482,7 +482,7 @@ export default function EditorPage() {
             {Math.round(zoom * 100)}%
           </span>
           <button
-            onClick={() => setZoom(Math.min(1.2, zoom + 0.1))}
+            onClick={() => setZoom(Math.min(0.85, zoom + 0.05))}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-600 dark:text-slate-400 transition-colors"
           >
             <ZoomIn size={16} />
@@ -494,12 +494,7 @@ export default function EditorPage() {
         </div>
 
         {/* Paper Container */}
-        <div
-          className="bg-white shadow-2xl transition-transform duration-200 ease-out origin-center rounded-sm overflow-hidden"
-          style={{
-            transform: `scale(${zoom})`,
-          }}
-        >
+        <div className="bg-white shadow-2xl rounded-sm overflow-hidden transition-all duration-200">
           {renderLivePreview()}
         </div>
       </main>

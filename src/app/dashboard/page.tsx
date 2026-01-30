@@ -9,7 +9,12 @@ import {
   DashboardTopbar,
   ExtractContentModal,
   DevToggle,
+  ProfileModal,
+  SettingsModal,
+  BillingModal,
+  HelpModal,
 } from './_components';
+import type { UserProfile } from '@/types';
 
 // Lazy load heavy components
 const DashboardBackground = dynamic(
@@ -61,6 +66,23 @@ export default function DashboardPage() {
   const [resumes, setResumes] = useState<Resume[]>(mockResumes);
   const [isExtractOpen, setIsExtractOpen] = useState(false);
   const [loading] = useState(false);
+
+  // Modal states
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isBillingOpen, setIsBillingOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+
+  // Mock user data - will be replaced with API data later
+  const mockUser: UserProfile = {
+    name: 'John Doe',
+    email: 'john@example.com',
+    avatar: null,
+    memberSince: 'January 2026',
+    plan: 'Free',
+    resumesUsed: 3,
+    resumesLimit: 5,
+  };
 
   // Onboarding state - will be replaced with API/auth state later
   // When backend is ready, this should come from user profile/database
@@ -212,6 +234,10 @@ export default function DashboardPage() {
               theme={theme}
               toggleTheme={toggleTheme}
               onLogout={handleLogout}
+              onOpenProfile={() => setIsProfileOpen(true)}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onOpenBilling={() => setIsBillingOpen(true)}
+              onOpenHelp={() => setIsHelpOpen(true)}
             />
 
             {/* Content Scroll Area */}
@@ -225,6 +251,24 @@ export default function DashboardPage() {
         isOpen={isExtractOpen}
         onClose={() => setIsExtractOpen(false)}
         onComplete={handleExtractionComplete}
+      />
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={mockUser}
+      />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
+      <BillingModal
+        isOpen={isBillingOpen}
+        onClose={() => setIsBillingOpen(false)}
+        currentPlan={mockUser.plan}
+      />
+      <HelpModal
+        isOpen={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
       />
     </div>
   );
