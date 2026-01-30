@@ -10,7 +10,8 @@ export const EditorBackground = ({ theme }: EditorBackgroundProps) => {
   const mountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!mountRef.current) return;
+    const mount = mountRef.current;
+    if (!mount) return;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let renderer: any;
@@ -25,7 +26,6 @@ export const EditorBackground = ({ theme }: EditorBackgroundProps) => {
     let material: any;
     let handleVisibilityChange: () => void;
     let handleResize: () => void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const particles: Array<{
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mesh: any;
@@ -53,8 +53,8 @@ export const EditorBackground = ({ theme }: EditorBackgroundProps) => {
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-      if (mountRef.current) {
-        mountRef.current.appendChild(renderer.domElement);
+      if (mount) {
+        mount.appendChild(renderer.domElement);
       }
 
       geometry = new THREE.CircleGeometry(0.5, 32);
@@ -121,8 +121,8 @@ export const EditorBackground = ({ theme }: EditorBackgroundProps) => {
       if (material) material.dispose();
       if (renderer) renderer.dispose();
 
-      if (mountRef.current?.firstChild) {
-        mountRef.current.removeChild(mountRef.current.firstChild);
+      if (mount?.firstChild) {
+        mount.removeChild(mount.firstChild);
       }
     };
   }, [theme]);

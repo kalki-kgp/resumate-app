@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Upload, Sparkles, CheckCircle } from 'lucide-react';
 import type { ExtractContentModalProps } from '@/types';
 
@@ -14,12 +14,12 @@ export const ExtractContentModal = ({
   const [step, setStep] = useState<Step>('upload');
   const [progress, setProgress] = useState(0);
 
-  useEffect(() => {
-    if (isOpen) {
-      setStep('upload');
-      setProgress(0);
-    }
-  }, [isOpen]);
+  // Reset state when modal closes
+  const handleClose = () => {
+    setStep('upload');
+    setProgress(0);
+    onClose();
+  };
 
   const handleSimulateUpload = () => {
     setStep('processing');
@@ -44,11 +44,11 @@ export const ExtractContentModal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={handleClose}
       />
       <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-2xl border border-white/20 animate-fade-in-up">
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-4 right-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500"
         >
           <X size={20} />

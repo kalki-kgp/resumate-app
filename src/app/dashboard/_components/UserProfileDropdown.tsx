@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import {
   User,
   Settings,
@@ -94,9 +95,11 @@ export const UserProfileDropdown = ({
         aria-expanded={isOpen}
       >
         {mockUser.avatar ? (
-          <img
+          <Image
             src={mockUser.avatar}
             alt={mockUser.name}
+            width={40}
+            height={40}
             className="w-full h-full rounded-full object-cover"
           />
         ) : (
@@ -112,9 +115,11 @@ export const UserProfileDropdown = ({
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-md">
                 {mockUser.avatar ? (
-                  <img
+                  <Image
                     src={mockUser.avatar}
                     alt={mockUser.name}
+                    width={48}
+                    height={48}
                     className="w-full h-full rounded-full object-cover"
                   />
                 ) : (

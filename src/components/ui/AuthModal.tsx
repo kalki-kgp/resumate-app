@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { X, Users, Mail, Lock, Github } from 'lucide-react';
 import type { AuthModalProps } from '@/types';
 
 export const AuthModal = ({ isOpen, onClose, initialMode = 'signin' }: AuthModalProps) => {
   const [mode, setMode] = useState(initialMode);
-  
-  useEffect(() => { setMode(initialMode); }, [initialMode, isOpen]);
   
   if (!isOpen) return null;
 

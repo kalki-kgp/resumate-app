@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useSyncExternalStore, useCallback } from 'react';
 import type { Theme } from '@/types';
 
 /**
@@ -14,44 +14,58 @@ const applyTheme = (theme: Theme) => {
   }
 };
 
+// Module-level state for theme store
+let currentTheme: Theme = 'light';
+let listeners: Array<() => void> = [];
+let isInitialized = false;
+
+const themeStore = {
+  getSnapshot: (): Theme => currentTheme,
+  getServerSnapshot: (): Theme => 'light', // SSR fallback
+  subscribe: (listener: () => void): (() => void) => {
+    listeners.push(listener);
+
+    // Initialize theme on first subscription (client-side only)
+    if (!isInitialized && typeof window !== 'undefined') {
+      isInitialized = true;
+      const savedTheme = localStorage.getItem('theme') as Theme | null;
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+
+      if (initialTheme !== currentTheme) {
+        currentTheme = initialTheme;
+        applyTheme(initialTheme);
+      }
+    }
+
+    return () => {
+      listeners = listeners.filter((l) => l !== listener);
+    };
+  },
+  setTheme: (theme: Theme) => {
+    currentTheme = theme;
+    localStorage.setItem('theme', theme);
+    applyTheme(theme);
+    listeners.forEach((listener) => listener());
+  },
+};
+
 /**
  * Custom hook for managing theme state with localStorage persistence
+ * Uses useSyncExternalStore for hydration-safe state management
  * @returns [theme, toggleTheme] - Current theme and toggle function
  */
 export const useTheme = () => {
-  const [theme, setTheme] = useState<Theme>('light');
-  const [mounted, setMounted] = useState(false);
-
-  // Initialize theme on mount
-  useEffect(() => {
-    setMounted(true);
-    
-    // Check local storage first
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
-    
-    if (savedTheme) {
-      setTheme(savedTheme);
-      applyTheme(savedTheme);
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      // Fall back to system preference
-      setTheme('dark');
-      applyTheme('dark');
-    } else {
-      // Default to light and ensure dark class is removed
-      setTheme('light');
-      applyTheme('light');
-    }
-  }, []);
+  const theme = useSyncExternalStore(
+    themeStore.subscribe,
+    themeStore.getSnapshot,
+    themeStore.getServerSnapshot
+  );
 
   const toggleTheme = useCallback(() => {
-    setTheme((prevTheme) => {
-      const newTheme: Theme = prevTheme === 'light' ? 'dark' : 'light';
-      localStorage.setItem('theme', newTheme);
-      applyTheme(newTheme);
-      return newTheme;
-    });
+    const newTheme: Theme = currentTheme === 'light' ? 'dark' : 'light';
+    themeStore.setTheme(newTheme);
   }, []);
 
-  // Return light theme during SSR to prevent hydration mismatch
-  return [mounted ? theme : 'light', toggleTheme] as const;
+  return [theme, toggleTheme] as const;
 };
