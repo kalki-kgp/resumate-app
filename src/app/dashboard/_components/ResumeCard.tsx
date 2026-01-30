@@ -1,9 +1,10 @@
 'use client';
 
+import { memo } from 'react';
 import { FileText, Trash2 } from 'lucide-react';
 import type { ResumeCardProps } from '@/types';
 
-export const ResumeCard = ({ resume, onDelete, onEdit }: ResumeCardProps) => {
+export const ResumeCard = memo(({ resume, onDelete, onEdit }: ResumeCardProps) => {
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-500';
     if (score >= 60) return 'text-yellow-500';
@@ -52,4 +53,6 @@ export const ResumeCard = ({ resume, onDelete, onEdit }: ResumeCardProps) => {
       </div>
     </div>
   );
-};
+});
+
+ResumeCard.displayName = 'ResumeCard';

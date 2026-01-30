@@ -4,12 +4,6 @@ import { useEffect, useRef } from 'react';
 import type { ThreeBackgroundProps } from '@/types';
 import type * as THREE from 'three';
 
-declare global {
-  interface Window {
-    THREE: typeof import('three');
-  }
-}
-
 export const DashboardBackground = ({ theme }: ThreeBackgroundProps) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -19,20 +13,18 @@ export const DashboardBackground = ({ theme }: ThreeBackgroundProps) => {
   }>({});
 
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-    script.async = true;
-
     let animationId: number;
+    let geometry: THREE.BoxGeometry;
+    let renderer: THREE.WebGLRenderer;
     const particles: Array<{
       mesh: THREE.Mesh;
       speed: number;
       rotSpeed: number;
     }> = [];
 
-    const init = () => {
-      const THREE = window.THREE;
-      if (!THREE || !mountRef.current) return;
+    const init = async () => {
+      const THREE = await import('three');
+      if (!mountRef.current) return;
 
       const scene = new THREE.Scene();
       sceneRef.current = scene;
@@ -49,7 +41,7 @@ export const DashboardBackground = ({ theme }: ThreeBackgroundProps) => {
       );
       camera.position.z = 5;
 
-      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       mountRef.current.appendChild(renderer.domElement);
@@ -71,9 +63,9 @@ export const DashboardBackground = ({ theme }: ThreeBackgroundProps) => {
       };
 
       // Create abstract "Data Blocks"
-      const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+      geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
 
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 30; i++) {
         const mat =
           Math.random() > 0.5
             ? materialsRef.current.primary!
@@ -122,6 +114,16 @@ export const DashboardBackground = ({ theme }: ThreeBackgroundProps) => {
 
         renderer.render(scene, camera);
       };
+
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          cancelAnimationFrame(animationId);
+        } else {
+          animate();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
       animate();
 
       const handleResize = () => {
@@ -133,15 +135,22 @@ export const DashboardBackground = ({ theme }: ThreeBackgroundProps) => {
 
       return () => {
         window.removeEventListener('resize', handleResize);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
         cancelAnimationFrame(animationId);
+        geometry.dispose();
+        if (materialsRef.current.primary) materialsRef.current.primary.dispose();
+        if (materialsRef.current.secondary) materialsRef.current.secondary.dispose();
         renderer.dispose();
       };
     };
 
-    script.onload = init;
-    document.body.appendChild(script);
+    let cleanup: (() => void) | undefined;
+    init().then((cleanupFn) => {
+      cleanup = cleanupFn;
+    });
 
     return () => {
+      cleanup?.();
       if (mountRef.current?.firstChild) {
         mountRef.current.removeChild(mountRef.current.firstChild);
       }
@@ -151,20 +160,25 @@ export const DashboardBackground = ({ theme }: ThreeBackgroundProps) => {
   // Theme Update
   useEffect(() => {
     if (!sceneRef.current) return;
-    const THREE = window.THREE;
-    if (!THREE) return;
 
-    const bgHex = theme === 'dark' ? 0x0f172a : 0xf8fafc;
-    sceneRef.current.background = new THREE.Color(bgHex);
-    if (sceneRef.current.fog) {
-      (sceneRef.current.fog as THREE.FogExp2).color = new THREE.Color(bgHex);
-    }
+    const updateTheme = async () => {
+      const THREE = await import('three');
+      if (!sceneRef.current) return;
 
-    if (materialsRef.current.primary) {
-      materialsRef.current.primary.color.setHex(
-        theme === 'dark' ? 0x3b82f6 : 0x60a5fa
-      );
-    }
+      const bgHex = theme === 'dark' ? 0x0f172a : 0xf8fafc;
+      sceneRef.current.background = new THREE.Color(bgHex);
+      if (sceneRef.current.fog) {
+        (sceneRef.current.fog as THREE.FogExp2).color = new THREE.Color(bgHex);
+      }
+
+      if (materialsRef.current.primary) {
+        materialsRef.current.primary.color.setHex(
+          theme === 'dark' ? 0x3b82f6 : 0x60a5fa
+        );
+      }
+    };
+
+    updateTheme();
   }, [theme]);
 
   return <div ref={mountRef} className="fixed inset-0 -z-10" />;

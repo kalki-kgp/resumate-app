@@ -20,6 +20,12 @@ export const EditorBackground = ({ theme }: EditorBackgroundProps) => {
     let camera: any;
     let animationId: number;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let geometry: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let material: any;
+    let handleVisibilityChange: () => void;
+    let handleResize: () => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const particles: Array<{
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mesh: any;
@@ -51,14 +57,14 @@ export const EditorBackground = ({ theme }: EditorBackgroundProps) => {
         mountRef.current.appendChild(renderer.domElement);
       }
 
-      const geometry = new THREE.CircleGeometry(0.5, 32);
-      const material = new THREE.MeshBasicMaterial({
+      geometry = new THREE.CircleGeometry(0.5, 32);
+      material = new THREE.MeshBasicMaterial({
         color: theme === 'dark' ? 0x6366f1 : 0x3b82f6,
         transparent: true,
         opacity: theme === 'dark' ? 0.15 : 0.2,
       });
 
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 30; i++) {
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(
           (Math.random() - 0.5) * 50,
@@ -85,27 +91,38 @@ export const EditorBackground = ({ theme }: EditorBackgroundProps) => {
       };
       animate();
 
-      const handleResize = () => {
+      handleVisibilityChange = () => {
+        if (document.hidden) {
+          cancelAnimationFrame(animationId);
+        } else {
+          animate();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      handleResize = () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
       };
 
       window.addEventListener('resize', handleResize);
-
-      return () => {
-        window.removeEventListener('resize', handleResize);
-      };
     };
 
     init();
 
     return () => {
-      if (mountRef.current && mountRef.current.firstChild) {
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      cancelAnimationFrame(animationId);
+
+      // Dispose Three.js resources
+      if (geometry) geometry.dispose();
+      if (material) material.dispose();
+      if (renderer) renderer.dispose();
+
+      if (mountRef.current?.firstChild) {
         mountRef.current.removeChild(mountRef.current.firstChild);
-      }
-      if (animationId) {
-        cancelAnimationFrame(animationId);
       }
     };
   }, [theme]);

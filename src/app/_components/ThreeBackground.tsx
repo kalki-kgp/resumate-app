@@ -3,13 +3,6 @@
 import { useEffect, useRef } from 'react';
 import type { ThreeBackgroundProps } from '@/types';
 
-// Declare THREE as a global for dynamic import
-declare global {
-  interface Window {
-    THREE: typeof import('three');
-  }
-}
-
 export const ThreeBackground = ({ theme }: ThreeBackgroundProps) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
@@ -21,10 +14,6 @@ export const ThreeBackground = ({ theme }: ThreeBackgroundProps) => {
   }>({});
 
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
-    script.async = true;
-    
     let camera: import('three').PerspectiveCamera;
     let renderer: import('three').WebGLRenderer;
     let floatingShapes: Array<{
@@ -35,10 +24,12 @@ export const ThreeBackground = ({ theme }: ThreeBackgroundProps) => {
       offset: number;
     }>;
     let animationId: number;
+    let geometries: import('three').BufferGeometry[];
+    let handleVisibilityChange: () => void;
 
-    const initThree = () => {
-      const THREE = window.THREE;
-      if (!THREE || !mountRef.current) return;
+    const initThree = async () => {
+      const THREE = await import('three');
+      if (!mountRef.current) return;
 
       const scene = new THREE.Scene();
       sceneRef.current = scene;
@@ -55,7 +46,7 @@ export const ThreeBackground = ({ theme }: ThreeBackgroundProps) => {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       mountRef.current.appendChild(renderer.domElement);
 
-      const geometries = [
+      geometries = [
         new THREE.BoxGeometry(1, 1, 1),
         new THREE.OctahedronGeometry(0.5),
         new THREE.TetrahedronGeometry(0.6),
@@ -86,7 +77,7 @@ export const ThreeBackground = ({ theme }: ThreeBackgroundProps) => {
 
       floatingShapes = [];
       
-      for (let i = 0; i < 180; i++) {
+      for (let i = 0; i < 60; i++) {
         const geometry = geometries[Math.floor(Math.random() * geometries.length)];
         const materialType = Math.random() > 0.7 ? 'wireframe' : (Math.random() > 0.5 ? 'solid' : 'accent');
         const material = materialsRef.current[materialType];
@@ -175,6 +166,15 @@ export const ThreeBackground = ({ theme }: ThreeBackgroundProps) => {
 
       animate();
 
+      handleVisibilityChange = () => {
+        if (document.hidden) {
+          cancelAnimationFrame(animationId);
+        } else {
+          animate();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
       const handleResize = () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -185,41 +185,59 @@ export const ThreeBackground = ({ theme }: ThreeBackgroundProps) => {
       return () => {
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('resize', handleResize);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        cancelAnimationFrame(animationId);
+
+        // Dispose Three.js resources
+        geometries.forEach(g => g.dispose());
+        if (materialsRef.current.solid) materialsRef.current.solid.dispose();
+        if (materialsRef.current.wireframe) materialsRef.current.wireframe.dispose();
+        if (materialsRef.current.accent) materialsRef.current.accent.dispose();
+        renderer.dispose();
+
+        if (mountRef.current?.firstChild) {
+          mountRef.current.removeChild(mountRef.current.firstChild);
+        }
       };
     };
 
-    script.onload = initThree;
-    document.body.appendChild(script);
+    let cleanup: (() => void) | undefined;
+
+    initThree().then((cleanupFn) => {
+      cleanup = cleanupFn;
+    });
 
     return () => {
-      if(mountRef.current && mountRef.current.firstChild) {
-         mountRef.current.removeChild(mountRef.current.firstChild);
-      }
       cancelAnimationFrame(animationId);
-      if(script.parentNode) script.parentNode.removeChild(script);
+      if (cleanup) cleanup();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // React to theme changes separately
   useEffect(() => {
-    const THREE = window.THREE;
-    if (!THREE || !sceneRef.current) return;
+    if (!sceneRef.current) return;
 
-    const bgHex = theme === 'dark' ? 0x020617 : 0xf8fafc;
-    const solidColor = theme === 'dark' ? 0x3b82f6 : 0x2563EB;
-    const wireframeColor = theme === 'dark' ? 0x94a3b8 : 0x93C5FD;
-    const accentColor = theme === 'dark' ? 0x818cf8 : 0x6366F1;
+    const updateTheme = async () => {
+      const THREE = await import('three');
+      if (!sceneRef.current) return;
 
-    sceneRef.current.background = new THREE.Color(bgHex);
-    if (sceneRef.current.fog) {
-      (sceneRef.current.fog as import('three').FogExp2).color = new THREE.Color(bgHex);
-    }
+      const bgHex = theme === 'dark' ? 0x020617 : 0xf8fafc;
+      const solidColor = theme === 'dark' ? 0x3b82f6 : 0x2563EB;
+      const wireframeColor = theme === 'dark' ? 0x94a3b8 : 0x93C5FD;
+      const accentColor = theme === 'dark' ? 0x818cf8 : 0x6366F1;
 
-    if (materialsRef.current.solid) materialsRef.current.solid.color.setHex(solidColor);
-    if (materialsRef.current.wireframe) materialsRef.current.wireframe.color.setHex(wireframeColor);
-    if (materialsRef.current.accent) materialsRef.current.accent.color.setHex(accentColor);
+      sceneRef.current.background = new THREE.Color(bgHex);
+      if (sceneRef.current.fog) {
+        (sceneRef.current.fog as import('three').FogExp2).color = new THREE.Color(bgHex);
+      }
 
+      if (materialsRef.current.solid) materialsRef.current.solid.color.setHex(solidColor);
+      if (materialsRef.current.wireframe) materialsRef.current.wireframe.color.setHex(wireframeColor);
+      if (materialsRef.current.accent) materialsRef.current.accent.color.setHex(accentColor);
+    };
+
+    updateTheme();
   }, [theme]);
 
   return <div ref={mountRef} className="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none" />;

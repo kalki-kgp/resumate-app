@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import type { ResumeData } from '@/types';
 
 interface TemplatePreviewProps {
@@ -9,7 +10,7 @@ interface TemplatePreviewProps {
 }
 
 // Modern Template - Clean with accent bar
-export const ModernPreview = ({ data, scale = 0.15 }: { data: ResumeData; scale?: number }) => (
+export const ModernPreview = memo(({ data, scale = 0.15 }: { data: ResumeData; scale?: number }) => (
   <div
     className="bg-white text-slate-800 relative overflow-hidden"
     style={{
@@ -74,10 +75,11 @@ export const ModernPreview = ({ data, scale = 0.15 }: { data: ResumeData; scale?
       </div>
     </div>
   </div>
-);
+));
+ModernPreview.displayName = 'ModernPreview';
 
 // Classic Template - Traditional serif style
-export const ClassicPreview = ({ data, scale = 0.15 }: { data: ResumeData; scale?: number }) => (
+export const ClassicPreview = memo(({ data, scale = 0.15 }: { data: ResumeData; scale?: number }) => (
   <div
     className="bg-white text-slate-900"
     style={{
@@ -124,10 +126,11 @@ export const ClassicPreview = ({ data, scale = 0.15 }: { data: ResumeData; scale
       ))}
     </div>
   </div>
-);
+));
+ClassicPreview.displayName = 'ClassicPreview';
 
 // Creative Template - Bold colors and shapes
-export const CreativePreview = ({ data, scale = 0.15 }: { data: ResumeData; scale?: number }) => (
+export const CreativePreview = memo(({ data, scale = 0.15 }: { data: ResumeData; scale?: number }) => (
   <div
     className="bg-gradient-to-br from-purple-900 to-indigo-900 text-white relative overflow-hidden"
     style={{
@@ -181,10 +184,11 @@ export const CreativePreview = ({ data, scale = 0.15 }: { data: ResumeData; scal
       </div>
     </div>
   </div>
-);
+));
+CreativePreview.displayName = 'CreativePreview';
 
 // Minimal Template - Clean and spacious
-export const MinimalPreview = ({ data, scale = 0.15 }: { data: ResumeData; scale?: number }) => (
+export const MinimalPreview = memo(({ data, scale = 0.15 }: { data: ResumeData; scale?: number }) => (
   <div
     className="bg-white text-slate-800"
     style={{
@@ -228,7 +232,8 @@ export const MinimalPreview = ({ data, scale = 0.15 }: { data: ResumeData; scale
       {data.skills.slice(0, 5).join(' / ')}
     </div>
   </div>
-);
+));
+MinimalPreview.displayName = 'MinimalPreview';
 
 // Main preview selector component
 export const TemplatePreview = ({ template, data, scale = 0.15 }: TemplatePreviewProps) => {
