@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Upload,
@@ -68,6 +68,36 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
   apply: Send,
 };
 
+// Hydration-safe mounted check using useSyncExternalStore
+const mountedStore = {
+  getSnapshot: () => true,
+  getServerSnapshot: () => false,
+  subscribe: (callback: () => void) => {
+    callback();
+    return () => {};
+  },
+};
+
+// Pre-generate random values for floating background elements (generated once at module load)
+const floatingElements = Array.from({ length: 20 }, (_, i) => ({
+  id: i,
+  width: Math.random() * 100 + 50,
+  height: Math.random() * 100 + 50,
+  left: Math.random() * 100,
+  top: Math.random() * 100,
+  animationDelay: Math.random() * 5,
+  animationDuration: Math.random() * 10 + 10,
+}));
+
+// Pre-generate confetti particles (generated once at module load)
+const confettiParticles = Array.from({ length: 50 }, (_, i) => ({
+  id: i,
+  left: Math.random() * 100,
+  animationDelay: Math.random() * 0.5,
+  backgroundColor: ['#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B'][Math.floor(Math.random() * 5)],
+  borderRadius: Math.random() > 0.5 ? '50%' : '0',
+}));
+
 export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardProps) => {
   const router = useRouter();
   const [phase, setPhase] = useState<OnboardingPhase>('choice');
@@ -75,12 +105,12 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
   const [currentStep, setCurrentStep] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    mountedStore.subscribe,
+    mountedStore.getSnapshot,
+    mountedStore.getServerSnapshot
+  );
   const [choiceHover, setChoiceHover] = useState<'upload' | 'create' | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleChooseUpload = () => {
     setIsAnimating(true);
@@ -143,17 +173,17 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
     <div className="min-h-[calc(100vh-5rem)] flex flex-col items-center justify-center p-8 relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
+        {floatingElements.map((el) => (
           <div
-            key={i}
+            key={el.id}
             className="absolute rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 animate-float"
             style={{
-              width: `${Math.random() * 100 + 50}px`,
-              height: `${Math.random() * 100 + 50}px`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${Math.random() * 10 + 10}s`,
+              width: `${el.width}px`,
+              height: `${el.height}px`,
+              left: `${el.left}%`,
+              top: `${el.top}%`,
+              animationDelay: `${el.animationDelay}s`,
+              animationDuration: `${el.animationDuration}s`,
             }}
           />
         ))}
@@ -162,17 +192,17 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
       {/* Confetti Effect */}
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50">
-          {[...Array(50)].map((_, i) => (
+          {confettiParticles.map((particle) => (
             <div
-              key={i}
+              key={particle.id}
               className="absolute animate-confetti"
               style={{
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 0.5}s`,
-                backgroundColor: ['#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B'][Math.floor(Math.random() * 5)],
+                left: `${particle.left}%`,
+                animationDelay: `${particle.animationDelay}s`,
+                backgroundColor: particle.backgroundColor,
                 width: '10px',
                 height: '10px',
-                borderRadius: Math.random() > 0.5 ? '50%' : '0',
+                borderRadius: particle.borderRadius,
               }}
             />
           ))}

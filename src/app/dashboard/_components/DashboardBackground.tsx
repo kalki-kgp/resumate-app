@@ -13,6 +13,7 @@ export const DashboardBackground = ({ theme }: ThreeBackgroundProps) => {
   }>({});
 
   useEffect(() => {
+    const mount = mountRef.current;
     let animationId: number;
     let geometry: THREE.BoxGeometry;
     let renderer: THREE.WebGLRenderer;
@@ -151,10 +152,11 @@ export const DashboardBackground = ({ theme }: ThreeBackgroundProps) => {
 
     return () => {
       cleanup?.();
-      if (mountRef.current?.firstChild) {
-        mountRef.current.removeChild(mountRef.current.firstChild);
+      if (mount?.firstChild) {
+        mount.removeChild(mount.firstChild);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Theme Update
