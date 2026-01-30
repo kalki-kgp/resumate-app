@@ -1,17 +1,30 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { useTheme } from '@/hooks';
-import { Navbar, Footer, AuthModal } from '@/components';
-import { 
-  ThreeBackground, 
-  Hero, 
-  Features, 
-  Templates, 
-  Testimonials, 
-  Pricing, 
-  CTA 
+import { Navbar, Footer } from '@/components';
+import {
+  Hero,
+  Features,
+  Templates,
+  Testimonials,
+  Pricing,
+  CTA
 } from './_components';
+
+const ThreeBackground = dynamic(
+  () => import('./_components/ThreeBackground').then(mod => ({ default: mod.ThreeBackground })),
+  {
+    ssr: false,
+    loading: () => <div className="fixed inset-0 -z-10 bg-slate-50 dark:bg-slate-900" />
+  }
+);
+
+const AuthModal = dynamic(
+  () => import('@/components/ui/AuthModal').then(mod => ({ default: mod.AuthModal })),
+  { ssr: false }
+);
 
 export default function HomePage() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);

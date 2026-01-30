@@ -1,20 +1,33 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useTheme } from '@/hooks';
 import type { DashboardView, Resume } from '@/types';
 import {
-  DashboardBackground,
   Sidebar,
   DashboardTopbar,
   ExtractContentModal,
-  OnboardingWizard,
   DevToggle,
-  OverviewView,
-  ResumesView,
-  JobsView,
-  TemplatesView,
 } from './_components';
+
+// Lazy load heavy components
+const DashboardBackground = dynamic(
+  () => import('./_components/DashboardBackground').then(mod => ({ default: mod.DashboardBackground })),
+  {
+    ssr: false,
+    loading: () => <div className="fixed inset-0 -z-10 bg-slate-50 dark:bg-slate-900" />
+  }
+);
+
+const OnboardingWizard = dynamic(
+  () => import('./_components/OnboardingWizard').then(mod => ({ default: mod.OnboardingWizard }))
+);
+
+const OverviewView = dynamic(() => import('./_components/views/OverviewView').then(mod => ({ default: mod.OverviewView })));
+const ResumesView = dynamic(() => import('./_components/views/ResumesView').then(mod => ({ default: mod.ResumesView })));
+const JobsView = dynamic(() => import('./_components/views/JobsView').then(mod => ({ default: mod.JobsView })));
+const TemplatesView = dynamic(() => import('./_components/views/TemplatesView').then(mod => ({ default: mod.TemplatesView })));
 
 // Mock data - will be replaced with API data later
 const mockResumes: Resume[] = [

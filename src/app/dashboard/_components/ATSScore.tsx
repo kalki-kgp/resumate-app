@@ -1,8 +1,9 @@
 'use client';
 
+import { memo } from 'react';
 import type { ATSScoreProps } from '@/types';
 
-export const ATSScore = ({ score }: ATSScoreProps) => {
+export const ATSScore = memo(({ score }: ATSScoreProps) => {
   const r = 30;
   const c = 2 * Math.PI * r;
   const offset = c - (score / 100) * c;
@@ -46,4 +47,6 @@ export const ATSScore = ({ score }: ATSScoreProps) => {
       </div>
     </div>
   );
-};
+});
+
+ATSScore.displayName = 'ATSScore';

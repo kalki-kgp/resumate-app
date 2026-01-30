@@ -247,3 +247,28 @@ canvas, video {
 .animate-slide-up-fade {
   animation: slide-up-fade 0.6s ease-out forwards;
 }
+
+/* Performance Optimizations */
+
+/* Reduced motion support for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* GPU acceleration hints for animations */
+.animate-gradient {
+  will-change: background-position;
+}
+
+/* CSS containment for animated elements */
+.animate-float,
+.animate-pulse-slow,
+.animate-bounce-subtle {
+  contain: layout style paint;
+}
