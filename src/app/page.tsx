@@ -13,14 +13,6 @@ import {
   CTA
 } from './_components';
 
-const ThreeBackground = dynamic(
-  () => import('./_components/ThreeBackground').then(mod => ({ default: mod.ThreeBackground })),
-  {
-    ssr: false,
-    loading: () => <div className="fixed inset-0 -z-10 bg-slate-50 dark:bg-slate-900" />
-  }
-);
-
 const AuthModal = dynamic(
   () => import('@/components/ui/AuthModal').then(mod => ({ default: mod.AuthModal })),
   { ssr: false }
@@ -38,9 +30,9 @@ export default function HomePage() {
 
   return (
     <div className={`min-h-screen font-sans antialiased selection:bg-blue-100 selection:text-blue-900 transition-colors duration-500 ${
-      theme === 'dark' ? 'bg-slate-900 text-white' : 'bg-slate-50/50 text-slate-900'
+      theme === 'dark' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
     }`}>
-      <ThreeBackground theme={theme} />
+      <div className="fixed inset-0 -z-10 bg-white" />
       <Navbar onOpenAuth={openAuth} theme={theme} toggleTheme={toggleTheme} />
       
       <main>

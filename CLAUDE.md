@@ -16,7 +16,6 @@
 | TypeScript | 5.x | Type safety |
 | Tailwind CSS | 4.x | Styling |
 | Lucide React | Latest | Icon library |
-| Three.js | Latest | 3D background animations |
 
 ## Project Structure
 
@@ -30,7 +29,6 @@ src/
 │   │   ├── Pricing.tsx
 │   │   ├── Testimonials.tsx
 │   │   ├── CTA.tsx
-│   │   ├── ThreeBackground.tsx
 │   │   └── index.ts            # Barrel export
 │   ├── dashboard/              # Dashboard route
 │   │   ├── _components/        # Dashboard-specific components
@@ -40,7 +38,6 @@ src/
 │   │   │   │   ├── JobsView.tsx
 │   │   │   │   ├── TemplatesView.tsx
 │   │   │   │   └── index.ts
-│   │   │   ├── DashboardBackground.tsx
 │   │   │   ├── Sidebar.tsx
 │   │   │   ├── DashboardTopbar.tsx
 │   │   │   ├── UserProfileDropdown.tsx
@@ -54,7 +51,6 @@ src/
 │   │   └── page.tsx            # Dashboard page (with onboarding flow)
 │   ├── editor/                 # Resume Editor route
 │   │   ├── _components/        # Editor-specific components
-│   │   │   ├── EditorBackground.tsx  # 3D animated background
 │   │   │   ├── InputGroup.tsx        # Collapsible form section
 │   │   │   ├── InputField.tsx        # Form input component
 │   │   │   ├── TemplatePreview.tsx   # Mini template previews
@@ -208,4 +204,3 @@ Currently using React's built-in state (`useState`, `useEffect`). For future:
 6. **Type everything** - no `any` types unless absolutely necessary
 7. **Follow existing naming** - PascalCase for components, camelCase for hooks/utils
 8. **NEVER run `bun run dev`** - Do not start the dev server unless explicitly requested by the user
-

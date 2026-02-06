@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
 
   // Enable experimental features
   experimental: {
-    optimizePackageImports: ['lucide-react', 'three'],
+    optimizePackageImports: ['lucide-react'],
   },
 
   // Image optimization

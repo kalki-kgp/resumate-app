@@ -100,10 +100,10 @@ const confettiParticles = Array.from({ length: 50 }, (_, i) => ({
 
 export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardProps) => {
   const router = useRouter();
+  const steps = initialSteps;
   const [phase, setPhase] = useState<OnboardingPhase>('choice');
-  const [steps, setSteps] = useState<OnboardingStep[]>(initialSteps);
   const [currentStep, setCurrentStep] = useState(1);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [isFinished, setIsFinished] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const mounted = useSyncExternalStore(
     mountedStore.subscribe,
@@ -113,11 +113,7 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
   const [choiceHover, setChoiceHover] = useState<'upload' | 'create' | null>(null);
 
   const handleChooseUpload = () => {
-    setIsAnimating(true);
-    setTimeout(() => {
-      setPhase('steps');
-      setIsAnimating(false);
-    }, 300);
+    setPhase('steps');
   };
 
   const handleChooseCreate = () => {
@@ -127,44 +123,29 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
   };
 
   const handleBackToChoice = () => {
-    setIsAnimating(true);
-    setTimeout(() => {
-      setPhase('choice');
-      setIsAnimating(false);
-    }, 300);
+    setPhase('choice');
   };
 
   const handleStepComplete = (stepId: number) => {
-    if (isAnimating) return;
-
-    setIsAnimating(true);
-
-    // Mark step as completed
-    setSteps(prev =>
-      prev.map(step =>
-        step.id === stepId ? { ...step, completed: true } : step
-      )
-    );
+    if (stepId !== currentStep || isFinished) return;
 
     // Trigger the action callback
     onStepAction(stepId);
 
-    // Move to next step after animation
-    setTimeout(() => {
-      if (stepId < 4) {
-        setCurrentStep(stepId + 1);
-      } else {
-        // All steps completed
-        setShowConfetti(true);
-        setTimeout(() => {
-          onComplete();
-        }, 2000);
-      }
-      setIsAnimating(false);
-    }, 600);
+    if (stepId < steps.length) {
+      setCurrentStep(stepId + 1);
+    } else {
+      setIsFinished(true);
+      setShowConfetti(true);
+      setTimeout(() => {
+        onComplete();
+      }, 2000);
+    }
   };
 
-  const completedCount = steps.filter(s => s.completed).length;
+  const completedCount = isFinished
+    ? steps.length
+    : Math.max(currentStep - 1, 0);
   const progress = (completedCount / steps.length) * 100;
 
   if (!mounted) return null;
@@ -213,7 +194,7 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
       <div className="relative z-10 max-w-4xl w-full">
         {/* ============ PHASE: CHOICE ============ */}
         {phase === 'choice' && (
-          <div className={`transition-all duration-300 ${isAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+          <div>
             {/* Header */}
             <div className="text-center mb-12 animate-fade-in-up">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 mb-6">
@@ -387,18 +368,18 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
 
         {/* ============ PHASE: STEPS ============ */}
         {phase === 'steps' && (
-          <div className={`transition-all duration-300 ${isAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+          <div>
             {/* Back Button */}
             <button
               onClick={handleBackToChoice}
-              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors mb-6 animate-fade-in-up"
+              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors mb-6"
             >
               <ArrowLeft size={18} />
               <span>Back to options</span>
             </button>
 
             {/* Header */}
-            <div className="text-center mb-12 animate-fade-in-up">
+            <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 mb-6">
                 <FileText className="w-4 h-4 text-blue-500" />
                 <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
@@ -414,7 +395,7 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
             </div>
 
             {/* Progress Bar */}
-            <div className="mb-12 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <div className="mb-12">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Progress
@@ -425,11 +406,9 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
               </div>
               <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full transition-all duration-700 ease-out relative"
+                  className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full transition-all duration-300 ease-out"
                   style={{ width: `${progress}%` }}
-                >
-                  <div className="absolute inset-0 bg-white/20 animate-shimmer" />
-                </div>
+                />
               </div>
             </div>
 
@@ -438,18 +417,17 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
               {steps.map((step, index) => {
                 const Icon = iconMap[step.icon];
                 const isActive = currentStep === step.id;
-                const isCompleted = step.completed;
+                const isCompleted = isFinished || step.id < currentStep;
                 const isLocked = step.id > currentStep && !isCompleted;
 
                 return (
                   <div
                     key={step.id}
                     className={`
-                      relative group animate-fade-in-up
+                      relative group
                       ${isActive ? 'scale-105' : ''}
-                      transition-all duration-500
+                      transition-all duration-300
                     `}
-                    style={{ animationDelay: `${0.2 + index * 0.1}s` }}
                   >
                     {/* Connector Line */}
                     {index < steps.length - 1 && (
@@ -476,7 +454,7 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
                               ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-60'
                               : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
                         }
-                        ${isActive && !isCompleted ? 'animate-pulse-border' : ''}
+                        ${isActive && !isCompleted ? '' : ''}
                       `}
                     >
                       {/* Step Number / Check */}
@@ -487,13 +465,13 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
                           ${isCompleted
                             ? 'bg-green-500 text-white scale-110'
                             : isActive
-                              ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white animate-bounce-subtle'
+                              ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
                               : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
                           }
                         `}
                       >
                         {isCompleted ? (
-                          <CheckCircle2 className="w-6 h-6 animate-scale-in" />
+                          <CheckCircle2 className="w-6 h-6" />
                         ) : (
                           <span className="font-bold">{step.id}</span>
                         )}
@@ -544,7 +522,6 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
                       {isActive && !isCompleted ? (
                         <button
                           onClick={() => handleStepComplete(step.id)}
-                          disabled={isAnimating}
                           className={`
                             w-full py-2.5 px-4 rounded-xl font-semibold text-sm
                             flex items-center justify-center gap-2
@@ -557,7 +534,7 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
                           `}
                         >
                           {step.action}
-                          <ArrowRight size={16} className="animate-bounce-x" />
+                          <ArrowRight size={16} />
                         </button>
                       ) : isCompleted ? (
                         <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium">
@@ -576,7 +553,7 @@ export const OnboardingWizard = ({ onComplete, onStepAction }: OnboardingWizardP
             </div>
 
             {/* Skip Option */}
-            <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+            <div className="text-center">
               <button
                 onClick={onComplete}
                 className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"

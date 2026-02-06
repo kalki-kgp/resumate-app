@@ -1,5 +1,4 @@
 // Export all homepage components
-export { ThreeBackground } from './ThreeBackground';
 export { Hero } from './Hero';
 export { Features } from './Features';
 export { Templates } from './Templates';

@@ -16,15 +16,6 @@ import {
 } from './_components';
 import type { UserProfile } from '@/types';
 
-// Lazy load heavy components
-const DashboardBackground = dynamic(
-  () => import('./_components/DashboardBackground').then(mod => ({ default: mod.DashboardBackground })),
-  {
-    ssr: false,
-    loading: () => <div className="fixed inset-0 -z-10 bg-slate-50 dark:bg-slate-900" />
-  }
-);
-
 const OnboardingWizard = dynamic(
   () => import('./_components/OnboardingWizard').then(mod => ({ default: mod.OnboardingWizard }))
 );
@@ -194,10 +185,10 @@ export default function DashboardPage() {
       className={`h-screen flex overflow-hidden font-sans ${
         theme === 'dark'
           ? 'dark bg-slate-900 text-white'
-          : 'bg-slate-50 text-slate-900'
+          : 'bg-white text-slate-900'
       }`}
     >
-      <DashboardBackground theme={theme} />
+      <div className="fixed inset-0 -z-10 bg-white" />
 
       {/* Dev Toggle - Remove in production */}
       <DevToggle

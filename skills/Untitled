@@ -1,0 +1,2 @@
+mkdir -p /Users/onepiece/.codex/skills/frontend-design
+cp /Users/onepiece/.codex/skills/FRONTNED-SKILL.md /Users/onepiece/.codex/skills/frontend-design/SKILL.md

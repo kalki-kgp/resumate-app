@@ -1,4 +1,3 @@
-export { DashboardBackground } from './DashboardBackground';
 export { Sidebar } from './Sidebar';
 export { DashboardTopbar } from './DashboardTopbar';
 export { UserProfileDropdown } from './UserProfileDropdown';

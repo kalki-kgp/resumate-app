@@ -49,10 +49,6 @@ export interface PricingCardProps {
   delay: number;
 }
 
-export interface ThreeBackgroundProps {
-  theme: Theme;
-}
-
 // Dashboard Types
 export type DashboardView = 'overview' | 'resumes' | 'jobs' | 'templates';
 

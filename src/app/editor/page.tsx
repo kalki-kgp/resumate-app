@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState, useDeferredValue } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/hooks';
 import type { ResumeData, TemplateType } from '@/types';
@@ -24,7 +24,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import {
-  EditorBackground,
   InputGroup,
   InputField,
   TemplatePreview,
@@ -92,6 +91,7 @@ export default function EditorPage() {
   const router = useRouter();
   const [theme] = useTheme();
   const [data, setData] = useState<ResumeData>(INITIAL_DATA);
+  const deferredData = useDeferredValue(data);
   const [activeSection, setActiveSection] = useState<string | null>('personal');
   const [zoom, setZoom] = useState(0.75);
   const [template, setTemplate] = useState<TemplateType>('modern');
@@ -197,26 +197,26 @@ export default function EditorPage() {
   };
 
   // Render the selected template preview with zoom scale
-  const renderLivePreview = () => {
-    const PreviewComponent = {
-      modern: ModernPreview,
-      classic: ClassicPreview,
-      creative: CreativePreview,
-      minimal: MinimalPreview,
-    }[template];
-
-    return <PreviewComponent data={data} scale={zoom} />;
-  };
+  const PreviewComponent = useMemo(
+    () =>
+      ({
+        modern: ModernPreview,
+        classic: ClassicPreview,
+        creative: CreativePreview,
+        minimal: MinimalPreview,
+      })[template],
+    [template]
+  );
 
   return (
     <div
       className={`h-screen flex overflow-hidden font-sans ${
         theme === 'dark'
           ? 'dark bg-slate-900 text-white'
-          : 'bg-slate-100 text-slate-900'
+          : 'bg-white text-slate-900'
       }`}
     >
-      <EditorBackground theme={theme} />
+      <div className="fixed inset-0 -z-10 bg-white" />
 
       {/* Left Sidebar - Input Forms */}
       <aside className="w-[380px] flex-shrink-0 flex flex-col h-full bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border-r border-white/50 dark:border-slate-800 z-20">
@@ -495,7 +495,7 @@ export default function EditorPage() {
 
         {/* Paper Container */}
         <div className="bg-white shadow-2xl rounded-sm overflow-hidden transition-all duration-200">
-          {renderLivePreview()}
+          <PreviewComponent data={deferredData} scale={zoom} />
         </div>
       </main>
 
@@ -535,87 +535,89 @@ export default function EditorPage() {
         </div>
 
         {/* Drawer Content */}
-        <div
-          className={`flex-1 ml-16 h-full overflow-y-auto p-6 transition-opacity duration-300 ${
-            drawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-        >
-          <h2 className="text-white font-bold text-lg mb-6 flex items-center gap-2">
-            <Sparkles size={18} className="text-yellow-400" />
-            Templates
-          </h2>
+        {drawerOpen && (
+          <div className="flex-1 ml-16 h-full overflow-y-auto p-6 transition-opacity duration-300 opacity-100">
+            <h2 className="text-white font-bold text-lg mb-6 flex items-center gap-2">
+              <Sparkles size={18} className="text-yellow-400" />
+              Templates
+            </h2>
 
-          {/* Template Cards - Vertical Carousel */}
-          <div className="space-y-6">
-            {TEMPLATES.map((t) => {
-              const isSelected = template === t.id;
+            {/* Template Cards - Vertical Carousel */}
+            <div className="space-y-6">
+              {TEMPLATES.map((t) => {
+                const isSelected = template === t.id;
 
-              return (
-                <div
-                  key={t.id}
-                  onClick={() => setTemplate(t.id)}
-                  className={`relative cursor-pointer transition-all duration-500 ${
-                    isSelected
-                      ? 'scale-100 z-10'
-                      : 'scale-90 opacity-40 hover:opacity-70'
-                  }`}
-                >
-                  {/* Preview Container */}
+                return (
                   <div
-                    className={`relative rounded-xl overflow-hidden shadow-lg transition-all duration-300 ${
+                    key={t.id}
+                    onClick={() => setTemplate(t.id)}
+                    className={`relative cursor-pointer transition-all duration-500 ${
                       isSelected
-                        ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900'
-                        : ''
+                        ? 'scale-100 z-10'
+                        : 'scale-90 opacity-40 hover:opacity-70'
                     }`}
                   >
-                    {/* Actual Mini Preview */}
-                    <div className="bg-white rounded-lg overflow-hidden">
-                      <TemplatePreview template={t.id} data={data} scale={0.12} />
-                    </div>
-
-                    {/* Gradient Overlay for non-selected */}
-                    {!isSelected && (
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
-                    )}
-
-                    {/* Selection Indicator */}
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 bg-blue-600 text-white p-1.5 rounded-full shadow-lg animate-scale-in">
-                        <Check size={12} />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Template Name */}
-                  <div className="mt-3 text-center">
-                    <span
-                      className={`text-sm font-medium transition-colors ${
-                        isSelected ? 'text-white' : 'text-slate-500'
+                    {/* Preview Container */}
+                    <div
+                      className={`relative rounded-xl overflow-hidden shadow-lg transition-all duration-300 ${
+                        isSelected
+                          ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900'
+                          : ''
                       }`}
                     >
-                      {t.name}
-                    </span>
-                    {isSelected && (
-                      <span className="ml-2 text-xs text-blue-400">
-                        Selected
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                      {/* Actual Mini Preview */}
+                      <div className="bg-white rounded-lg overflow-hidden">
+                        <TemplatePreview
+                          template={t.id}
+                          data={deferredData}
+                          scale={0.12}
+                        />
+                      </div>
 
-          {/* More Templates CTA */}
-          <div className="mt-8 p-4 rounded-xl bg-slate-800/50 border border-slate-700 text-center">
-            <p className="text-slate-400 text-sm mb-3">
-              Want more templates?
-            </p>
-            <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all">
-              Upgrade to Pro
-            </button>
+                      {/* Gradient Overlay for non-selected */}
+                      {!isSelected && (
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
+                      )}
+
+                      {/* Selection Indicator */}
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 bg-blue-600 text-white p-1.5 rounded-full shadow-lg animate-scale-in">
+                          <Check size={12} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Template Name */}
+                    <div className="mt-3 text-center">
+                      <span
+                        className={`text-sm font-medium transition-colors ${
+                          isSelected ? 'text-white' : 'text-slate-500'
+                        }`}
+                      >
+                        {t.name}
+                      </span>
+                      {isSelected && (
+                        <span className="ml-2 text-xs text-blue-400">
+                          Selected
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* More Templates CTA */}
+            <div className="mt-8 p-4 rounded-xl bg-slate-800/50 border border-slate-700 text-center">
+              <p className="text-slate-400 text-sm mb-3">
+                Want more templates?
+              </p>
+              <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all">
+                Upgrade to Pro
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </aside>
     </div>
   );
