@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   User,
   Sparkles,
@@ -80,11 +81,13 @@ const HomeTwoAuthModal = ({
   mode,
   onModeChange,
   onClose,
+  onSubmit,
 }: {
   isOpen: boolean;
   mode: AuthMode;
   onModeChange: (mode: AuthMode) => void;
   onClose: () => void;
+  onSubmit: () => void;
 }) => {
   if (!isOpen) return null;
 
@@ -171,7 +174,10 @@ const HomeTwoAuthModal = ({
         </div>
 
         <form
-          onSubmit={(event) => event.preventDefault()}
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
           className="relative space-y-4 px-6 pb-7 sm:px-8 sm:pb-8"
         >
           {mode === 'signup' && (
@@ -253,6 +259,7 @@ const HomeTwoAuthModal = ({
 
 // ─── Main Page Component ─────────────────────────────────────
 export default function HomePageTwo() {
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -262,6 +269,11 @@ export default function HomePageTwo() {
     setAuthMode(mode);
     setIsAuthOpen(true);
     setMobileMenuOpen(false);
+  };
+
+  const handleAuthSubmit = () => {
+    setIsAuthOpen(false);
+    router.push('/dashboard/2');
   };
 
   useEffect(() => {
@@ -1359,6 +1371,7 @@ export default function HomePageTwo() {
         mode={authMode}
         onModeChange={setAuthMode}
         onClose={() => setIsAuthOpen(false)}
+        onSubmit={handleAuthSubmit}
       />
     </div>
   );

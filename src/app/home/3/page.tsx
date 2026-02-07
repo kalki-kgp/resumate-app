@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Playfair_Display, Source_Sans_3 } from 'next/font/google';
 import {
   ArrowRight,
@@ -122,11 +123,13 @@ const HomeThreeAuthModal = ({
   mode,
   onModeChange,
   onClose,
+  onSubmit,
 }: {
   isOpen: boolean;
   mode: AuthMode;
   onModeChange: (mode: AuthMode) => void;
   onClose: () => void;
+  onSubmit: () => void;
 }) => {
   if (!isOpen) return null;
 
@@ -219,7 +222,10 @@ const HomeThreeAuthModal = ({
             </div>
 
             <form
-              onSubmit={(event) => event.preventDefault()}
+              onSubmit={(event) => {
+                event.preventDefault();
+                onSubmit();
+              }}
               className="space-y-4"
             >
               {mode === 'signup' && (
@@ -309,6 +315,7 @@ const HomeThreeAuthModal = ({
 
 /* ─── Component ─── */
 export default function EditorialLuxePage() {
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
@@ -317,6 +324,11 @@ export default function EditorialLuxePage() {
     setAuthMode(mode);
     setIsAuthOpen(true);
     setMobileMenuOpen(false);
+  };
+
+  const handleAuthSubmit = () => {
+    setIsAuthOpen(false);
+    router.push('/dashboard/3');
   };
 
   useEffect(() => {
@@ -1014,6 +1026,7 @@ export default function EditorialLuxePage() {
         mode={authMode}
         onModeChange={setAuthMode}
         onClose={() => setIsAuthOpen(false)}
+        onSubmit={handleAuthSubmit}
       />
     </div>
   );

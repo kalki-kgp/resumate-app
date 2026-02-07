@@ -1,0 +1,570 @@
+'use client';
+
+import { useMemo, useState, useDeferredValue } from 'react';
+import { useRouter } from 'next/navigation';
+import { Fraunces, DM_Sans } from 'next/font/google';
+import type { ResumeData, TemplateType } from '@/types';
+import {
+  ArrowLeft,
+  User,
+  Briefcase,
+  GraduationCap,
+  Wrench,
+  Download,
+  Save,
+  ZoomIn,
+  ZoomOut,
+  ChevronRight,
+  Sparkles,
+  Palette,
+  Type,
+  Check,
+  Plus,
+  Trash2,
+  Leaf,
+} from 'lucide-react';
+import {
+  InputGroup,
+  InputField,
+  TemplatePreview,
+  ModernPreview,
+  ClassicPreview,
+  CreativePreview,
+  MinimalPreview,
+} from '../_components';
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['700', '800', '900'],
+  variable: '--font-fraunces',
+  display: 'swap',
+});
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+});
+
+const INITIAL_DATA: ResumeData = {
+  personal: {
+    fullName: 'Amara Okafor',
+    role: 'Senior Product Designer',
+    email: 'amara.okafor@example.com',
+    phone: '+1 (555) 0142-3311',
+    location: 'Austin, TX',
+    summary:
+      'Product designer who blends user empathy with crisp execution. I love translating messy workflows into experiences that feel simple, human, and trustworthy.',
+  },
+  experience: [
+    {
+      id: 1,
+      role: 'Senior Product Designer',
+      company: 'Stripe',
+      date: '2021 - Present',
+      description:
+        'Led onboarding redesign that improved activation by 26% and reduced support tickets during first-week setup.',
+    },
+    {
+      id: 2,
+      role: 'Product Designer',
+      company: 'Figma',
+      date: '2018 - 2021',
+      description:
+        'Partnered with PM and engineering to ship collaboration features used daily by distributed design teams.',
+    },
+  ],
+  education: [
+    {
+      id: 1,
+      degree: 'B.A. in Visual Communication',
+      school: 'University of Texas',
+      date: '2014 - 2018',
+    },
+  ],
+  skills: [
+    'Figma',
+    'User Research',
+    'Design Systems',
+    'Prototyping',
+    'Accessibility',
+    'Collaboration',
+  ],
+};
+
+const TEMPLATES: { id: TemplateType; name: string; color: string }[] = [
+  { id: 'modern', name: 'Modern', color: 'bg-[#c96442]' },
+  { id: 'classic', name: 'Classic', color: 'bg-[#2d5a3d]' },
+  { id: 'creative', name: 'Creative', color: 'bg-[#8b7355]' },
+  { id: 'minimal', name: 'Minimal', color: 'bg-[#cbb8a1]' },
+];
+
+export default function EditorTwoPage() {
+  const router = useRouter();
+  const [data, setData] = useState<ResumeData>(INITIAL_DATA);
+  const deferredData = useDeferredValue(data);
+  const [activeSection, setActiveSection] = useState<string | null>('personal');
+  const [zoom, setZoom] = useState(0.75);
+  const [template, setTemplate] = useState<TemplateType>('modern');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const updatePersonal = (field: keyof typeof data.personal, value: string) => {
+    setData((prev) => ({
+      ...prev,
+      personal: { ...prev.personal, [field]: value },
+    }));
+  };
+
+  const updateExperience = (
+    id: number,
+    field: keyof (typeof data.experience)[0],
+    value: string
+  ) => {
+    setData((prev) => ({
+      ...prev,
+      experience: prev.experience.map((job) =>
+        job.id === id ? { ...job, [field]: value } : job
+      ),
+    }));
+  };
+
+  const addExperience = () => {
+    const newId = Math.max(...data.experience.map((e) => e.id), 0) + 1;
+    setData((prev) => ({
+      ...prev,
+      experience: [
+        ...prev.experience,
+        {
+          id: newId,
+          role: '',
+          company: '',
+          date: '',
+          description: '',
+        },
+      ],
+    }));
+  };
+
+  const deleteExperience = (id: number) => {
+    setData((prev) => ({
+      ...prev,
+      experience: prev.experience.filter((job) => job.id !== id),
+    }));
+  };
+
+  const updateEducation = (
+    id: number,
+    field: keyof (typeof data.education)[0],
+    value: string
+  ) => {
+    setData((prev) => ({
+      ...prev,
+      education: prev.education.map((edu) =>
+        edu.id === id ? { ...edu, [field]: value } : edu
+      ),
+    }));
+  };
+
+  const addEducation = () => {
+    const newId = Math.max(...data.education.map((e) => e.id), 0) + 1;
+    setData((prev) => ({
+      ...prev,
+      education: [
+        ...prev.education,
+        {
+          id: newId,
+          degree: '',
+          school: '',
+          date: '',
+        },
+      ],
+    }));
+  };
+
+  const deleteEducation = (id: number) => {
+    setData((prev) => ({
+      ...prev,
+      education: prev.education.filter((edu) => edu.id !== id),
+    }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    setSaving(false);
+  };
+
+  const PreviewComponent = useMemo(
+    () =>
+      ({
+        modern: ModernPreview,
+        classic: ClassicPreview,
+        creative: CreativePreview,
+        minimal: MinimalPreview,
+      })[template],
+    [template]
+  );
+
+  return (
+    <div
+      className={`${fraunces.variable} ${dmSans.variable} h-screen flex overflow-hidden bg-[#faf7f2] text-[#2c1810]`}
+      style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+    >
+      <div className="fixed inset-0 -z-10 bg-[#faf7f2]" />
+      <div className="pointer-events-none fixed -left-20 top-20 -z-10 h-72 w-72 rounded-full bg-[#f0e6d8] opacity-55 blur-3xl" />
+      <div className="pointer-events-none fixed right-0 top-0 -z-10 h-72 w-72 rounded-full bg-[#c96442] opacity-20 blur-3xl" />
+
+      <aside className="w-[380px] flex-shrink-0 flex flex-col h-full bg-[#fffaf4]/95 backdrop-blur-xl border-r border-[#eadfce] z-20">
+        <div className="h-16 flex items-center gap-3 px-4 border-b border-[#eadfce]">
+          <button
+            onClick={() => router.push('/dashboard/2')}
+            className="p-2 -ml-1 rounded-full hover:bg-[#f4ecdf] text-[#8b7355] hover:text-[#2c1810] transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex items-center gap-2">
+            <Leaf size={20} className="text-[#2d5a3d]" />
+            <span className="font-bold" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+              Warm Editor
+            </span>
+          </div>
+          <div className="ml-auto flex gap-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 px-3 py-1.5 bg-[#c96442] text-white rounded-full text-xs font-bold hover:brightness-110 transition-all disabled:opacity-50"
+            >
+              <Save size={14} />
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          <InputGroup
+            title="Personal Details"
+            icon={User}
+            variant="warm"
+            isOpen={activeSection === 'personal'}
+            onToggle={() =>
+              setActiveSection(activeSection === 'personal' ? null : 'personal')
+            }
+          >
+            <InputField
+              variant="warm"
+              label="Full Name"
+              value={data.personal.fullName}
+              onChange={(v) => updatePersonal('fullName', v)}
+            />
+            <InputField
+              variant="warm"
+              label="Job Title"
+              value={data.personal.role}
+              onChange={(v) => updatePersonal('role', v)}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <InputField
+                variant="warm"
+                label="Email"
+                value={data.personal.email}
+                onChange={(v) => updatePersonal('email', v)}
+                type="email"
+              />
+              <InputField
+                variant="warm"
+                label="Phone"
+                value={data.personal.phone}
+                onChange={(v) => updatePersonal('phone', v)}
+                type="tel"
+              />
+            </div>
+            <InputField
+              variant="warm"
+              label="Location"
+              value={data.personal.location}
+              onChange={(v) => updatePersonal('location', v)}
+            />
+            <InputField
+              variant="warm"
+              label="Professional Summary"
+              value={data.personal.summary}
+              onChange={(v) => updatePersonal('summary', v)}
+              multiline
+            />
+          </InputGroup>
+
+          <InputGroup
+            title="Work Experience"
+            icon={Briefcase}
+            variant="warm"
+            isOpen={activeSection === 'experience'}
+            onToggle={() =>
+              setActiveSection(
+                activeSection === 'experience' ? null : 'experience'
+              )
+            }
+          >
+            {data.experience.map((job, i) => (
+              <div
+                key={job.id}
+                className="p-4 rounded-2xl bg-white border border-[#eadfce] mb-3 relative group"
+              >
+                <div className="absolute top-2 right-2 flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#d1bca4]">#{i + 1}</span>
+                  {data.experience.length > 1 && (
+                    <button
+                      onClick={() => deleteExperience(job.id)}
+                      className="p-1 rounded text-[#b59e86] hover:text-[#c96442] transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <InputField
+                    variant="warm"
+                    label="Role"
+                    value={job.role}
+                    onChange={(v) => updateExperience(job.id, 'role', v)}
+                  />
+                  <InputField
+                    variant="warm"
+                    label="Company"
+                    value={job.company}
+                    onChange={(v) => updateExperience(job.id, 'company', v)}
+                  />
+                  <InputField
+                    variant="warm"
+                    label="Date Range"
+                    value={job.date}
+                    onChange={(v) => updateExperience(job.id, 'date', v)}
+                    placeholder="e.g. 2020 - Present"
+                  />
+                  <InputField
+                    variant="warm"
+                    label="Description"
+                    value={job.description}
+                    onChange={(v) => updateExperience(job.id, 'description', v)}
+                    multiline
+                  />
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={addExperience}
+              className="w-full py-2.5 border border-dashed border-[#d9cbb8] rounded-2xl text-[#8b7355] font-bold text-xs hover:border-[#c96442] hover:text-[#c96442] transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus size={16} />
+              Add Position
+            </button>
+          </InputGroup>
+
+          <InputGroup
+            title="Education"
+            icon={GraduationCap}
+            variant="warm"
+            isOpen={activeSection === 'education'}
+            onToggle={() =>
+              setActiveSection(activeSection === 'education' ? null : 'education')
+            }
+          >
+            {data.education.map((edu, i) => (
+              <div
+                key={edu.id}
+                className="p-4 rounded-2xl bg-white border border-[#eadfce] mb-3 relative group"
+              >
+                <div className="absolute top-2 right-2 flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#d1bca4]">#{i + 1}</span>
+                  {data.education.length > 1 && (
+                    <button
+                      onClick={() => deleteEducation(edu.id)}
+                      className="p-1 rounded text-[#b59e86] hover:text-[#c96442] transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <InputField
+                    variant="warm"
+                    label="Degree"
+                    value={edu.degree}
+                    onChange={(v) => updateEducation(edu.id, 'degree', v)}
+                  />
+                  <InputField
+                    variant="warm"
+                    label="School"
+                    value={edu.school}
+                    onChange={(v) => updateEducation(edu.id, 'school', v)}
+                  />
+                  <InputField
+                    variant="warm"
+                    label="Date Range"
+                    value={edu.date}
+                    onChange={(v) => updateEducation(edu.id, 'date', v)}
+                    placeholder="e.g. 2016 - 2020"
+                  />
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={addEducation}
+              className="w-full py-2.5 border border-dashed border-[#d9cbb8] rounded-2xl text-[#8b7355] font-bold text-xs hover:border-[#c96442] hover:text-[#c96442] transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus size={16} />
+              Add Education
+            </button>
+          </InputGroup>
+
+          <InputGroup
+            title="Skills"
+            icon={Wrench}
+            variant="warm"
+            isOpen={activeSection === 'skills'}
+            onToggle={() =>
+              setActiveSection(activeSection === 'skills' ? null : 'skills')
+            }
+          >
+            <textarea
+              className="w-full p-3 rounded-2xl bg-white border border-[#eadfce] focus:border-[#c96442] focus:outline-none transition-all text-sm h-32 resize-y text-[#2c1810]"
+              value={data.skills.join(', ')}
+              onChange={(e) =>
+                setData({
+                  ...data,
+                  skills: e.target.value.split(',').map((s) => s.trim()),
+                })
+              }
+            />
+            <p className="text-[10px] text-[#8b7355] mt-1 ml-1">Separate skills with commas</p>
+          </InputGroup>
+        </div>
+
+        <div className="p-4 border-t border-[#eadfce]">
+          <div className="p-4 rounded-2xl bg-[#fff1e8] border border-[#f1d7c7]">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-5 h-5 text-[#c96442]" />
+              <span className="font-semibold text-[#c96442]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+                Writing Coach
+              </span>
+            </div>
+            <p className="text-sm text-[#8b7355] mb-3">Get warm, human wording suggestions for stronger impact.</p>
+            <button className="w-full py-2 px-4 rounded-full bg-[#2d5a3d] text-white text-sm font-medium hover:brightness-110 transition-colors">
+              Get Suggestions
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <main className="flex-1 h-full relative flex flex-col items-center bg-[#f3ece2]/50 overflow-auto pt-20 pb-8">
+        <div className="absolute top-6 flex items-center gap-2 bg-[#fffaf4]/95 rounded-full px-4 py-2 shadow-lg z-30 border border-[#eadfce]">
+          <button
+            onClick={() => setZoom(Math.max(0.35, zoom - 0.05))}
+            className="p-2 hover:bg-[#f4ecdf] rounded-full text-[#8b7355] hover:text-[#2c1810] transition-colors"
+          >
+            <ZoomOut size={16} />
+          </button>
+          <span className="text-xs font-mono font-bold w-12 text-center text-[#8b7355]">{Math.round(zoom * 100)}%</span>
+          <button
+            onClick={() => setZoom(Math.min(0.85, zoom + 0.05))}
+            className="p-2 hover:bg-[#f4ecdf] rounded-full text-[#8b7355] hover:text-[#2c1810] transition-colors"
+          >
+            <ZoomIn size={16} />
+          </button>
+          <div className="w-px h-4 bg-[#eadfce] mx-2" />
+          <button className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#f4ecdf] rounded-lg text-xs font-bold text-[#8b7355] transition-colors">
+            <Download size={14} /> Export PDF
+          </button>
+        </div>
+
+        <div className="bg-white shadow-2xl rounded-sm overflow-hidden transition-all duration-200">
+          <PreviewComponent data={deferredData} scale={zoom} />
+        </div>
+      </main>
+
+      <aside
+        className={`fixed right-0 top-0 h-full bg-[#2d5a3d] shadow-2xl z-50 transition-all duration-500 ease-in-out border-l border-[#244a33] flex flex-col ${
+          drawerOpen ? 'w-80' : 'w-16'
+        }`}
+      >
+        <div className="flex-shrink-0 w-16 h-full absolute left-0 top-0 flex flex-col items-center py-6 bg-[#2d5a3d] border-r border-[#244a33] z-20">
+          <button
+            onClick={() => setDrawerOpen(!drawerOpen)}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center mb-6 transition-all ${
+              drawerOpen ? 'bg-[#c96442] text-white' : 'bg-[#244a33] text-[#d0dfd2] hover:text-white'
+            }`}
+          >
+            {drawerOpen ? <ChevronRight size={20} /> : <Palette size={20} />}
+          </button>
+
+          <div className="space-y-4 flex flex-col items-center">
+            <div className="w-8 h-8 rounded-lg bg-[#244a33] flex items-center justify-center text-[#d0dfd2] hover:text-white cursor-pointer transition-colors" title="Templates">
+              <Palette size={18} />
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-[#244a33] flex items-center justify-center text-[#d0dfd2] hover:text-white cursor-pointer transition-colors" title="Typography">
+              <Type size={18} />
+            </div>
+          </div>
+        </div>
+
+        {drawerOpen && (
+          <div className="flex-1 ml-16 h-full overflow-y-auto p-6 transition-opacity duration-300 opacity-100">
+            <h2 className="text-white font-bold text-lg mb-6 flex items-center gap-2" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+              <Sparkles size={18} className="text-[#ffd7c8]" />
+              Template Picks
+            </h2>
+
+            <div className="space-y-6">
+              {TEMPLATES.map((templateOption) => {
+                const isSelected = template === templateOption.id;
+
+                return (
+                  <div
+                    key={templateOption.id}
+                    onClick={() => setTemplate(templateOption.id)}
+                    className={`relative cursor-pointer transition-all duration-500 ${
+                      isSelected ? 'scale-100 z-10' : 'scale-90 opacity-45 hover:opacity-75'
+                    }`}
+                  >
+                    <div
+                      className={`relative rounded-xl overflow-hidden shadow-lg transition-all duration-300 ${
+                        isSelected ? 'ring-2 ring-[#c96442] ring-offset-2 ring-offset-[#2d5a3d]' : ''
+                      }`}
+                    >
+                      <div className="bg-white rounded-lg overflow-hidden">
+                        <TemplatePreview template={templateOption.id} data={deferredData} scale={0.12} />
+                      </div>
+
+                      {!isSelected && <div className="absolute inset-0 bg-gradient-to-t from-[#2d5a3d]/80 via-[#2d5a3d]/20 to-transparent" />}
+
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 bg-[#c96442] text-white p-1.5 rounded-full shadow-lg animate-scale-in">
+                          <Check size={12} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 text-center">
+                      <span className={`text-sm font-medium transition-colors ${isSelected ? 'text-white' : 'text-[#d0dfd2]'}`}>
+                        {templateOption.name}
+                      </span>
+                      {isSelected && <span className="ml-2 text-xs text-[#ffd7c8]">Selected</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-8 p-4 rounded-xl bg-[#244a33] border border-[#1f3f2c] text-center">
+              <p className="text-[#d0dfd2] text-sm mb-3">Need custom branded templates?</p>
+              <button className="px-4 py-2 bg-[#c96442] text-white text-sm font-semibold rounded-lg hover:brightness-110 transition-all">
+                Upgrade
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}

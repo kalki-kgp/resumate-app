@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Outfit, JetBrains_Mono } from 'next/font/google';
 import {
   Sparkles,
@@ -321,11 +322,13 @@ const HomeOneAuthModal = ({
   mode,
   onModeChange,
   onClose,
+  onSubmit,
 }: {
   isOpen: boolean;
   mode: AuthMode;
   onModeChange: (mode: AuthMode) => void;
   onClose: () => void;
+  onSubmit: () => void;
 }) => {
   if (!isOpen) return null;
 
@@ -403,7 +406,10 @@ const HomeOneAuthModal = ({
         </div>
 
         <form
-          onSubmit={(event) => event.preventDefault()}
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
           className="relative space-y-4 px-6 py-6 sm:px-8 sm:py-7"
         >
           {mode === 'signup' && (
@@ -471,6 +477,7 @@ const HomeOneAuthModal = ({
 /*  MAIN PAGE COMPONENT                                                        */
 /* -------------------------------------------------------------------------- */
 export default function DarkCommandCenter() {
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -481,6 +488,11 @@ export default function DarkCommandCenter() {
     setAuthMode(mode);
     setIsAuthOpen(true);
     setMobileMenuOpen(false);
+  };
+
+  const handleAuthSubmit = () => {
+    setIsAuthOpen(false);
+    router.push('/dashboard/1');
   };
 
   // Scroll detection for navbar
@@ -1297,6 +1309,7 @@ export default function DarkCommandCenter() {
         mode={authMode}
         onModeChange={setAuthMode}
         onClose={() => setIsAuthOpen(false)}
+        onSubmit={handleAuthSubmit}
       />
     </div>
   );
