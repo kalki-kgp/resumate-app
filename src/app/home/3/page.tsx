@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Playfair_Display, Source_Sans_3 } from 'next/font/google';
 import {
   ArrowRight,
   Star,
   Menu,
   X,
+  Mail,
+  Lock,
 } from 'lucide-react';
 
 const playfair = Playfair_Display({
@@ -113,9 +115,226 @@ const FOOTER_LINKS = {
   Legal: ['Privacy', 'Terms', 'Security', 'Cookies'],
 };
 
+type AuthMode = 'signin' | 'signup';
+
+const HomeThreeAuthModal = ({
+  isOpen,
+  mode,
+  onModeChange,
+  onClose,
+}: {
+  isOpen: boolean;
+  mode: AuthMode;
+  onModeChange: (mode: AuthMode) => void;
+  onClose: () => void;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center px-4 py-8">
+      <button
+        type="button"
+        className="absolute inset-0 bg-[rgba(17,17,17,0.72)] backdrop-blur-[2px]"
+        onClick={onClose}
+        aria-label="Close auth modal"
+      />
+
+      <div className="relative w-full max-w-3xl overflow-hidden border border-[#d9d2bf] bg-[#fcfaf6] shadow-[0_32px_90px_rgba(0,0,0,0.35)]">
+        <div className="grid md:grid-cols-[0.9fr_1.1fr]">
+          <div className="relative border-b border-[#e5e5e5] px-6 py-8 md:border-r md:border-b-0 md:px-8 md:py-10">
+            <p
+              className="text-[10px] uppercase tracking-[0.34em]"
+              style={{ color: '#8b7a45' }}
+            >
+              Members Edition
+            </p>
+            <h3
+              className="mt-3 text-3xl font-black leading-tight"
+              style={{
+                color: '#111111',
+                fontFamily: 'var(--font-playfair), serif',
+              }}
+            >
+              {mode === 'signin' ? 'Access your career archive.' : 'Join the curated platform.'}
+            </h3>
+            <p
+              className="mt-4 text-sm leading-relaxed"
+              style={{
+                color: '#666666',
+                fontFamily: 'var(--font-source-sans), sans-serif',
+              }}
+            >
+              Build premium, ATS-strong resumes and keep every application polished.
+            </p>
+            <div className="mt-7 flex items-center gap-2.5">
+              {[0, 1, 2].map((item) => (
+                <span
+                  key={item}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border text-[9px] font-semibold"
+                  style={{
+                    borderColor: '#d9d2bf',
+                    color: '#8b7a45',
+                    fontFamily: 'var(--font-source-sans), sans-serif',
+                  }}
+                >
+                  0{item + 1}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative px-6 py-8 md:px-8 md:py-10">
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute top-4 right-4 text-xs uppercase tracking-[0.2em] transition-opacity hover:opacity-70"
+              style={{ color: '#666666', fontFamily: 'var(--font-source-sans), sans-serif' }}
+            >
+              Close
+            </button>
+
+            <div className="mb-6 inline-flex gap-5 border-b border-[#e5e5e5]">
+              <button
+                type="button"
+                onClick={() => onModeChange('signin')}
+                className="pb-2 text-xs font-semibold tracking-[0.22em] uppercase transition-colors"
+                style={{
+                  color: mode === 'signin' ? '#111111' : '#8f8f8f',
+                  borderBottom: mode === 'signin' ? '2px solid #c9a84c' : '2px solid transparent',
+                }}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => onModeChange('signup')}
+                className="pb-2 text-xs font-semibold tracking-[0.22em] uppercase transition-colors"
+                style={{
+                  color: mode === 'signup' ? '#111111' : '#8f8f8f',
+                  borderBottom: mode === 'signup' ? '2px solid #c9a84c' : '2px solid transparent',
+                }}
+              >
+                Sign Up
+              </button>
+            </div>
+
+            <form
+              onSubmit={(event) => event.preventDefault()}
+              className="space-y-4"
+            >
+              {mode === 'signup' && (
+                <label className="block">
+                  <span
+                    className="mb-1 block text-[11px] font-semibold tracking-[0.2em] uppercase"
+                    style={{ color: '#777777', fontFamily: 'var(--font-source-sans), sans-serif' }}
+                  >
+                    Full Name
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Alexandra Chen"
+                    className="w-full border-b px-0 py-2.5 text-sm outline-none transition-colors placeholder:text-[#9f9f9f]"
+                    style={{
+                      borderColor: '#d8d8d8',
+                      color: '#111111',
+                      backgroundColor: 'transparent',
+                    }}
+                  />
+                </label>
+              )}
+
+              <label className="block">
+                <span
+                  className="mb-1 block text-[11px] font-semibold tracking-[0.2em] uppercase"
+                  style={{ color: '#777777', fontFamily: 'var(--font-source-sans), sans-serif' }}
+                >
+                  Email
+                </span>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute top-1/2 left-0 h-4 w-4 -translate-y-1/2" style={{ color: '#9f9f9f' }} />
+                  <input
+                    type="email"
+                    placeholder="you@domain.com"
+                    className="w-full border-b py-2.5 pr-0 pl-6 text-sm outline-none transition-colors placeholder:text-[#9f9f9f]"
+                    style={{
+                      borderColor: '#d8d8d8',
+                      color: '#111111',
+                      backgroundColor: 'transparent',
+                    }}
+                  />
+                </div>
+              </label>
+
+              <label className="block">
+                <span
+                  className="mb-1 block text-[11px] font-semibold tracking-[0.2em] uppercase"
+                  style={{ color: '#777777', fontFamily: 'var(--font-source-sans), sans-serif' }}
+                >
+                  Password
+                </span>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute top-1/2 left-0 h-4 w-4 -translate-y-1/2" style={{ color: '#9f9f9f' }} />
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    className="w-full border-b py-2.5 pr-0 pl-6 text-sm outline-none transition-colors placeholder:text-[#9f9f9f]"
+                    style={{
+                      borderColor: '#d8d8d8',
+                      color: '#111111',
+                      backgroundColor: 'transparent',
+                    }}
+                  />
+                </div>
+              </label>
+
+              <button
+                type="submit"
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 px-5 py-3 text-xs font-semibold tracking-[0.24em] uppercase transition-all hover:brightness-105"
+                style={{
+                  backgroundColor: '#c9a84c',
+                  color: '#111111',
+                  fontFamily: 'var(--font-source-sans), sans-serif',
+                }}
+              >
+                {mode === 'signin' ? 'Enter Workspace' : 'Create Membership'}
+                <ArrowRight size={14} strokeWidth={2} />
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ─── Component ─── */
 export default function EditorialLuxePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>('signin');
+
+  const openAuth = (mode: AuthMode) => {
+    setAuthMode(mode);
+    setIsAuthOpen(true);
+    setMobileMenuOpen(false);
+  };
+
+  useEffect(() => {
+    if (!isAuthOpen) return undefined;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsAuthOpen(false);
+    };
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isAuthOpen]);
 
   return (
     <div
@@ -161,8 +380,9 @@ export default function EditorialLuxePage() {
                   {link}
                 </a>
               ))}
-              <a
-                href="#"
+              <button
+                type="button"
+                onClick={() => openAuth('signup')}
                 className="group relative font-[family-name:var(--font-source-sans)] text-sm font-semibold tracking-wide transition-colors duration-200"
                 style={{ color: COLORS.textPrimary }}
               >
@@ -171,7 +391,7 @@ export default function EditorialLuxePage() {
                   className="absolute -bottom-0.5 left-0 h-[1.5px] w-0 transition-all duration-300 group-hover:w-full"
                   style={{ backgroundColor: COLORS.gold }}
                 />
-              </a>
+              </button>
             </div>
 
             {/* Mobile Menu Toggle */}
@@ -205,13 +425,14 @@ export default function EditorialLuxePage() {
                   {link}
                 </a>
               ))}
-              <a
-                href="#"
+              <button
+                type="button"
+                onClick={() => openAuth('signup')}
                 className="mt-2 block py-2 font-[family-name:var(--font-source-sans)] text-sm font-semibold"
                 style={{ color: COLORS.gold }}
               >
                 Get Started
-              </a>
+              </button>
             </div>
           </div>
         )}
@@ -247,8 +468,9 @@ export default function EditorialLuxePage() {
                 poised for success.
               </p>
               <div className="mt-10 flex flex-wrap items-center gap-4">
-                <a
-                  href="#"
+                <button
+                  type="button"
+                  onClick={() => openAuth('signup')}
                   className="inline-flex items-center gap-2 px-8 py-3.5 font-[family-name:var(--font-source-sans)] text-sm font-semibold tracking-wide transition-all duration-300 hover:brightness-110"
                   style={{
                     backgroundColor: COLORS.gold,
@@ -257,7 +479,7 @@ export default function EditorialLuxePage() {
                 >
                   Create Resume
                   <ArrowRight size={16} strokeWidth={2} />
-                </a>
+                </button>
                 <a
                   href="#"
                   className="inline-flex items-center gap-2 border px-8 py-3.5 font-[family-name:var(--font-source-sans)] text-sm font-semibold tracking-wide transition-all duration-300"
@@ -676,8 +898,9 @@ export default function EditorialLuxePage() {
             career narrative. The tools you need, refined to perfection.
           </p>
           <div className="flex flex-col items-center gap-4">
-            <a
-              href="#"
+            <button
+              type="button"
+              onClick={() => openAuth('signup')}
               className="inline-flex items-center gap-2 px-10 py-4 font-[family-name:var(--font-source-sans)] text-sm font-semibold tracking-wider uppercase transition-all duration-300 hover:brightness-110"
               style={{
                 backgroundColor: COLORS.gold,
@@ -686,7 +909,7 @@ export default function EditorialLuxePage() {
             >
               Begin Your Journey
               <ArrowRight size={16} strokeWidth={2} />
-            </a>
+            </button>
             <p
               className="font-[family-name:var(--font-source-sans)] text-xs tracking-wide"
               style={{ color: COLORS.textMuted }}
@@ -785,6 +1008,13 @@ export default function EditorialLuxePage() {
           </div>
         </div>
       </footer>
+
+      <HomeThreeAuthModal
+        isOpen={isAuthOpen}
+        mode={authMode}
+        onModeChange={setAuthMode}
+        onClose={() => setIsAuthOpen(false)}
+      />
     </div>
   );
 }

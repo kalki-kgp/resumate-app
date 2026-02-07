@@ -25,6 +25,8 @@ import {
   TrendingUp,
   Users,
   Award,
+  Lock,
+  X,
 } from 'lucide-react';
 
 const outfit = Outfit({
@@ -312,13 +314,174 @@ const useSectionReveal = () => {
   return { ref, isVisible };
 };
 
+type AuthMode = 'signin' | 'signup';
+
+const HomeOneAuthModal = ({
+  isOpen,
+  mode,
+  onModeChange,
+  onClose,
+}: {
+  isOpen: boolean;
+  mode: AuthMode;
+  onModeChange: (mode: AuthMode) => void;
+  onClose: () => void;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center px-4 py-8">
+      <button
+        type="button"
+        className="absolute inset-0 bg-[#03060d]/85 backdrop-blur-md"
+        onClick={onClose}
+        aria-label="Close login modal"
+      />
+      <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-[#1e2736] bg-[#0b111a] shadow-[0_30px_80px_rgba(0,0,0,0.6)]">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-28 right-8 h-56 w-56 rounded-full bg-[#00e5a0]/10 blur-3xl" />
+          <div className="absolute -bottom-20 -left-4 h-44 w-44 rounded-full bg-[#3b82f6]/15 blur-3xl" />
+          <div
+            className="absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                'linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)',
+              backgroundSize: '28px 28px',
+            }}
+          />
+        </div>
+
+        <div className="relative border-b border-[#1e2736] px-6 py-5 sm:px-8">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <p
+                className="text-[11px] uppercase tracking-[0.22em] text-[#00e5a0]"
+                style={{ fontFamily: 'var(--font-jetbrains)' }}
+              >
+                Secure Session
+              </p>
+              <h3 className="mt-1 text-2xl font-bold text-[#e2e8f0]">
+                {mode === 'signin' ? 'Access Command Center' : 'Create Operator Profile'}
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#1e2736] text-[#64748b] transition-colors hover:text-[#e2e8f0]"
+              aria-label="Close modal"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="inline-flex rounded-lg border border-[#1e2736] bg-[#06080f] p-1">
+            <button
+              type="button"
+              onClick={() => onModeChange('signin')}
+              className={`rounded-md px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition-all ${
+                mode === 'signin'
+                  ? 'bg-[#00e5a0] text-[#06080f]'
+                  : 'text-[#64748b] hover:text-[#e2e8f0]'
+              }`}
+              style={{ fontFamily: 'var(--font-jetbrains)' }}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => onModeChange('signup')}
+              className={`rounded-md px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition-all ${
+                mode === 'signup'
+                  ? 'bg-[#00e5a0] text-[#06080f]'
+                  : 'text-[#64748b] hover:text-[#e2e8f0]'
+              }`}
+              style={{ fontFamily: 'var(--font-jetbrains)' }}
+            >
+              Sign Up
+            </button>
+          </div>
+        </div>
+
+        <form
+          onSubmit={(event) => event.preventDefault()}
+          className="relative space-y-4 px-6 py-6 sm:px-8 sm:py-7"
+        >
+          {mode === 'signup' && (
+            <label className="block">
+              <span className="mb-1.5 block text-xs uppercase tracking-[0.2em] text-[#64748b]">
+                Full Name
+              </span>
+              <input
+                type="text"
+                placeholder="Jane Doe"
+                className="w-full rounded-lg border border-[#1e2736] bg-[#06080f] px-3 py-3 text-sm text-[#e2e8f0] outline-none transition-colors placeholder:text-[#475569] focus:border-[#00e5a0]/60"
+              />
+            </label>
+          )}
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs uppercase tracking-[0.2em] text-[#64748b]">
+              Email
+            </span>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#475569]" />
+              <input
+                type="email"
+                placeholder="you@company.com"
+                className="w-full rounded-lg border border-[#1e2736] bg-[#06080f] py-3 pr-3 pl-10 text-sm text-[#e2e8f0] outline-none transition-colors placeholder:text-[#475569] focus:border-[#00e5a0]/60"
+              />
+            </div>
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs uppercase tracking-[0.2em] text-[#64748b]">
+              Password
+            </span>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#475569]" />
+              <input
+                type="password"
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-[#1e2736] bg-[#06080f] py-3 pr-3 pl-10 text-sm text-[#e2e8f0] outline-none transition-colors placeholder:text-[#475569] focus:border-[#00e5a0]/60"
+              />
+            </div>
+          </label>
+
+          <button
+            type="submit"
+            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#00e5a0] px-4 py-3 text-sm font-semibold text-[#06080f] transition-all hover:bg-[#00cc8e] hover:shadow-[0_0_28px_rgba(0,229,160,0.35)]"
+          >
+            {mode === 'signin' ? 'Launch Session' : 'Create Account'}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+
+          <p
+            className="pt-1 text-center text-[11px] uppercase tracking-[0.16em] text-[#64748b]"
+            style={{ fontFamily: 'var(--font-jetbrains)' }}
+          >
+            Encrypted authentication. No spam.
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 /* -------------------------------------------------------------------------- */
 /*  MAIN PAGE COMPONENT                                                        */
 /* -------------------------------------------------------------------------- */
 export default function DarkCommandCenter() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
+
+  const openAuth = (mode: AuthMode) => {
+    setAuthMode(mode);
+    setIsAuthOpen(true);
+    setMobileMenuOpen(false);
+  };
 
   // Scroll detection for navbar
   useEffect(() => {
@@ -326,6 +489,23 @@ export default function DarkCommandCenter() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthOpen) return undefined;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsAuthOpen(false);
+    };
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isAuthOpen]);
 
   // Section reveal hooks
   const heroReveal = useSectionReveal();
@@ -385,16 +565,21 @@ export default function DarkCommandCenter() {
 
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-4">
-              <button className="text-sm text-[#64748b] hover:text-[#e2e8f0] transition-colors">
+              <button
+                type="button"
+                onClick={() => openAuth('signin')}
+                className="text-sm text-[#64748b] hover:text-[#e2e8f0] transition-colors"
+              >
                 Log in
               </button>
-              <a
-                href="#cta"
+              <button
+                type="button"
+                onClick={() => openAuth('signup')}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#00e5a0] text-[#06080f] hover:bg-[#00cc8e] transition-colors"
               >
                 Get Started
                 <ChevronRight className="w-4 h-4" />
-              </a>
+              </button>
             </div>
 
             {/* Mobile menu button */}
@@ -448,17 +633,21 @@ export default function DarkCommandCenter() {
                 Pricing
               </a>
               <div className="pt-2 border-t border-[#1e2736] flex flex-col gap-3">
-                <button className="text-sm text-[#64748b] hover:text-[#e2e8f0] text-left py-1">
+                <button
+                  type="button"
+                  onClick={() => openAuth('signin')}
+                  className="text-sm text-[#64748b] hover:text-[#e2e8f0] text-left py-1"
+                >
                   Log in
                 </button>
-                <a
-                  href="#cta"
-                  onClick={() => setMobileMenuOpen(false)}
+                <button
+                  type="button"
+                  onClick={() => openAuth('signup')}
                   className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#00e5a0] text-[#06080f]"
                 >
                   Get Started
                   <ChevronRight className="w-4 h-4" />
-                </a>
+                </button>
               </div>
             </div>
           )}
@@ -540,13 +729,14 @@ export default function DarkCommandCenter() {
 
               {/* CTAs */}
               <div className="flex flex-wrap items-center gap-4 mb-10">
-                <a
-                  href="#cta"
+                <button
+                  type="button"
+                  onClick={() => openAuth('signup')}
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold bg-[#00e5a0] text-[#06080f] hover:bg-[#00cc8e] transition-all hover:shadow-[0_0_24px_rgba(0,229,160,0.25)]"
                 >
                   Start Building — Free
                   <ArrowRight className="w-4 h-4" />
-                </a>
+                </button>
                 <button className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold border border-[#1e2736] text-[#e2e8f0] hover:border-[#00e5a0]/40 hover:text-[#00e5a0] transition-all">
                   <Play className="w-4 h-4" />
                   Watch Demo
@@ -1000,7 +1190,10 @@ export default function DarkCommandCenter() {
 
                 {/* Email form */}
                 <form
-                  onSubmit={(e) => e.preventDefault()}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    openAuth('signup');
+                  }}
                   className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-md mx-auto mb-4"
                 >
                   <input
@@ -1098,6 +1291,13 @@ export default function DarkCommandCenter() {
           </div>
         </div>
       </footer>
+
+      <HomeOneAuthModal
+        isOpen={isAuthOpen}
+        mode={authMode}
+        onModeChange={setAuthMode}
+        onClose={() => setIsAuthOpen(false)}
+      />
     </div>
   );
 }

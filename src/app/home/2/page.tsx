@@ -15,6 +15,8 @@ import {
   Star,
   ChevronRight,
   Leaf,
+  Mail,
+  Lock,
 } from 'lucide-react';
 import { Fraunces, DM_Sans } from 'next/font/google';
 
@@ -71,10 +73,196 @@ const templatePreviews = [
   { name: 'Creative', accent: '#c96442' },
 ];
 
+type AuthMode = 'signin' | 'signup';
+
+const HomeTwoAuthModal = ({
+  isOpen,
+  mode,
+  onModeChange,
+  onClose,
+}: {
+  isOpen: boolean;
+  mode: AuthMode;
+  onModeChange: (mode: AuthMode) => void;
+  onClose: () => void;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center px-4 py-8">
+      <button
+        type="button"
+        className="absolute inset-0 bg-[rgba(44,24,16,0.55)] backdrop-blur-sm"
+        onClick={onClose}
+        aria-label="Close login modal"
+      />
+
+      <div className="relative w-full max-w-lg overflow-hidden rounded-[32px] border border-[#eadfce] bg-[#fffaf4] shadow-[0_30px_70px_rgba(44,24,16,0.25)]">
+        <div className="pointer-events-none absolute inset-0">
+          <div
+            className="absolute -left-12 -top-16 h-44 w-44 opacity-70"
+            style={{
+              backgroundColor: '#f3e7d9',
+              borderRadius: '62% 38% 56% 44% / 52% 41% 59% 48%',
+            }}
+          />
+          <div
+            className="absolute -right-10 -bottom-10 h-40 w-40 opacity-65"
+            style={{
+              backgroundColor: '#e6efe7',
+              borderRadius: '57% 43% 31% 69% / 42% 53% 47% 58%',
+            }}
+          />
+        </div>
+
+        <div className="relative px-6 pt-7 pb-5 sm:px-8">
+          <div className="mb-5 flex items-start justify-between">
+            <div>
+              <p
+                className="text-xs font-semibold tracking-[0.24em] uppercase"
+                style={{ color: '#2d5a3d' }}
+              >
+                Welcome Back
+              </p>
+              <h3
+                className="mt-1 text-3xl font-bold leading-tight"
+                style={{
+                  color: '#2c1810',
+                  fontFamily: 'var(--font-fraunces), serif',
+                }}
+              >
+                {mode === 'signin' ? 'Let’s pick up where you left off.' : 'Create your ResuMate account.'}
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full px-3 py-1.5 text-xs font-semibold"
+              style={{ color: '#8b7355', backgroundColor: '#f4ecdf' }}
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="inline-flex rounded-full p-1" style={{ backgroundColor: '#f2e8da' }}>
+            <button
+              type="button"
+              onClick={() => onModeChange('signin')}
+              className="rounded-full px-4 py-2 text-xs font-semibold transition-colors"
+              style={{
+                backgroundColor: mode === 'signin' ? '#ffffff' : 'transparent',
+                color: mode === 'signin' ? '#2c1810' : '#8b7355',
+              }}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => onModeChange('signup')}
+              className="rounded-full px-4 py-2 text-xs font-semibold transition-colors"
+              style={{
+                backgroundColor: mode === 'signup' ? '#ffffff' : 'transparent',
+                color: mode === 'signup' ? '#2c1810' : '#8b7355',
+              }}
+            >
+              Sign Up
+            </button>
+          </div>
+        </div>
+
+        <form
+          onSubmit={(event) => event.preventDefault()}
+          className="relative space-y-4 px-6 pb-7 sm:px-8 sm:pb-8"
+        >
+          {mode === 'signup' && (
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium" style={{ color: '#8b7355' }}>
+                Full Name
+              </span>
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: '#8b7355' }} />
+                <input
+                  type="text"
+                  placeholder="Jordan Lee"
+                  className="w-full rounded-2xl border px-10 py-3 text-sm outline-none transition-all"
+                  style={{
+                    borderColor: '#eadfce',
+                    backgroundColor: '#ffffff',
+                    color: '#2c1810',
+                  }}
+                />
+              </div>
+            </label>
+          )}
+
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium" style={{ color: '#8b7355' }}>
+              Email Address
+            </span>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: '#8b7355' }} />
+              <input
+                type="email"
+                placeholder="you@example.com"
+                className="w-full rounded-2xl border px-10 py-3 text-sm outline-none transition-all"
+                style={{
+                  borderColor: '#eadfce',
+                  backgroundColor: '#ffffff',
+                  color: '#2c1810',
+                }}
+              />
+            </div>
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium" style={{ color: '#8b7355' }}>
+              Password
+            </span>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: '#8b7355' }} />
+              <input
+                type="password"
+                placeholder="••••••••"
+                className="w-full rounded-2xl border px-10 py-3 text-sm outline-none transition-all"
+                style={{
+                  borderColor: '#eadfce',
+                  backgroundColor: '#ffffff',
+                  color: '#2c1810',
+                }}
+              />
+            </div>
+          </label>
+
+          <button
+            type="submit"
+            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg"
+            style={{ backgroundColor: '#c96442' }}
+          >
+            {mode === 'signin' ? 'Continue' : 'Create Account'}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+
+          <p className="text-center text-xs font-medium" style={{ color: '#8b7355' }}>
+            By continuing, you agree to our terms and privacy policy.
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Page Component ─────────────────────────────────────
 export default function HomePageTwo() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>('signin');
+
+  const openAuth = (mode: AuthMode) => {
+    setAuthMode(mode);
+    setIsAuthOpen(true);
+    setMobileMenuOpen(false);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -83,6 +271,23 @@ export default function HomePageTwo() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthOpen) return undefined;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsAuthOpen(false);
+    };
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isAuthOpen]);
 
   return (
     <div
@@ -140,22 +345,24 @@ export default function HomePageTwo() {
 
             {/* Desktop CTA */}
             <div className="hidden items-center gap-4 md:flex">
-              <a
-                href="#"
+              <button
+                type="button"
+                onClick={() => openAuth('signin')}
                 className="text-sm font-medium transition-colors duration-200 hover:opacity-80"
                 style={{ color: '#2c1810' }}
               >
                 Log in
-              </a>
-              <a
-                href="#"
+              </button>
+              <button
+                type="button"
+                onClick={() => openAuth('signup')}
                 className="rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg"
                 style={{
                   backgroundColor: '#c96442',
                 }}
               >
                 Start Free
-              </a>
+              </button>
             </div>
 
             {/* Mobile Menu Toggle */}
@@ -187,16 +394,22 @@ export default function HomePageTwo() {
                   </a>
                 ))}
                 <div className="flex flex-col gap-3 pt-4">
-                  <a href="#" className="text-base font-medium" style={{ color: '#2c1810' }}>
+                  <button
+                    type="button"
+                    onClick={() => openAuth('signin')}
+                    className="text-left text-base font-medium"
+                    style={{ color: '#2c1810' }}
+                  >
                     Log in
-                  </a>
-                  <a
-                    href="#"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openAuth('signup')}
                     className="inline-block rounded-full px-6 py-2.5 text-center text-sm font-semibold text-white"
                     style={{ backgroundColor: '#c96442' }}
                   >
                     Start Free
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
@@ -273,14 +486,15 @@ export default function HomePageTwo() {
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:mt-10">
-              <a
-                href="#"
+              <button
+                type="button"
+                onClick={() => openAuth('signup')}
                 className="group inline-flex items-center gap-2 rounded-full px-8 py-4 text-base font-semibold text-white shadow-lg transition-all duration-300 hover:shadow-xl"
                 style={{ backgroundColor: '#c96442' }}
               >
                 Create Your Resume
                 <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
-              </a>
+              </button>
             </div>
 
             {/* Trust Bar */}
@@ -1000,8 +1214,9 @@ export default function HomePageTwo() {
             resume that truly represents them.
           </p>
           <div className="mt-8 flex flex-col items-center gap-4 md:mt-10">
-            <a
-              href="#"
+            <button
+              type="button"
+              onClick={() => openAuth('signup')}
               className="group inline-flex items-center gap-2 rounded-full px-10 py-4 text-base font-bold shadow-lg transition-all duration-300 hover:shadow-xl"
               style={{
                 backgroundColor: '#ffffff',
@@ -1010,7 +1225,7 @@ export default function HomePageTwo() {
             >
               Get Started — It&apos;s Free
               <ChevronRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
-            </a>
+            </button>
             <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
               No credit card needed &middot; Cancel anytime
             </p>
@@ -1138,6 +1353,13 @@ export default function HomePageTwo() {
           </div>
         </div>
       </footer>
+
+      <HomeTwoAuthModal
+        isOpen={isAuthOpen}
+        mode={authMode}
+        onModeChange={setAuthMode}
+        onClose={() => setIsAuthOpen(false)}
+      />
     </div>
   );
 }
