@@ -11,7 +11,13 @@ import pypdfium2 as pdfium
 from openai import BadRequestError, OpenAI
 
 from app.core.config import settings
-from app.schemas.onboarding import ResumeAnalysisBullet, ResumeAnalysisResult, ResumeAnalysisRole
+from app.schemas.onboarding import (
+    ResumeAnalysisBullet,
+    ResumeAnalysisCategoryScores,
+    ResumeAnalysisResult,
+    ResumeAnalysisRole,
+    ResumeAnalysisSectionScores,
+)
 
 RESUME_ANALYSIS_PROMPT = """
 You are a senior resume strategist combining ATS screening expertise and hiring-manager judgment.
@@ -47,6 +53,18 @@ JSON schema:
   "candidate_headline": "string",
   "summary": "string",
   "ats_score_estimate": 0,
+  "category_scores": {
+    "impact": 0,
+    "brevity": 0,
+    "style": 0,
+    "soft_skills": 0
+  },
+  "section_scores": {
+    "headline": 0,
+    "summary": 0,
+    "experience": 0,
+    "education": 0
+  },
   "strengths": ["string"],
   "gaps": ["string"],
   "priority_fixes": ["string"],
@@ -67,6 +85,8 @@ QUALITY TARGETS:
 - keywords_to_add: 8-15
 - recommended_roles: 3-5
 - improved_bullets: 4-8
+- category_scores fields: integer 0-100
+- section_scores fields: integer 0-10
 
 STYLE:
 - Prefer concrete hiring language and ATS keywords.
@@ -238,20 +258,32 @@ def _as_string_list(value: Any) -> list[str]:
     return output
 
 
+def _bounded_int(value: Any, min_value: int, max_value: int) -> int | None:
+    if isinstance(value, bool):
+        return None
+
+    candidate = value
+    if isinstance(candidate, str):
+        trimmed = candidate.strip()
+        if trimmed.isdigit():
+            candidate = int(trimmed)
+        else:
+            return None
+    elif isinstance(candidate, float):
+        candidate = int(round(candidate))
+
+    if not isinstance(candidate, int):
+        return None
+
+    return max(min_value, min(max_value, candidate))
+
+
 def _build_analysis_result(parsed_json: dict[str, Any] | None, raw_text: str) -> ResumeAnalysisResult:
     if not isinstance(parsed_json, dict):
         fallback_summary = raw_text.strip()[:1800] if raw_text else "No analysis details returned by model."
         return ResumeAnalysisResult(summary=fallback_summary, raw_response=raw_text, analyzed_at=datetime.now(timezone.utc))
 
-    ats_score = parsed_json.get("ats_score_estimate")
-    if isinstance(ats_score, str) and ats_score.isdigit():
-        ats_score = int(ats_score)
-    if isinstance(ats_score, float):
-        ats_score = int(round(ats_score))
-    if not isinstance(ats_score, int):
-        ats_score = None
-    if isinstance(ats_score, int):
-        ats_score = max(0, min(100, ats_score))
+    ats_score = _bounded_int(parsed_json.get("ats_score_estimate"), min_value=0, max_value=100)
 
     roles_payload = parsed_json.get("recommended_roles")
     roles: list[ResumeAnalysisRole] = []
@@ -275,10 +307,32 @@ def _build_analysis_result(parsed_json: dict[str, Any] | None, raw_text: str) ->
             if isinstance(original, str) and original.strip() and isinstance(improved, str) and improved.strip():
                 bullets.append(ResumeAnalysisBullet(original=original.strip(), improved=improved.strip()))
 
+    category_scores_payload = parsed_json.get("category_scores")
+    category_scores: ResumeAnalysisCategoryScores | None = None
+    if isinstance(category_scores_payload, dict):
+        category_scores = ResumeAnalysisCategoryScores(
+            impact=_bounded_int(category_scores_payload.get("impact"), min_value=0, max_value=100),
+            brevity=_bounded_int(category_scores_payload.get("brevity"), min_value=0, max_value=100),
+            style=_bounded_int(category_scores_payload.get("style"), min_value=0, max_value=100),
+            soft_skills=_bounded_int(category_scores_payload.get("soft_skills"), min_value=0, max_value=100),
+        )
+
+    section_scores_payload = parsed_json.get("section_scores")
+    section_scores: ResumeAnalysisSectionScores | None = None
+    if isinstance(section_scores_payload, dict):
+        section_scores = ResumeAnalysisSectionScores(
+            headline=_bounded_int(section_scores_payload.get("headline"), min_value=0, max_value=10),
+            summary=_bounded_int(section_scores_payload.get("summary"), min_value=0, max_value=10),
+            experience=_bounded_int(section_scores_payload.get("experience"), min_value=0, max_value=10),
+            education=_bounded_int(section_scores_payload.get("education"), min_value=0, max_value=10),
+        )
+
     return ResumeAnalysisResult(
         candidate_headline=parsed_json.get("candidate_headline") if isinstance(parsed_json.get("candidate_headline"), str) else None,
         summary=parsed_json.get("summary") if isinstance(parsed_json.get("summary"), str) else None,
         ats_score_estimate=ats_score,
+        category_scores=category_scores,
+        section_scores=section_scores,
         strengths=_as_string_list(parsed_json.get("strengths")),
         gaps=_as_string_list(parsed_json.get("gaps")),
         priority_fixes=_as_string_list(parsed_json.get("priority_fixes")),

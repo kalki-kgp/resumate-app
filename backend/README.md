@@ -36,6 +36,16 @@ alembic upgrade head
 - `POST /api/v1/onboarding/back-to-options`
 - `POST /api/v1/onboarding/skip`
 
+## Dashboard APIs
+
+- `GET /api/v1/dashboard`
+
+## Resume APIs
+
+- `GET /api/v1/resumes/{resume_id}/thumbnail`
+
+Uploaded resumes are persisted in PostgreSQL (`resumes` table) and stored on disk under `uploads/resumes/<user_id>/`.
+
 ## AI Analysis Setup
 
 Set `NEBIUS_API_KEY` in `backend/.env` (or docker environment) to enable `/api/v1/onboarding/analyze-resume`.

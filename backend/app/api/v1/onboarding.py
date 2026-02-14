@@ -1,6 +1,3 @@
-import re
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -17,11 +14,11 @@ from app.services.resume_analysis import (
     ResumeAnalysisError,
     analyze_resume_with_nebius,
     clear_latest_analysis_result,
-    latest_resume_pdf_path,
     load_latest_analysis_result,
     pdf_to_base64_png_images,
     save_latest_analysis_result,
 )
+from app.services.resumes import latest_user_resume, save_user_uploaded_resume, set_resume_analysis, resolve_storage_path
 from app.services.onboarding import (
     advance_step,
     back_to_options,
@@ -125,11 +122,12 @@ async def onboarding_upload_resume(
             detail="Invalid PDF file format",
         )
 
-    safe_basename = re.sub(r"[^a-zA-Z0-9._-]+", "_", Path(filename).name)
-    upload_dir = Path(settings.UPLOAD_DIR) / "resumes" / str(current_user.id)
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    destination = upload_dir / safe_basename
-    destination.write_bytes(content)
+    save_user_uploaded_resume(
+        db=db,
+        user_id=current_user.id,
+        original_filename=filename,
+        content=content,
+    )
     await file.close()
     clear_latest_analysis_result(current_user.id)
 
@@ -145,12 +143,13 @@ def onboarding_analyze_resume(
     progress = get_or_create_onboarding_progress(db, current_user)
     ensure_analysis_step_active(progress)
 
-    resume_pdf_path = latest_resume_pdf_path(current_user.id)
-    if resume_pdf_path is None:
+    latest_resume = latest_user_resume(db, current_user.id)
+    if latest_resume is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="No uploaded resume found. Upload a resume first.",
         )
+    resume_pdf_path = resolve_storage_path(latest_resume.file_path)
 
     try:
         page_images = pdf_to_base64_png_images(
@@ -164,6 +163,7 @@ def onboarding_analyze_resume(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Analysis failed: {exc}") from exc
 
     save_latest_analysis_result(current_user.id, resume_pdf_path, analysis)
+    set_resume_analysis(db, latest_resume, analysis)
 
     target_role = analysis.recommended_roles[0].title if analysis.recommended_roles else None
     progress = advance_step(db, progress, step_index=1, target_role=target_role)
