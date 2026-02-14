@@ -1,0 +1,70 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: resumate-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: resumate
+      POSTGRES_PASSWORD: resumate
+      POSTGRES_DB: resumate
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resumate -d resumate"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: resumate-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      PROJECT_NAME: ResuMate API
+      VERSION: 0.1.0
+      DATABASE_URL: postgresql+psycopg://resumate:resumate@db:5432/resumate
+      BACKEND_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      AUTH_SESSION_TTL_HOURS: 720
+      UPLOAD_DIR: uploads
+      MAX_RESUME_UPLOAD_SIZE_MB: 8
+      NEBIUS_BASE_URL: https://api.tokenfactory.nebius.com/v1/
+      NEBIUS_MODEL: google/gemma-3-27b-it-fast
+      RESUME_ANALYSIS_MAX_PAGES: 2
+      RESUME_ANALYSIS_MAX_TOKENS: 1200
+      RESUME_ANALYSIS_TEMPERATURE: 0.35
+      RESUME_ANALYSIS_TOP_P: 0.9
+      RESUME_ANALYSIS_TOP_K: 50
+      RESUME_RENDER_SCALE: 1.6
+      RESUME_RENDER_MAX_WIDTH: 1400
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: resumate-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  backend_uploads:
