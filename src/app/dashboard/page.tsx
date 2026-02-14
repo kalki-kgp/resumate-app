@@ -133,6 +133,7 @@ type DashboardResume = {
 };
 
 type UploadResumeResponse = DashboardResume;
+type AnalyzeDashboardResumeResponse = DashboardResume;
 
 type DashboardResponse = {
   display_name: string;
@@ -302,6 +303,7 @@ export default function DashboardTwoPage() {
   const [selectedResumeFile, setSelectedResumeFile] = useState<File | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [isResumeUploadBusy, setIsResumeUploadBusy] = useState(false);
+  const [isResumeAnalysisBusy, setIsResumeAnalysisBusy] = useState(false);
   const [dashboardNotice, setDashboardNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const workspaceUploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -461,6 +463,9 @@ export default function DashboardTwoPage() {
 
   const hasSelectedResume = Boolean(selectedDashboardResume);
   const selectedDashboardAnalysis = selectedDashboardResume?.analysis ?? null;
+  const hasSelectedAnalysis = Boolean(
+    selectedDashboardAnalysis && selectedDashboardAnalysis.ats_score_estimate !== null
+  );
 
   const atsScore = clamp(Math.round(selectedDashboardAnalysis?.ats_score_estimate ?? 0), 0, 100);
   const ringStyle = {
@@ -809,6 +814,44 @@ export default function DashboardTwoPage() {
     }
   };
 
+  const analyzeSelectedResume = async () => {
+    if (!token || !selectedDashboardResume) {
+      setDashboardNotice('Select a resume first.');
+      return;
+    }
+
+    setDashboardNotice(null);
+    setIsResumeAnalysisBusy(true);
+    try {
+      const updatedResume = await apiRequest<AnalyzeDashboardResumeResponse>(
+        `/api/v1/resumes/${selectedDashboardResume.id}/analyze`,
+        {
+          method: 'POST',
+          token,
+        }
+      );
+
+      setDashboardResumes((previous) => previous.map((resume) => (
+        resume.id === updatedResume.id ? updatedResume : resume
+      )));
+      setSelectedDashboardResumeId(updatedResume.id);
+      setDashboardNotice(`Analysis complete for ${updatedResume.title}.`);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          clearStoredAccessToken();
+          router.replace('/');
+          return;
+        }
+        setDashboardNotice(error.detail);
+      } else {
+        setDashboardNotice('Could not analyze this resume right now. Please try again.');
+      }
+    } finally {
+      setIsResumeAnalysisBusy(false);
+    }
+  };
+
   const renderStepDetails = () => {
     if (!currentOnboardingStep) return null;
 
@@ -1082,6 +1125,40 @@ export default function DashboardTwoPage() {
   };
 
   const renderDashboardSection = () => {
+    const renderNoResumeState = (message: string, hint: string) => (
+      <div className="rounded-2xl border border-dashed border-[#d9dee5] bg-[#fafbfd] px-4 py-8 text-center">
+        <p className="text-sm font-semibold text-[#2b313b]">{message}</p>
+        <p className="mt-1 text-xs text-[#8a909b]">{hint}</p>
+      </div>
+    );
+
+    const renderNeedsAnalysisState = (message: string, hint: string) => (
+      <div className="rounded-2xl border border-dashed border-[#d9dee5] bg-[#fafbfd] px-4 py-8 text-center">
+        <p className="text-sm font-semibold text-[#2b313b]">{message}</p>
+        <p className="mt-1 text-xs text-[#8a909b]">{hint}</p>
+        <button
+          type="button"
+          onClick={() => {
+            void analyzeSelectedResume();
+          }}
+          disabled={isResumeAnalysisBusy || !selectedDashboardResume}
+          className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#ff8b2f] px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isResumeAnalysisBusy ? (
+            <>
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              Analyze Resume
+              <ArrowRight className="h-3.5 w-3.5" />
+            </>
+          )}
+        </button>
+      </div>
+    );
+
     if (activeSection === 'overview') {
       return (
         <>
@@ -1227,9 +1304,18 @@ export default function DashboardTwoPage() {
                 {selectedDashboardResume ? `Selected: ${selectedDashboardResume.title}` : 'Select a resume to inspect'}
               </p>
               {!hasSelectedResume ? (
-                <div className="mt-4 rounded-2xl border border-dashed border-[#d9dee5] bg-[#fafbfd] px-4 py-8 text-center">
-                  <p className="text-sm font-semibold text-[#2b313b]">Select a resume to view ATS details</p>
-                  <p className="mt-1 text-xs text-[#8a909b]">Upload a resume or pick one from the Recently Opened list.</p>
+                <div className="mt-4">
+                  {renderNoResumeState(
+                    'Select a resume to view ATS details',
+                    'Upload a resume or pick one from the Recently Opened list.'
+                  )}
+                </div>
+              ) : !hasSelectedAnalysis ? (
+                <div className="mt-4">
+                  {renderNeedsAnalysisState(
+                    'This resume has not been analyzed yet',
+                    'Run AI analysis to generate ATS score, category breakdown, and section insights.'
+                  )}
                 </div>
               ) : (
                 <>
@@ -1360,7 +1446,27 @@ export default function DashboardTwoPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-xl border border-[#e6e9ed] bg-[#fbfcfd] px-3 py-2">
                     <p className="text-xs text-[#8a909b]">ATS Score</p>
-                    <p className="text-2xl font-black text-[#2d8b46]">{selectedDashboardResume.analysis?.ats_score_estimate ?? '--'}%</p>
+                    {hasSelectedAnalysis ? (
+                      <p className="text-2xl font-black text-[#2d8b46]">{selectedDashboardResume.analysis?.ats_score_estimate}%</p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void analyzeSelectedResume();
+                        }}
+                        disabled={isResumeAnalysisBusy}
+                        className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#ff8b2f] px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60"
+                      >
+                        {isResumeAnalysisBusy ? (
+                          <>
+                            <LoaderCircle className="h-3 w-3 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          'Analyze Resume'
+                        )}
+                      </button>
+                    )}
                   </div>
                   <div className="rounded-xl border border-[#e6e9ed] bg-[#fbfcfd] px-3 py-2">
                     <p className="text-xs text-[#8a909b]">Target Role</p>
@@ -1419,6 +1525,18 @@ export default function DashboardTwoPage() {
     }
 
     if (activeSection === 'analytics') {
+      if (!hasSelectedResume) {
+        return renderNoResumeState(
+          'Select a resume to view analytics',
+          'Choose one from My Resumes to load category and section performance.'
+        );
+      }
+      if (!hasSelectedAnalysis) {
+        return renderNeedsAnalysisState(
+          'No analytics available yet',
+          'Analyze the selected resume to unlock score breakdown and priority fixes.'
+        );
+      }
       return (
         <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
           <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
@@ -1458,6 +1576,18 @@ export default function DashboardTwoPage() {
     }
 
     if (activeSection === 'ai-insights') {
+      if (!hasSelectedResume) {
+        return renderNoResumeState(
+          'Select a resume to see AI insights',
+          'Pick any resume first to inspect strengths, gaps, and keywords.'
+        );
+      }
+      if (!hasSelectedAnalysis) {
+        return renderNeedsAnalysisState(
+          'Insights are locked for this resume',
+          'Run AI analysis to generate strengths, gaps, and keyword recommendations.'
+        );
+      }
       return (
         <section className="grid gap-4 xl:grid-cols-3">
           <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4 xl:col-span-1">
@@ -1491,6 +1621,18 @@ export default function DashboardTwoPage() {
     }
 
     if (activeSection === 'job-match') {
+      if (!hasSelectedResume) {
+        return renderNoResumeState(
+          'Select a resume to view role matches',
+          'Choose one from your library to load role fit recommendations.'
+        );
+      }
+      if (!hasSelectedAnalysis) {
+        return renderNeedsAnalysisState(
+          'Role matching needs analysis first',
+          'Analyze this resume to generate job-fit role suggestions.'
+        );
+      }
       const roleCards = recommendedRoles.length > 0
         ? recommendedRoles.map((role, idx) => ({ ...role, match: Math.max(70, 95 - idx * 6) }))
         : jobOptions.map((job) => ({ title: job.title, reason: job.reason || `${job.company} · ${job.type}`, match: job.match }));
@@ -1515,6 +1657,18 @@ export default function DashboardTwoPage() {
     }
 
     if (activeSection === 'ai-assistant') {
+      if (!hasSelectedResume) {
+        return renderNoResumeState(
+          'Select a resume to use AI Assistant',
+          'Pick a resume first to load prompts and rewrite suggestions.'
+        );
+      }
+      if (!hasSelectedAnalysis) {
+        return renderNeedsAnalysisState(
+          'Assistant suggestions need analysis',
+          'Analyze this resume to generate improved bullet rewrites and tailored prompt context.'
+        );
+      }
       return (
         <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
           <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
