@@ -44,8 +44,10 @@ alembic upgrade head
 
 - `POST /api/v1/resumes/upload`
 - `GET /api/v1/resumes/{resume_id}/thumbnail`
+- `POST /api/v1/resumes/{resume_id}/analyze`
 
 Uploaded resumes are persisted in PostgreSQL (`resumes` table) and stored on disk under `uploads/resumes/<user_id>/`.
+When running with Docker Compose, persist `/app/uploads` using a named volume (configured as `backend_uploads` in `docker-compose.yml`) so thumbnails and PDFs survive container restarts.
 
 ## AI Analysis Setup
 
