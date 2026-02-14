@@ -42,6 +42,7 @@ alembic upgrade head
 
 ## Resume APIs
 
+- `POST /api/v1/resumes/upload`
 - `GET /api/v1/resumes/{resume_id}/thumbnail`
 
 Uploaded resumes are persisted in PostgreSQL (`resumes` table) and stored on disk under `uploads/resumes/<user_id>/`.

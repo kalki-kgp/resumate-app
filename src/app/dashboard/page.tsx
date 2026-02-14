@@ -26,6 +26,8 @@ import {
   WandSparkles,
 } from 'lucide-react';
 import { ApiError, apiRequest, clearStoredAccessToken, getApiBaseUrl, getStoredAccessToken } from '@/lib/api';
+import { TemplatePreview } from '@/app/editor/_components';
+import type { ResumeData, TemplateType } from '@/types';
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -130,6 +132,8 @@ type DashboardResume = {
   thumbnail_url: string | null;
 };
 
+type UploadResumeResponse = DashboardResume;
+
 type DashboardResponse = {
   display_name: string;
   target_role: string | null;
@@ -185,6 +189,49 @@ const exampleJobs: ExampleJob[] = [
   { id: 'j2', title: 'Design Systems Lead', company: 'Airbnb', match: 89, type: 'Hybrid' },
   { id: 'j3', title: 'Principal UX Designer', company: 'Stripe', match: 86, type: 'Remote' },
 ];
+
+const templateCards: { id: TemplateType; name: string; tone: string }[] = [
+  { id: 'modern', name: 'Modern', tone: 'Balanced hierarchy for product and tech roles.' },
+  { id: 'classic', name: 'Classic', tone: 'Sharper structure for leadership and consulting applications.' },
+  { id: 'creative', name: 'Creative', tone: 'Expressive style for design and brand-facing positions.' },
+  { id: 'minimal', name: 'Minimal', tone: 'Compact high-signal format for recruiter scans.' },
+];
+
+const templatePreviewData: ResumeData = {
+  personal: {
+    fullName: 'Alex Morgan',
+    role: 'Senior Product Designer',
+    email: 'alex@resumate.ai',
+    phone: '+1 (555) 908-1102',
+    location: 'San Francisco, CA',
+    summary: 'Product designer focused on shipping user-centered, measurable outcomes.',
+  },
+  experience: [
+    {
+      id: 1,
+      role: 'Senior Product Designer',
+      company: 'Figma',
+      date: '2021 - Present',
+      description: 'Led onboarding redesign and improved activation metrics by 24%.',
+    },
+    {
+      id: 2,
+      role: 'Product Designer',
+      company: 'Notion',
+      date: '2018 - 2021',
+      description: 'Built design systems and workflow features for distributed teams.',
+    },
+  ],
+  education: [
+    {
+      id: 1,
+      degree: 'B.S. in HCI',
+      school: 'UC San Diego',
+      date: '2014 - 2018',
+    },
+  ],
+  skills: ['Figma', 'Product Strategy', 'UX Research', 'Design Systems', 'Prototyping'],
+};
 
 const sidebarPrimaryItems = [
   { key: 'overview', label: 'Overview', icon: LayoutGrid },
@@ -254,7 +301,10 @@ export default function DashboardTwoPage() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedResumeFile, setSelectedResumeFile] = useState<File | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [isResumeUploadBusy, setIsResumeUploadBusy] = useState(false);
+  const [dashboardNotice, setDashboardNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const workspaceUploadInputRef = useRef<HTMLInputElement | null>(null);
   const analysisTimerRef = useRef<number | null>(null);
 
   const stopAnalysisAnimation = useCallback(() => {
@@ -409,7 +459,8 @@ export default function DashboardTwoPage() {
     return dashboardResumes.find((resume) => resume.id === selectedDashboardResumeId) ?? dashboardResumes[0];
   }, [dashboardResumes, selectedDashboardResumeId]);
 
-  const selectedDashboardAnalysis = selectedDashboardResume?.analysis ?? analysisResult;
+  const hasSelectedResume = Boolean(selectedDashboardResume);
+  const selectedDashboardAnalysis = selectedDashboardResume?.analysis ?? null;
 
   const atsScore = clamp(Math.round(selectedDashboardAnalysis?.ats_score_estimate ?? 0), 0, 100);
   const ringStyle = {
@@ -709,6 +760,52 @@ export default function DashboardTwoPage() {
       }
     } finally {
       setIsOnboardingBusy(false);
+    }
+  };
+
+  const openWorkspaceUploadPicker = () => {
+    workspaceUploadInputRef.current?.click();
+  };
+
+  const uploadResumeFromDashboard = async (file: File | null) => {
+    if (!file || !token) return;
+    if (!isPdfFile(file)) {
+      setDashboardNotice('Please upload a PDF file.');
+      return;
+    }
+
+    setDashboardNotice(null);
+    setIsResumeUploadBusy(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('source', 'dashboard');
+
+      const created = await apiRequest<UploadResumeResponse>('/api/v1/resumes/upload', {
+        method: 'POST',
+        token,
+        body: formData,
+      });
+
+      setSelectedDashboardResumeId(created.id);
+      await fetchDashboardData();
+      setDashboardNotice('Resume uploaded to My Resumes.');
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          clearStoredAccessToken();
+          router.replace('/');
+          return;
+        }
+        setDashboardNotice(error.detail);
+      } else {
+        setDashboardNotice('Upload failed. Please try again.');
+      }
+    } finally {
+      setIsResumeUploadBusy(false);
+      if (workspaceUploadInputRef.current) {
+        workspaceUploadInputRef.current.value = '';
+      }
     }
   };
 
@@ -1031,10 +1128,25 @@ export default function DashboardTwoPage() {
                   </h2>
                   <p className="text-xs text-[#8a909b]">Uploaded resumes from onboarding are available here.</p>
                 </div>
-                <div className="rounded-full border border-[#e1e4e8] bg-[#f8f9fb] px-3 py-1 text-xs text-[#717987]">
-                  All Files
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={openWorkspaceUploadPicker}
+                    disabled={isResumeUploadBusy}
+                    className="rounded-full border border-[#e1e4e8] bg-white px-3 py-1 text-xs font-semibold text-[#626a77] hover:bg-[#f8f9fb] disabled:opacity-60"
+                  >
+                    {isResumeUploadBusy ? 'Uploading...' : 'Upload Resume'}
+                  </button>
+                  <div className="rounded-full border border-[#e1e4e8] bg-[#f8f9fb] px-3 py-1 text-xs text-[#717987]">
+                    All Files
+                  </div>
                 </div>
               </div>
+              {dashboardNotice && (
+                <div className="mb-3 rounded-xl border border-[#e5e8ec] bg-[#f9fafb] px-3 py-2 text-xs text-[#646c79]">
+                  {dashboardNotice}
+                </div>
+              )}
 
               {isDashboardLoading ? (
                 <div className="rounded-xl border border-[#e8ebf0] bg-[#fafbfd] px-4 py-8 text-center text-sm text-[#7d8694]">
@@ -1044,6 +1156,13 @@ export default function DashboardTwoPage() {
                 <div className="rounded-xl border border-dashed border-[#d8dde4] bg-[#fafbfd] px-4 py-8 text-center">
                   <p className="text-sm font-semibold text-[#2b313c]">No resume uploaded yet</p>
                   <p className="mt-1 text-xs text-[#8a909b]">Upload your resume in onboarding to see it here.</p>
+                  <button
+                    type="button"
+                    onClick={openWorkspaceUploadPicker}
+                    className="mt-3 rounded-full border border-[#dfe4eb] bg-white px-3 py-1.5 text-xs font-semibold text-[#3b4352] hover:bg-[#f8fafc]"
+                  >
+                    Upload your first resume
+                  </button>
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -1107,52 +1226,60 @@ export default function DashboardTwoPage() {
               <p className="mt-1 text-sm text-[#6c7280]">
                 {selectedDashboardResume ? `Selected: ${selectedDashboardResume.title}` : 'Select a resume to inspect'}
               </p>
-
-              <div className="mx-auto mt-5 flex h-48 w-48 items-center justify-center rounded-full p-3" style={ringStyle}>
-                <div className="flex h-full w-full items-center justify-center rounded-full bg-white text-5xl font-black text-[#1d2619]">
-                  {atsScore}%
+              {!hasSelectedResume ? (
+                <div className="mt-4 rounded-2xl border border-dashed border-[#d9dee5] bg-[#fafbfd] px-4 py-8 text-center">
+                  <p className="text-sm font-semibold text-[#2b313b]">Select a resume to view ATS details</p>
+                  <p className="mt-1 text-xs text-[#8a909b]">Upload a resume or pick one from the Recently Opened list.</p>
                 </div>
-              </div>
-
-              <p className="mt-4 text-center text-sm font-semibold text-[#2a3039]">
-                Your resume scored {atsScore} out of 100
-              </p>
-
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                {[
-                  { key: 'impact', label: 'Impact', value: categoryScores.impact },
-                  { key: 'brevity', label: 'Brevity', value: categoryScores.brevity },
-                  { key: 'style', label: 'Style', value: categoryScores.style },
-                  { key: 'soft-skills', label: 'Soft Skills', value: categoryScores.softSkills },
-                ].map((item) => {
-                  const badge = getCategoryBadge(item.value);
-                  return (
-                    <div key={item.key} className="rounded-xl border border-[#e6e8eb] bg-[#fbfcfd] px-3 py-2">
-                      <p className="text-xs font-semibold text-[#6e7583]">{item.label}</p>
-                      <div className="mt-1 flex items-center justify-between">
-                        <p className="text-3xl font-bold text-[#181f2a]">{item.value}</p>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${badge.className}`}>
-                          {badge.label}
-                        </span>
-                      </div>
+              ) : (
+                <>
+                  <div className="mx-auto mt-5 flex h-48 w-48 items-center justify-center rounded-full p-3" style={ringStyle}>
+                    <div className="flex h-full w-full items-center justify-center rounded-full bg-white text-5xl font-black text-[#1d2619]">
+                      {atsScore}%
                     </div>
-                  );
-                })}
-              </div>
-
-              <div className="mt-3 space-y-2">
-                {[
-                  { label: 'Headline', value: sectionScores.headline },
-                  { label: 'Summary', value: sectionScores.summary },
-                  { label: 'Experience', value: sectionScores.experience },
-                  { label: 'Education', value: sectionScores.education },
-                ].map((section) => (
-                  <div key={section.label} className="flex items-center justify-between rounded-xl bg-[#f6f7f8] px-3 py-2">
-                    <span className="text-sm font-semibold text-[#303744]">{section.label}</span>
-                    <span className="text-2xl font-bold text-[#ef8a30]">{section.value}/10</span>
                   </div>
-                ))}
-              </div>
+
+                  <p className="mt-4 text-center text-sm font-semibold text-[#2a3039]">
+                    Your resume scored {atsScore} out of 100
+                  </p>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    {[
+                      { key: 'impact', label: 'Impact', value: categoryScores.impact },
+                      { key: 'brevity', label: 'Brevity', value: categoryScores.brevity },
+                      { key: 'style', label: 'Style', value: categoryScores.style },
+                      { key: 'soft-skills', label: 'Soft Skills', value: categoryScores.softSkills },
+                    ].map((item) => {
+                      const badge = getCategoryBadge(item.value);
+                      return (
+                        <div key={item.key} className="rounded-xl border border-[#e6e8eb] bg-[#fbfcfd] px-3 py-2">
+                          <p className="text-xs font-semibold text-[#6e7583]">{item.label}</p>
+                          <div className="mt-1 flex items-center justify-between">
+                            <p className="text-3xl font-bold text-[#181f2a]">{item.value}</p>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${badge.className}`}>
+                              {badge.label}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    {[
+                      { label: 'Headline', value: sectionScores.headline },
+                      { label: 'Summary', value: sectionScores.summary },
+                      { label: 'Experience', value: sectionScores.experience },
+                      { label: 'Education', value: sectionScores.education },
+                    ].map((section) => (
+                      <div key={section.label} className="flex items-center justify-between rounded-xl bg-[#f6f7f8] px-3 py-2">
+                        <span className="text-sm font-semibold text-[#303744]">{section.label}</span>
+                        <span className="text-2xl font-bold text-[#ef8a30]">{section.value}/10</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </article>
           </section>
         </>
@@ -1266,28 +1393,21 @@ export default function DashboardTwoPage() {
 
     if (activeSection === 'templates') {
       return (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {[
-            { name: 'Forma Modern', tone: 'Balanced hierarchy for product and tech roles.' },
-            { name: 'Executive Mono', tone: 'Sharper structure for leadership and consulting applications.' },
-            { name: 'Creative Grid', tone: 'Expressive layout for design and brand-facing positions.' },
-            { name: 'Minimal One-Page', tone: 'Compact high-signal format for quick recruiter scans.' },
-            { name: 'Research Focus', tone: 'Publication and project-forward flow for research roles.' },
-            { name: 'Growth Operator', tone: 'Impact-first format for PMM, growth, and strategy roles.' },
-          ].map((tpl) => (
-            <article key={tpl.name} className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
-              <div className="mb-3 rounded-xl border border-[#eceff3] bg-gradient-to-b from-[#fdfdfd] to-[#f3f5f8] p-4">
-                <div className="space-y-2">
-                  <div className="h-2 w-2/3 rounded-full bg-[#c8cfda]" />
-                  <div className="h-2 w-1/2 rounded-full bg-[#d8dee8]" />
-                  <div className="h-2 w-3/4 rounded-full bg-[#d2d9e4]" />
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {templateCards.map((tpl) => (
+            <article key={tpl.id} className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
+              <div className="mb-3 overflow-hidden rounded-xl border border-[#eceff3] bg-[#f4f6f9]">
+                <div className="origin-top-left scale-[0.62] p-2" style={{ width: '160%', transformOrigin: 'top left' }}>
+                  <TemplatePreview template={tpl.id} data={templatePreviewData} scale={0.12} />
                 </div>
               </div>
-              <p className="text-lg font-semibold text-[#252b34]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>{tpl.name}</p>
+              <p className="text-lg font-semibold text-[#252b34]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+                {tpl.name}
+              </p>
               <p className="mt-1 text-sm text-[#7d8694]">{tpl.tone}</p>
               <button
                 type="button"
-                onClick={() => router.push('/editor')}
+                onClick={() => router.push(`/editor?template=${tpl.id}`)}
                 className="mt-4 rounded-full border border-[#dfe4eb] bg-[#f8fafc] px-3 py-1.5 text-xs font-semibold text-[#3b4352]"
               >
                 Use Template
@@ -1710,6 +1830,16 @@ export default function DashboardTwoPage() {
       className={`${fraunces.variable} ${dmSans.variable} min-h-screen bg-[#f3f4f6] text-[#1b1d21]`}
       style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
     >
+      <input
+        ref={workspaceUploadInputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0] ?? null;
+          void uploadResumeFromDashboard(file);
+        }}
+      />
       <div className="mx-auto flex min-h-screen w-full max-w-[1680px] gap-4 p-4 lg:p-5">
         <aside className="flex w-full max-w-[270px] flex-col rounded-[28px] border border-[#e3e5e8] bg-[#f7f7f8] p-4 shadow-[0_10px_30px_rgba(26,31,44,0.06)]">
           <div className="mb-4 rounded-2xl border border-[#e3e5e8] bg-white px-3 py-3">
