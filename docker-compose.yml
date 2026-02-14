@@ -23,12 +23,25 @@ services:
       dockerfile: Dockerfile
     container_name: resumate-backend
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
     environment:
       PROJECT_NAME: ResuMate API
       VERSION: 0.1.0
       DATABASE_URL: postgresql+psycopg://resumate:resumate@db:5432/resumate
       BACKEND_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
       AUTH_SESSION_TTL_HOURS: 720
+      UPLOAD_DIR: uploads
+      MAX_RESUME_UPLOAD_SIZE_MB: 8
+      NEBIUS_BASE_URL: https://api.tokenfactory.nebius.com/v1/
+      NEBIUS_MODEL: google/gemma-3-27b-it-fast
+      RESUME_ANALYSIS_MAX_PAGES: 2
+      RESUME_ANALYSIS_MAX_TOKENS: 1200
+      RESUME_ANALYSIS_TEMPERATURE: 0.35
+      RESUME_ANALYSIS_TOP_P: 0.9
+      RESUME_ANALYSIS_TOP_K: 50
+      RESUME_RENDER_SCALE: 1.6
+      RESUME_RENDER_MAX_WIDTH: 1400
     depends_on:
       db:
         condition: service_healthy

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fraunces, DM_Sans } from 'next/font/google';
 import {
@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   FileUp,
   Heart,
+  LoaderCircle,
   LogOut,
   PenTool,
   Plus,
@@ -58,6 +59,31 @@ type OnboardingStep = {
   action: string;
 };
 
+type ResumeAnalysisRole = {
+  title: string;
+  reason: string;
+};
+
+type ResumeAnalysisBullet = {
+  original: string;
+  improved: string;
+};
+
+type ResumeAnalysisResult = {
+  candidate_headline: string | null;
+  summary: string | null;
+  ats_score_estimate: number | null;
+  strengths: string[];
+  gaps: string[];
+  priority_fixes: string[];
+  keywords_to_add: string[];
+  recommended_roles: ResumeAnalysisRole[];
+  improved_bullets: ResumeAnalysisBullet[];
+  confidence_note: string | null;
+  raw_response: string | null;
+  analyzed_at: string | null;
+};
+
 type OnboardingStateResponse = {
   stage: Stage;
   phase: OnboardingPhase;
@@ -65,7 +91,13 @@ type OnboardingStateResponse = {
   current_step: number;
   target_role: string | null;
   steps: OnboardingStep[];
+  analysis: ResumeAnalysisResult | null;
   updated_at: string;
+};
+
+type AnalyzeResumeResponse = {
+  onboarding: OnboardingStateResponse;
+  analysis: ResumeAnalysisResult;
 };
 
 type MeResponse = {
@@ -73,6 +105,15 @@ type MeResponse = {
   full_name: string;
   email: string;
   created_at: string;
+};
+
+type ExampleJob = {
+  id: string;
+  title: string;
+  company: string;
+  match: number;
+  type: string;
+  reason?: string;
 };
 
 const defaultOnboardingSteps: OnboardingStep[] = [
@@ -100,6 +141,12 @@ const defaultOnboardingSteps: OnboardingStep[] = [
     description: 'Apply with tailored resumes and track your applications',
     action: 'Start Applying',
   },
+];
+
+const exampleJobs: ExampleJob[] = [
+  { id: 'j1', title: 'Senior Product Designer', company: 'Notion', match: 93, type: 'Remote' },
+  { id: 'j2', title: 'Design Systems Lead', company: 'Airbnb', match: 89, type: 'Hybrid' },
+  { id: 'j3', title: 'Principal UX Designer', company: 'Stripe', match: 86, type: 'Remote' },
 ];
 
 const initialDrafts: ResumeDraft[] = [
@@ -139,6 +186,8 @@ const templateLibrary = [
   },
 ] as const;
 
+const isPdfFile = (file: File): boolean => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
 export default function DashboardTwoPage() {
   const router = useRouter();
 
@@ -158,21 +207,58 @@ export default function DashboardTwoPage() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isOnboardingBusy, setIsOnboardingBusy] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<ResumeAnalysisResult | null>(null);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisStatusText, setAnalysisStatusText] = useState('Ready to run resume analysis.');
+
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [selectedResumeFile, setSelectedResumeFile] = useState<File | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const analysisTimerRef = useRef<number | null>(null);
+
+  const stopAnalysisAnimation = useCallback(() => {
+    if (analysisTimerRef.current !== null) {
+      window.clearInterval(analysisTimerRef.current);
+      analysisTimerRef.current = null;
+    }
+  }, []);
 
   const applyOnboardingState = useCallback((state: OnboardingStateResponse) => {
     setStage(state.stage);
     setOnboardingPhase(state.phase);
     setOnboardingStep(state.current_step);
     setTargetRole(state.target_role ?? '');
+    setAnalysisResult(state.analysis ?? null);
 
     if (Array.isArray(state.steps) && state.steps.length > 0) {
       const orderedSteps = [...state.steps].sort((a, b) => a.index - b.index);
       setOnboardingSteps(orderedSteps);
-      return;
+    } else {
+      setOnboardingSteps(defaultOnboardingSteps);
     }
 
-    setOnboardingSteps(defaultOnboardingSteps);
-  }, []);
+    if (state.current_step !== 0) {
+      setSelectedResumeFile(null);
+      setIsDragOver(false);
+    }
+
+    if (state.current_step !== 2) {
+      setSelectedJobId(null);
+    }
+
+    if (state.current_step !== 1) {
+      stopAnalysisAnimation();
+      setAnalysisProgress(0);
+      setAnalysisStatusText('Ready to run resume analysis.');
+    }
+  }, [stopAnalysisAnimation]);
+
+  useEffect(() => {
+    return () => {
+      stopAnalysisAnimation();
+    };
+  }, [stopAnalysisAnimation]);
 
   useEffect(() => {
     let cancelled = false;
@@ -230,6 +316,34 @@ export default function DashboardTwoPage() {
   const onboardingProgress = onboardingSteps.length > 0
     ? (completedOnboardingSteps / onboardingSteps.length) * 100
     : 0;
+
+  const currentOnboardingStep = onboardingSteps.find((step) => step.index === onboardingStep) ?? onboardingSteps[0];
+
+  const jobOptions = useMemo<ExampleJob[]>(() => {
+    const aiRoles = analysisResult?.recommended_roles ?? [];
+    if (aiRoles.length === 0) return exampleJobs;
+
+    return aiRoles.slice(0, 5).map((role, index) => ({
+      id: `ai-${index}`,
+      title: role.title,
+      company: 'AI Recommendation',
+      match: Math.max(72, 94 - index * 5),
+      type: 'Suggested',
+      reason: role.reason,
+    }));
+  }, [analysisResult]);
+
+  const selectedJob = jobOptions.find((job) => job.id === selectedJobId) ?? null;
+
+  useEffect(() => {
+    if (onboardingStep !== 2) return;
+    if (jobOptions.length === 0) return;
+
+    const hasSelected = selectedJobId ? jobOptions.some((job) => job.id === selectedJobId) : false;
+    if (!hasSelected) {
+      setSelectedJobId(jobOptions[0].id);
+    }
+  }, [jobOptions, onboardingStep, selectedJobId]);
 
   const toggleChecklist = (item: string) => {
     setChecked((prev) => ({ ...prev, [item]: !prev[item] }));
@@ -333,13 +447,409 @@ export default function DashboardTwoPage() {
     await runOnboardingMutation('/api/v1/onboarding/skip');
   };
 
-  const handleOnboardingStepAction = async (stepIndex: number) => {
-    if (stepIndex !== onboardingStep || isOnboardingBusy) return;
+  const handleAnalyzeStep = async () => {
+    if (!token) return;
+
+    setApiError(null);
+    setIsOnboardingBusy(true);
+    setAnalysisProgress(6);
+    setAnalysisStatusText('Preparing resume pages for analysis...');
+
+    const startedAt = Date.now();
+    stopAnalysisAnimation();
+    analysisTimerRef.current = window.setInterval(() => {
+      setAnalysisProgress((previous) => {
+        const next = Math.min(previous + Math.floor(Math.random() * 7) + 2, 94);
+
+        if (next < 28) {
+          setAnalysisStatusText('Converting PDF pages to images...');
+        } else if (next < 50) {
+          setAnalysisStatusText('Encoding page snapshots to base64...');
+        } else if (next < 72) {
+          setAnalysisStatusText('Running ATS and recruiter-grade review...');
+        } else {
+          setAnalysisStatusText('Generating structured recommendations...');
+        }
+
+        return next;
+      });
+    }, 650);
+
+    try {
+      const response = await apiRequest<AnalyzeResumeResponse>('/api/v1/onboarding/analyze-resume', {
+        method: 'POST',
+        token,
+      });
+
+      const elapsedMs = Date.now() - startedAt;
+      const minimumAnimationMs = 2500;
+      if (elapsedMs < minimumAnimationMs) {
+        await new Promise((resolve) => setTimeout(resolve, minimumAnimationMs - elapsedMs));
+      }
+
+      setAnalysisProgress(100);
+      setAnalysisStatusText('Analysis complete. Moving to role targeting...');
+      setAnalysisResult(response.analysis);
+      applyOnboardingState(response.onboarding);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          clearStoredAccessToken();
+          router.replace('/');
+          return;
+        }
+        setApiError(error.detail);
+      } else {
+        setApiError('Could not run AI analysis right now. Please try again.');
+      }
+    } finally {
+      stopAnalysisAnimation();
+      setIsOnboardingBusy(false);
+    }
+  };
+
+  const handleJobsStep = async () => {
+    if (!selectedJob) {
+      setApiError('Select a job to continue.');
+      return;
+    }
 
     await runOnboardingMutation('/api/v1/onboarding/step-action', {
-      step_index: stepIndex,
-      target_role: stepIndex === 2 ? targetRole || undefined : undefined,
+      step_index: 2,
+      target_role: selectedJob.title,
     });
+  };
+
+  const handleFinalStep = async () => {
+    await runOnboardingMutation('/api/v1/onboarding/step-action', { step_index: 3 });
+  };
+
+  const handleFileSelected = (file: File | null) => {
+    if (!file) return;
+
+    if (!isPdfFile(file)) {
+      setApiError('Please upload a PDF file.');
+      return;
+    }
+
+    setApiError(null);
+    setSelectedResumeFile(file);
+  };
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleUploadStep = async () => {
+    if (!token || !selectedResumeFile) {
+      setApiError('Select a PDF file before continuing.');
+      return;
+    }
+
+    setApiError(null);
+    setIsOnboardingBusy(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedResumeFile);
+
+      const nextState = await apiRequest<OnboardingStateResponse>('/api/v1/onboarding/upload-resume', {
+        method: 'POST',
+        token,
+        body: formData,
+      });
+
+      stopAnalysisAnimation();
+      setAnalysisProgress(0);
+      setAnalysisStatusText('Ready to run resume analysis.');
+      applyOnboardingState(nextState);
+      setSelectedResumeFile(null);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          clearStoredAccessToken();
+          router.replace('/');
+          return;
+        }
+        setApiError(error.detail);
+      } else {
+        setApiError('Resume upload failed. Please try again.');
+      }
+    } finally {
+      setIsOnboardingBusy(false);
+    }
+  };
+
+  const renderStepDetails = () => {
+    if (!currentOnboardingStep) return null;
+
+    if (currentOnboardingStep.index === 0) {
+      return (
+        <div className="space-y-5">
+          <div
+            className={`rounded-3xl border-2 border-dashed px-6 py-10 text-center transition-all ${
+              isDragOver
+                ? 'border-[#c96442] bg-[#fff3ec]'
+                : 'border-[#e4d3be] bg-white'
+            }`}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setIsDragOver(true);
+            }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDragOver(false);
+              const droppedFile = event.dataTransfer.files?.[0] ?? null;
+              handleFileSelected(droppedFile);
+            }}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                handleFileSelected(file);
+              }}
+            />
+
+            <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#fff1e8] text-[#c96442]">
+              <FileUp className="h-7 w-7" />
+            </div>
+            <h3 className="text-xl font-semibold text-[#2c1810]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+              Drag and drop your resume PDF
+            </h3>
+            <p className="mt-2 text-sm text-[#8b7355]">
+              Drop your file here or browse from your computer. We only accept PDF.
+            </p>
+            <button
+              type="button"
+              onClick={openFilePicker}
+              className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-[#fffaf4] px-4 py-2 text-sm font-semibold text-[#8b7355] hover:bg-[#f8f1e8]"
+            >
+              Choose PDF
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-[#eadfce] bg-white px-4 py-3 text-sm text-[#8b7355]">
+            {selectedResumeFile ? (
+              <span>
+                Selected: <span className="font-semibold text-[#2c1810]">{selectedResumeFile.name}</span>
+              </span>
+            ) : (
+              'No file selected yet.'
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              void handleUploadStep();
+            }}
+            disabled={isOnboardingBusy || !selectedResumeFile}
+            className="inline-flex items-center gap-2 rounded-full bg-[#c96442] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-65"
+          >
+            {isOnboardingBusy ? (
+              <>
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                Upload Resume
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </div>
+      );
+    }
+
+    if (currentOnboardingStep.index === 1) {
+      return (
+        <div className="space-y-5">
+          <div className="rounded-3xl border border-[#eadfce] bg-white px-6 py-6">
+            <div className="relative mb-6 overflow-hidden rounded-2xl border border-[#f0e5d6] bg-[#faf7f2] p-5">
+              <div className="absolute -right-8 -top-6 h-24 w-24 rounded-full bg-[#c96442]/15 blur-2xl" />
+              <div className="absolute -left-10 bottom-0 h-20 w-20 rounded-full bg-[#2d5a3d]/15 blur-2xl" />
+
+              <div className="relative mb-4 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em] text-[#8b7355]">
+                <span>AI Analysis Progress</span>
+                <span className="text-[#2d5a3d]">{analysisProgress}%</span>
+              </div>
+
+              <div className="relative mb-4 h-2 overflow-hidden rounded-full bg-[#e8dfd2]">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#2d5a3d] via-[#c96442] to-[#8b7355] transition-all duration-500"
+                  style={{ width: `${analysisProgress}%` }}
+                />
+              </div>
+
+              <p className="mb-4 text-sm text-[#5f4c3a]">{analysisStatusText}</p>
+
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="rounded-xl border border-[#eadfce] bg-white px-3 py-2">
+                  <p className="text-[11px] font-semibold text-[#8b7355]">Document Parsing</p>
+                  <p className="mt-1 text-xs text-[#2c1810]">PDF pages to image snapshots</p>
+                </div>
+                <div className="rounded-xl border border-[#eadfce] bg-white px-3 py-2">
+                  <p className="text-[11px] font-semibold text-[#8b7355]">Vision Review</p>
+                  <p className="mt-1 text-xs text-[#2c1810]">Gemma reads structure and content</p>
+                </div>
+                <div className="rounded-xl border border-[#eadfce] bg-white px-3 py-2">
+                  <p className="text-[11px] font-semibold text-[#8b7355]">Output Build</p>
+                  <p className="mt-1 text-xs text-[#2c1810]">ATS score + improvements + roles</p>
+                </div>
+              </div>
+
+              <div className="mt-4 inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 animate-bounce rounded-full bg-[#c96442]" />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-[#2d5a3d]" style={{ animationDelay: '120ms' }} />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-[#8b7355]" style={{ animationDelay: '240ms' }} />
+                <span className="ml-2 text-xs font-medium text-[#8b7355]">Live processing</span>
+              </div>
+            </div>
+
+            {analysisResult && !isOnboardingBusy && (
+              <div className="rounded-2xl border border-[#e7d9c7] bg-[#fffaf4] px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8b7355]">Latest Analysis Snapshot</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {analysisResult.ats_score_estimate !== null && (
+                    <span className="rounded-full bg-[#edf6ef] px-3 py-1 text-xs font-semibold text-[#2d5a3d]">
+                      ATS Estimate: {analysisResult.ats_score_estimate}%
+                    </span>
+                  )}
+                  {(analysisResult.recommended_roles ?? []).slice(0, 2).map((role) => (
+                    <span key={role.title} className="rounded-full bg-[#fff1e8] px-3 py-1 text-xs font-semibold text-[#c96442]">
+                      {role.title}
+                    </span>
+                  ))}
+                </div>
+                {analysisResult.summary && (
+                  <p className="mt-2 text-xs text-[#6d5a46]">{analysisResult.summary}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              void handleAnalyzeStep();
+            }}
+            disabled={isOnboardingBusy}
+            className="inline-flex items-center gap-2 rounded-full bg-[#2d5a3d] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-65"
+          >
+            {isOnboardingBusy ? (
+              <>
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+                Running AI analysis...
+              </>
+            ) : (
+              <>
+                Run Deep AI Analysis
+                <Sparkles className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </div>
+      );
+    }
+
+    if (currentOnboardingStep.index === 2) {
+      return (
+        <div className="space-y-5">
+          <div className="grid gap-3 md:grid-cols-3">
+            {jobOptions.map((job) => {
+              const isSelected = selectedJobId === job.id;
+
+              return (
+                <button
+                  key={job.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedJobId(job.id);
+                    setApiError(null);
+                  }}
+                  className={`rounded-2xl border px-4 py-4 text-left transition-all ${
+                    isSelected
+                      ? 'border-[#2d5a3d] bg-[#edf6ef]'
+                      : 'border-[#eadfce] bg-white hover:border-[#cbb7a0]'
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-[#2c1810]">{job.title}</p>
+                  <p className="mt-1 text-xs text-[#8b7355]">{job.company} · {job.type}</p>
+                  {job.reason && (
+                    <p className="mt-2 text-[11px] text-[#6d5a46]">{job.reason}</p>
+                  )}
+                  <p className="mt-3 text-xs font-semibold text-[#2d5a3d]">{job.match}% match</p>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              void handleJobsStep();
+            }}
+            disabled={isOnboardingBusy || !selectedJob}
+            className="inline-flex items-center gap-2 rounded-full bg-[#c96442] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-65"
+          >
+            {isOnboardingBusy ? (
+              <>
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+                Saving selection...
+              </>
+            ) : (
+              <>
+                Continue with Selected Role
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-5">
+        <div className="rounded-3xl border border-[#eadfce] bg-white px-6 py-6">
+          <p className="text-sm text-[#5f4c3a]">
+            Your profile is now calibrated. We&apos;ll guide you to apply with tailored resumes and track outcomes.
+          </p>
+          <div className="mt-4 space-y-2 text-sm text-[#8b7355]">
+            <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#2d5a3d]" /> Resume imported and analyzed</p>
+            <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#2d5a3d]" /> Target role selected: {targetRole || 'Product Designer'}</p>
+            <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#2d5a3d]" /> Application workflow ready</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            void handleFinalStep();
+          }}
+          disabled={isOnboardingBusy}
+          className="inline-flex items-center gap-2 rounded-full bg-[#2d5a3d] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-65"
+        >
+          {isOnboardingBusy ? (
+            <>
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+              Finalizing...
+            </>
+          ) : (
+            <>
+              Start Applying
+              <ArrowRight className="h-4 w-4" />
+            </>
+          )}
+        </button>
+      </div>
+    );
   };
 
   if (isInitializing) {
@@ -369,7 +879,7 @@ export default function DashboardTwoPage() {
 
         <div
           className={`relative mx-auto rounded-[34px] border border-[#eadfce] bg-[#fffaf4] p-6 shadow-[0_30px_70px_rgba(44,24,16,0.16)] sm:p-8 ${
-            onboardingPhase === 'choice' ? 'max-w-5xl' : 'max-w-3xl'
+            onboardingPhase === 'choice' ? 'max-w-5xl' : 'max-w-4xl'
           }`}
         >
           {apiError && (
@@ -497,7 +1007,7 @@ export default function DashboardTwoPage() {
                   Let&apos;s optimize your resume
                 </h1>
                 <p className="mt-2 text-sm text-[#8b7355]">
-                  Same onboarding options as before, adapted to the current warm design.
+                  One focused step at a time with richer guidance.
                 </p>
               </div>
 
@@ -514,65 +1024,16 @@ export default function DashboardTwoPage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {onboardingSteps.map((step, index) => {
-                  const isCompleted = index < onboardingStep;
-                  const isActive = index === onboardingStep;
-                  const isLocked = index > onboardingStep;
+              <div className="rounded-3xl border border-[#eadfce] bg-[#fffdf9] p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2d5a3d]">
+                  Step {currentOnboardingStep.index + 1} · {currentOnboardingStep.title}
+                </p>
+                <h2 className="mt-2 text-2xl font-bold text-[#2c1810]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+                  {currentOnboardingStep.action}
+                </h2>
+                <p className="mt-2 text-sm text-[#8b7355]">{currentOnboardingStep.description}</p>
 
-                  return (
-                    <div
-                      key={step.title}
-                      className={`rounded-2xl border p-4 transition-all ${
-                        isCompleted
-                          ? 'border-[#b7d3be] bg-[#edf6ef]'
-                          : isActive
-                            ? 'border-[#c96442] bg-[#fff6f1]'
-                            : 'border-[#eadfce] bg-white'
-                      }`}
-                    >
-                      <div className="mb-3 flex items-center gap-2">
-                        <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                            isCompleted
-                              ? 'bg-[#2d5a3d] text-white'
-                              : isActive
-                                ? 'bg-[#c96442] text-white'
-                                : 'bg-[#f2e8da] text-[#8b7355]'
-                          }`}
-                        >
-                          {index + 1}
-                        </div>
-                        <p className="text-sm font-semibold text-[#2c1810]">{step.title}</p>
-                      </div>
-
-                      <p className="mb-4 text-xs text-[#8b7355]">{step.description}</p>
-
-                      {isActive ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void handleOnboardingStepAction(index);
-                          }}
-                          disabled={isOnboardingBusy}
-                          className="inline-flex items-center gap-1 rounded-full bg-[#c96442] px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-70"
-                        >
-                          {step.action}
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </button>
-                      ) : isCompleted ? (
-                        <div className="inline-flex items-center gap-1 text-xs font-semibold text-[#2d5a3d]">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Completed
-                        </div>
-                      ) : (
-                        <p className={`text-xs ${isLocked ? 'text-[#b59e86]' : 'text-[#8b7355]'}`}>
-                          {isLocked ? 'Complete previous step' : 'Ready to start'}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
+                <div className="mt-6">{renderStepDetails()}</div>
               </div>
 
               <div className="mt-6">

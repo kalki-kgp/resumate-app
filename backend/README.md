@@ -30,6 +30,12 @@ alembic upgrade head
 
 - `GET /api/v1/onboarding`
 - `POST /api/v1/onboarding/choose`
+- `POST /api/v1/onboarding/upload-resume`
+- `POST /api/v1/onboarding/analyze-resume`
 - `POST /api/v1/onboarding/step-action`
 - `POST /api/v1/onboarding/back-to-options`
 - `POST /api/v1/onboarding/skip`
+
+## AI Analysis Setup
+
+Set `NEBIUS_API_KEY` in `backend/.env` (or docker environment) to enable `/api/v1/onboarding/analyze-resume`.

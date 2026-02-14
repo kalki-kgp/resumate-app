@@ -53,11 +53,14 @@ async function parseError(response: Response): Promise<string> {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
+
   const headers: Record<string, string> = {
     ...(options.headers ?? {}),
   };
 
-  if (options.body !== undefined) {
+  if (options.body !== undefined && !isFormData) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -65,10 +68,17 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     headers.Authorization = `Bearer ${options.token}`;
   }
 
+  const requestBody =
+    options.body === undefined
+      ? undefined
+      : isFormData
+        ? (options.body as FormData)
+        : JSON.stringify(options.body);
+
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     method: options.method ?? 'GET',
     headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: requestBody,
   });
 
   if (!response.ok) {

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.onboarding_progress import OnboardingProgress
 from app.models.user import User
-from app.schemas.onboarding import OnboardingStateResponse, OnboardingStep
+from app.schemas.onboarding import OnboardingStateResponse, OnboardingStep, ResumeAnalysisResult
 
 ONBOARDING_STEPS: list[OnboardingStep] = [
     OnboardingStep(
@@ -47,7 +47,10 @@ def get_or_create_onboarding_progress(db: Session, user: User) -> OnboardingProg
     return progress
 
 
-def progress_to_response(progress: OnboardingProgress) -> OnboardingStateResponse:
+def progress_to_response(
+    progress: OnboardingProgress,
+    analysis: ResumeAnalysisResult | None = None,
+) -> OnboardingStateResponse:
     return OnboardingStateResponse(
         stage=progress.stage,
         phase=progress.phase,
@@ -55,6 +58,7 @@ def progress_to_response(progress: OnboardingProgress) -> OnboardingStateRespons
         current_step=progress.current_step,
         target_role=progress.target_role,
         steps=ONBOARDING_STEPS,
+        analysis=analysis,
         updated_at=progress.updated_at,
     )
 
@@ -80,6 +84,40 @@ def choose_path(db: Session, progress: OnboardingProgress, path: str) -> Onboard
     db.commit()
     db.refresh(progress)
     return progress
+
+
+def ensure_upload_step_active(progress: OnboardingProgress) -> None:
+    if progress.selected_path != "upload" or progress.phase != "steps":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Upload onboarding path is not active",
+        )
+
+    if progress.stage != "onboarding":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Onboarding already completed")
+
+    if progress.current_step != 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Resume upload is only available on step 0. Current step is {progress.current_step}",
+        )
+
+
+def ensure_analysis_step_active(progress: OnboardingProgress) -> None:
+    if progress.selected_path != "upload" or progress.phase != "steps":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Upload onboarding path is not active",
+        )
+
+    if progress.stage != "onboarding":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Onboarding already completed")
+
+    if progress.current_step != 1:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Resume analysis is only available on step 1. Current step is {progress.current_step}",
+        )
 
 
 def back_to_options(db: Session, progress: OnboardingProgress) -> OnboardingProgress:
@@ -126,6 +164,11 @@ def advance_step(
 
     if step_index < 0 or step_index >= len(ONBOARDING_STEPS):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid onboarding step")
+
+    if step_index == 1 and target_role:
+        normalized_target_role = target_role.strip()
+        if normalized_target_role:
+            progress.target_role = normalized_target_role
 
     if step_index == 2:
         normalized_target_role = (target_role or "").strip()
