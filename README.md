@@ -34,3 +34,14 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+Unique Homepage Designs - All Live
+**✨ Homepage Design Variations**
+
+| Route     | Design Name      | Aesthetic & Mood                  | Typography                   | Color Palette                                         |
+|-----------|------------------|-----------------------------------|------------------------------|-------------------------------------------------------|
+| `/home/1` | **Dark Command Center** | Tech-forward, dashboard-inspired, data-driven    | Outfit + JetBrains Mono       | Near-black, electric teal `#00e5a0`                   |
+| `/home/2` | **Warm & Human**        | Friendly, organic, approachable                  | Fraunces (serif) + DM Sans    | Warm cream `#faf7f2`, terracotta `#c96442`, forest green |
+| `/home/3` | **Editorial Luxe**      | Magazine-style, premium, asymmetric              | Playfair Display + Source Sans | Off-white, charcoal, warm gold `#c9a84c`              |
+| `/home/4` | **Vivid Glass**         | Glassmorphism, gradient mesh, futuristic         | Sora + Plus Jakarta Sans      | Deep purple `#0a0118`, purple/pink/blue gradients     |
+| `/home/5` | **Bold Impact**         | Brutalist, oversized type, high contrast         | Anton + Work Sans             | Paper `#f0ede6`, black, vivid orange `#ff4d00`        |
