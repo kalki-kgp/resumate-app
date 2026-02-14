@@ -3,4 +3,7 @@
 .next
 node_modules
 npm-debug.log
+bun-debug.log
 backend
+Dockerfile*
+docker-compose.yml

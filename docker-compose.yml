@@ -27,6 +27,8 @@ services:
       PROJECT_NAME: ResuMate API
       VERSION: 0.1.0
       DATABASE_URL: postgresql+psycopg://resumate:resumate@db:5432/resumate
+      BACKEND_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      AUTH_SESSION_TTL_HOURS: 720
     depends_on:
       db:
         condition: service_healthy

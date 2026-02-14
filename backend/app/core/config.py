@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "ResuMate API"
     VERSION: str = "0.1.0"
     DATABASE_URL: str = "postgresql+psycopg://resumate:resumate@localhost:5432/resumate"
+    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    AUTH_SESSION_TTL_HOURS: int = 720
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.BACKEND_CORS_ORIGINS.split(",") if origin.strip()]
 
 
 settings = Settings()

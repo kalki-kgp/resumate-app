@@ -18,3 +18,18 @@ uvicorn app.main:app --reload
 alembic revision -m "init"
 alembic upgrade head
 ```
+
+## Auth APIs
+
+- `POST /api/v1/auth/signup`
+- `POST /api/v1/auth/signin`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/signout`
+
+## Onboarding APIs
+
+- `GET /api/v1/onboarding`
+- `POST /api/v1/onboarding/choose`
+- `POST /api/v1/onboarding/step-action`
+- `POST /api/v1/onboarding/back-to-options`
+- `POST /api/v1/onboarding/skip`
