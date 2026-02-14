@@ -8,7 +8,10 @@ import {
   Bot,
   ArrowLeft,
   ArrowRight,
+  BadgeCheck,
+  CalendarDays,
   CheckCircle2,
+  ChevronDown,
   CircleHelp,
   Compass,
   FileText,
@@ -18,6 +21,7 @@ import {
   LayoutGrid,
   LoaderCircle,
   LogOut,
+  Mail,
   Search,
   Settings,
   PenTool,
@@ -272,6 +276,13 @@ const formatRelativeTime = (isoDate: string): string => {
   return `edited ${Math.max(1, Math.floor(diffMs / day))}d ago`;
 };
 
+const formatJoinDate = (isoDate: string | null): string => {
+  if (!isoDate) return 'Unknown';
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return 'Unknown';
+  return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+};
+
 const resumeThumbnailSrc = (resume: DashboardResume): string | null => {
   if (!resume.thumbnail_url) return null;
   return `${getApiBaseUrl()}${resume.thumbnail_url}`;
@@ -285,6 +296,10 @@ export default function DashboardTwoPage() {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [onboardingSteps, setOnboardingSteps] = useState<OnboardingStep[]>(defaultOnboardingSteps);
   const [displayName, setDisplayName] = useState('friend');
+  const [profileFullName, setProfileFullName] = useState('ResuMate User');
+  const [profileEmail, setProfileEmail] = useState('user@resumate.app');
+  const [profileCreatedAt, setProfileCreatedAt] = useState<string | null>(null);
+  const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
   const [targetRole, setTargetRole] = useState('');
   const [activeSection, setActiveSection] = useState<DashboardSection>('overview');
   const [dashboardResumes, setDashboardResumes] = useState<DashboardResume[]>([]);
@@ -304,15 +319,28 @@ export default function DashboardTwoPage() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [isResumeUploadBusy, setIsResumeUploadBusy] = useState(false);
   const [isResumeAnalysisBusy, setIsResumeAnalysisBusy] = useState(false);
+  const [dashboardAnalysisProgress, setDashboardAnalysisProgress] = useState(0);
+  const [dashboardAnalysisStatusText, setDashboardAnalysisStatusText] = useState(
+    'Ready to analyze selected resume.'
+  );
   const [dashboardNotice, setDashboardNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const workspaceUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const profilePopupRef = useRef<HTMLDivElement | null>(null);
   const analysisTimerRef = useRef<number | null>(null);
+  const dashboardAnalysisTimerRef = useRef<number | null>(null);
 
   const stopAnalysisAnimation = useCallback(() => {
     if (analysisTimerRef.current !== null) {
       window.clearInterval(analysisTimerRef.current);
       analysisTimerRef.current = null;
+    }
+  }, []);
+
+  const stopDashboardAnalysisAnimation = useCallback(() => {
+    if (dashboardAnalysisTimerRef.current !== null) {
+      window.clearInterval(dashboardAnalysisTimerRef.current);
+      dashboardAnalysisTimerRef.current = null;
     }
   }, []);
 
@@ -349,8 +377,9 @@ export default function DashboardTwoPage() {
   useEffect(() => {
     return () => {
       stopAnalysisAnimation();
+      stopDashboardAnalysisAnimation();
     };
-  }, [stopAnalysisAnimation]);
+  }, [stopAnalysisAnimation, stopDashboardAnalysisAnimation]);
 
   useEffect(() => {
     let cancelled = false;
@@ -370,6 +399,9 @@ export default function DashboardTwoPage() {
 
         const firstName = me.full_name.trim().split(/\s+/)[0];
         setDisplayName(firstName || 'friend');
+        setProfileFullName(me.full_name?.trim() || firstName || 'ResuMate User');
+        setProfileEmail(me.email?.trim() || 'user@resumate.app');
+        setProfileCreatedAt(me.created_at ?? null);
 
         const onboardingState = await apiRequest<OnboardingStateResponse>('/api/v1/onboarding', {
           token: storedToken,
@@ -393,6 +425,30 @@ export default function DashboardTwoPage() {
       cancelled = true;
     };
   }, [applyOnboardingState, router]);
+
+  useEffect(() => {
+    if (!isProfilePopupOpen) return;
+
+    const onClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (profilePopupRef.current && !profilePopupRef.current.contains(target)) {
+        setIsProfilePopupOpen(false);
+      }
+    };
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsProfilePopupOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onEscape);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, [isProfilePopupOpen]);
 
   const completedOnboardingSteps = Math.min(onboardingStep, onboardingSteps.length);
   const onboardingProgress = onboardingSteps.length > 0
@@ -822,6 +878,27 @@ export default function DashboardTwoPage() {
 
     setDashboardNotice(null);
     setIsResumeAnalysisBusy(true);
+    setDashboardAnalysisProgress(7);
+    setDashboardAnalysisStatusText('Preparing resume pages for dashboard analysis...');
+    const startedAt = Date.now();
+
+    stopDashboardAnalysisAnimation();
+    dashboardAnalysisTimerRef.current = window.setInterval(() => {
+      setDashboardAnalysisProgress((previous) => {
+        const next = Math.min(previous + Math.floor(Math.random() * 6) + 3, 93);
+        if (next < 24) {
+          setDashboardAnalysisStatusText('Parsing layout blocks and section order...');
+        } else if (next < 52) {
+          setDashboardAnalysisStatusText('Running ATS heuristics and section scoring...');
+        } else if (next < 78) {
+          setDashboardAnalysisStatusText('Generating role-fit signals and rewrite hints...');
+        } else {
+          setDashboardAnalysisStatusText('Packaging insights for dashboard cards...');
+        }
+        return next;
+      });
+    }, 680);
+
     try {
       const updatedResume = await apiRequest<AnalyzeDashboardResumeResponse>(
         `/api/v1/resumes/${selectedDashboardResume.id}/analyze`,
@@ -831,12 +908,23 @@ export default function DashboardTwoPage() {
         }
       );
 
+      const elapsedMs = Date.now() - startedAt;
+      const minimumAnimationMs = 2200;
+      if (elapsedMs < minimumAnimationMs) {
+        await new Promise((resolve) => setTimeout(resolve, minimumAnimationMs - elapsedMs));
+      }
+
+      setDashboardAnalysisProgress(100);
+      setDashboardAnalysisStatusText('Analysis complete. ATS and AI insights are now available.');
+
       setDashboardResumes((previous) => previous.map((resume) => (
         resume.id === updatedResume.id ? updatedResume : resume
       )));
       setSelectedDashboardResumeId(updatedResume.id);
       setDashboardNotice(`Analysis complete for ${updatedResume.title}.`);
     } catch (error) {
+      setDashboardAnalysisProgress(0);
+      setDashboardAnalysisStatusText('Analysis failed. Please try again.');
       if (error instanceof ApiError) {
         if (error.status === 401) {
           clearStoredAccessToken();
@@ -848,6 +936,7 @@ export default function DashboardTwoPage() {
         setDashboardNotice('Could not analyze this resume right now. Please try again.');
       }
     } finally {
+      stopDashboardAnalysisAnimation();
       setIsResumeAnalysisBusy(false);
     }
   };
@@ -1136,26 +1225,45 @@ export default function DashboardTwoPage() {
       <div className="rounded-2xl border border-dashed border-[#d9dee5] bg-[#fafbfd] px-4 py-8 text-center">
         <p className="text-sm font-semibold text-[#2b313b]">{message}</p>
         <p className="mt-1 text-xs text-[#8a909b]">{hint}</p>
-        <button
-          type="button"
-          onClick={() => {
-            void analyzeSelectedResume();
-          }}
-          disabled={isResumeAnalysisBusy || !selectedDashboardResume}
-          className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#ff8b2f] px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isResumeAnalysisBusy ? (
-            <>
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              Analyze Resume
-              <ArrowRight className="h-3.5 w-3.5" />
-            </>
-          )}
-        </button>
+        {isResumeAnalysisBusy ? (
+          <div className="mx-auto mt-4 w-full max-w-md rounded-2xl border border-[#edd7c0] bg-[#fffaf4] p-3 text-left shadow-[0_12px_28px_rgba(34,25,15,0.08)]">
+            <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#5f4c3a]">
+              <span className="inline-flex items-center gap-1">
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin text-[#d9733b]" />
+                Dashboard AI Analysis
+              </span>
+              <span className="text-[#2d5a3d]">{dashboardAnalysisProgress}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-[#efe5d8]">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#ff9a38] via-[#f97344] to-[#2d8b46] transition-all duration-500"
+                style={{ width: `${dashboardAnalysisProgress}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-[#775f49]">{dashboardAnalysisStatusText}</p>
+            <div className="mt-2 flex items-center gap-1">
+              {[0, 1, 2, 3].map((dot) => (
+                <span
+                  key={dot}
+                  className="h-1.5 w-1.5 rounded-full bg-[#d88b57] animate-pulse"
+                  style={{ animationDelay: `${dot * 0.18}s` }}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              void analyzeSelectedResume();
+            }}
+            disabled={!selectedDashboardResume}
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#ff8b2f] px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Analyze Resume
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
     );
 
@@ -1460,7 +1568,7 @@ export default function DashboardTwoPage() {
                         {isResumeAnalysisBusy ? (
                           <>
                             <LoaderCircle className="h-3 w-3 animate-spin" />
-                            Analyzing...
+                            {dashboardAnalysisProgress > 0 ? `Analyzing ${dashboardAnalysisProgress}%` : 'Analyzing...'}
                           </>
                         ) : (
                           'Analyze Resume'
@@ -1502,9 +1610,11 @@ export default function DashboardTwoPage() {
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {templateCards.map((tpl) => (
             <article key={tpl.id} className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
-              <div className="mb-3 overflow-hidden rounded-xl border border-[#eceff3] bg-[#f4f6f9]">
-                <div className="origin-top-left scale-[0.62] p-2" style={{ width: '160%', transformOrigin: 'top left' }}>
-                  <TemplatePreview template={tpl.id} data={templatePreviewData} scale={0.12} />
+              <div className="mb-3 rounded-xl border border-[#eceff3] bg-gradient-to-b from-[#f8fafd] to-[#f0f3f7] p-3">
+                <div className="mx-auto flex h-[210px] items-center justify-center overflow-hidden rounded-lg border border-[#dfe4ea] bg-white shadow-[0_10px_18px_rgba(26,34,48,0.10)]">
+                  <div className="translate-y-0">
+                    <TemplatePreview template={tpl.id} data={templatePreviewData} scale={0.16} />
+                  </div>
                 </div>
               </div>
               <p className="text-lg font-semibold text-[#252b34]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
@@ -1981,7 +2091,7 @@ export default function DashboardTwoPage() {
 
   return (
     <div
-      className={`${fraunces.variable} ${dmSans.variable} min-h-screen bg-[#f3f4f6] text-[#1b1d21]`}
+      className={`${fraunces.variable} ${dmSans.variable} h-screen overflow-hidden bg-[#f3f4f6] text-[#1b1d21]`}
       style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
     >
       <input
@@ -1994,11 +2104,73 @@ export default function DashboardTwoPage() {
           void uploadResumeFromDashboard(file);
         }}
       />
-      <div className="mx-auto flex min-h-screen w-full max-w-[1680px] gap-4 p-4 lg:p-5">
-        <aside className="flex w-full max-w-[270px] flex-col rounded-[28px] border border-[#e3e5e8] bg-[#f7f7f8] p-4 shadow-[0_10px_30px_rgba(26,31,44,0.06)]">
-          <div className="mb-4 rounded-2xl border border-[#e3e5e8] bg-white px-3 py-3">
-            <p className="text-sm font-semibold text-[#1d2026]">ResuMate</p>
-            <p className="text-xs text-[#8b8f98]">Free Plan</p>
+      <div className="mx-auto flex h-full w-full max-w-[1680px] gap-4 p-4 lg:p-5">
+        <aside className="flex h-full w-full max-w-[270px] flex-col rounded-[28px] border border-[#e3e5e8] bg-[#f7f7f8] p-4 shadow-[0_10px_30px_rgba(26,31,44,0.06)]">
+          <div className="relative mb-4" ref={profilePopupRef}>
+            <button
+              type="button"
+              onClick={() => setIsProfilePopupOpen((value) => !value)}
+              className="flex w-full items-center gap-2 rounded-2xl border border-[#e3e5e8] bg-white px-3 py-3 text-left"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#ffbe86] via-[#ff9a38] to-[#ff7b33] text-xs font-bold text-white">
+                {profileFullName.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[#1d2026]">{profileFullName}</p>
+                <p className="text-xs text-[#8b8f98]">Free Plan</p>
+              </div>
+              <ChevronDown className={`h-4 w-4 text-[#9298a3] transition-transform ${isProfilePopupOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isProfilePopupOpen && (
+              <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50">
+                <div className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/45 p-3 backdrop-blur-xl shadow-[0_18px_45px_rgba(20,24,33,0.24)]">
+                  <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-[#ff9a38]/30 blur-2xl" />
+                  <div className="pointer-events-none absolute -left-8 bottom-0 h-20 w-20 rounded-full bg-[#64bf42]/20 blur-2xl" />
+                  <div className="relative space-y-3">
+                    <div className="rounded-xl border border-white/70 bg-white/55 p-3">
+                      <p className="truncate text-sm font-semibold text-[#1f2430]">{profileFullName}</p>
+                      <p className="mt-1 flex items-center gap-1.5 truncate text-[11px] text-[#5c6271]">
+                        <Mail className="h-3 w-3 text-[#7d8390]" />
+                        {profileEmail}
+                      </p>
+                      <p className="mt-1 flex items-center gap-1.5 text-[11px] text-[#5c6271]">
+                        <CalendarDays className="h-3 w-3 text-[#7d8390]" />
+                        Joined {formatJoinDate(profileCreatedAt)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-white/70 bg-gradient-to-br from-white/65 via-[#fff8ef]/55 to-[#fff0e4]/60 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8c5d39]">Plan</p>
+                          <p className="text-sm font-semibold text-[#2f3542]">Free Plan</p>
+                        </div>
+                        <span className="rounded-full bg-[#ff9a38] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
+                          Active
+                        </span>
+                      </div>
+                      <div className="mt-2 space-y-1 text-[11px] text-[#5f6675]">
+                        <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> Multi-resume dashboard</p>
+                        <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> ATS analysis</p>
+                        <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> Template library</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfilePopupOpen(false);
+                        void signOut();
+                      }}
+                      className="w-full rounded-xl border border-white/70 bg-white/60 px-3 py-2 text-xs font-semibold text-[#394150] hover:bg-white/75"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#e3e5e8] bg-white px-3 py-2 text-[#8a8f97]">
@@ -2006,53 +2178,55 @@ export default function DashboardTwoPage() {
             <span className="text-xs">Search anything</span>
           </div>
 
-          <div className="space-y-1">
-            {sidebarPrimaryItems.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => setActiveSection(item.key)}
-                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm ${
-                  activeSection === item.key
-                    ? 'bg-[#eceff3] font-semibold text-[#272c35]'
-                    : 'text-[#535a66] hover:bg-[#eceff3]'
-                }`}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-6">
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9aa0aa]">AI Features</p>
-            <div className="mt-2 space-y-1">
-              {sidebarAiItems.map((item) => (
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <div className="space-y-1">
+              {sidebarPrimaryItems.map((item) => (
                 <button
                   key={item.label}
                   type="button"
                   onClick={() => setActiveSection(item.key)}
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm ${
+                  className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm ${
                     activeSection === item.key
                       ? 'bg-[#eceff3] font-semibold text-[#272c35]'
                       : 'text-[#535a66] hover:bg-[#eceff3]'
                   }`}
                 >
-                  <span className="flex items-center gap-2.5">
-                    <item.icon className="h-4 w-4" />
-                    {item.label}
-                  </span>
-                  {item.badge && (
-                    <span className="rounded-full bg-[#ff9a38] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
-                      {item.badge}
-                    </span>
-                  )}
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
                 </button>
               ))}
             </div>
+
+            <div className="mt-6">
+              <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9aa0aa]">AI Features</p>
+              <div className="mt-2 space-y-1">
+                {sidebarAiItems.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => setActiveSection(item.key)}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm ${
+                      activeSection === item.key
+                        ? 'bg-[#eceff3] font-semibold text-[#272c35]'
+                        : 'text-[#535a66] hover:bg-[#eceff3]'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </span>
+                    {item.badge && (
+                      <span className="rounded-full bg-[#ff9a38] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="mt-auto space-y-1 pt-6">
+          <div className="mt-4 space-y-1 border-t border-[#e7eaee] pt-3">
             <button
               type="button"
               onClick={() => setActiveSection('faq')}
@@ -2088,7 +2262,7 @@ export default function DashboardTwoPage() {
           </div>
         </aside>
 
-        <main className="flex-1 rounded-[30px] border border-[#e3e5e8] bg-[#fafafa] p-5 shadow-[0_20px_45px_rgba(24,30,43,0.08)] sm:p-6">
+        <main className="h-full flex-1 overflow-y-auto rounded-[30px] border border-[#e3e5e8] bg-[#fafafa] p-5 shadow-[0_20px_45px_rgba(24,30,43,0.08)] sm:p-6">
           {apiError && (
             <div className="mb-4 rounded-xl border border-[#f3c8be] bg-[#fff4f1] px-4 py-3 text-sm text-[#9e3f29]">
               {apiError}
