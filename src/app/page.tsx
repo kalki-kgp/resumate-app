@@ -20,6 +20,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { Fraunces, DM_Sans } from 'next/font/google';
+import { ApiError, apiRequest, setStoredAccessToken } from '@/lib/api';
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -75,6 +76,24 @@ const templatePreviews = [
 ];
 
 type AuthMode = 'signin' | 'signup';
+type AuthField = 'fullName' | 'email' | 'password';
+
+type AuthFormState = {
+  fullName: string;
+  email: string;
+  password: string;
+};
+
+type AuthResponse = {
+  access_token: string;
+  token_type: string;
+  user: {
+    id: string;
+    full_name: string;
+    email: string;
+    created_at: string;
+  };
+};
 
 const HomeTwoAuthModal = ({
   isOpen,
@@ -82,12 +101,20 @@ const HomeTwoAuthModal = ({
   onModeChange,
   onClose,
   onSubmit,
+  form,
+  onFieldChange,
+  isSubmitting,
+  authError,
 }: {
   isOpen: boolean;
   mode: AuthMode;
   onModeChange: (mode: AuthMode) => void;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit: () => Promise<void> | void;
+  form: AuthFormState;
+  onFieldChange: (field: AuthField, value: string) => void;
+  isSubmitting: boolean;
+  authError: string | null;
 }) => {
   if (!isOpen) return null;
 
@@ -190,6 +217,8 @@ const HomeTwoAuthModal = ({
                 <input
                   type="text"
                   placeholder="Jordan Lee"
+                  value={form.fullName}
+                  onChange={(event) => onFieldChange('fullName', event.target.value)}
                   className="w-full rounded-2xl border px-10 py-3 text-sm outline-none transition-all"
                   style={{
                     borderColor: '#eadfce',
@@ -210,6 +239,8 @@ const HomeTwoAuthModal = ({
               <input
                 type="email"
                 placeholder="you@example.com"
+                value={form.email}
+                onChange={(event) => onFieldChange('email', event.target.value)}
                 className="w-full rounded-2xl border px-10 py-3 text-sm outline-none transition-all"
                 style={{
                   borderColor: '#eadfce',
@@ -229,6 +260,8 @@ const HomeTwoAuthModal = ({
               <input
                 type="password"
                 placeholder="••••••••"
+                value={form.password}
+                onChange={(event) => onFieldChange('password', event.target.value)}
                 className="w-full rounded-2xl border px-10 py-3 text-sm outline-none transition-all"
                 style={{
                   borderColor: '#eadfce',
@@ -239,12 +272,17 @@ const HomeTwoAuthModal = ({
             </div>
           </label>
 
+          {authError && (
+            <p className="text-sm font-medium text-[#b6422f]">{authError}</p>
+          )}
+
           <button
             type="submit"
+            disabled={isSubmitting}
             className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg"
-            style={{ backgroundColor: '#c96442' }}
+            style={{ backgroundColor: '#c96442', opacity: isSubmitting ? 0.8 : 1 }}
           >
-            {mode === 'signin' ? 'Continue' : 'Create Account'}
+            {isSubmitting ? 'Please wait...' : mode === 'signin' ? 'Continue' : 'Create Account'}
             <ArrowRight className="h-4 w-4" />
           </button>
 
@@ -264,16 +302,77 @@ export default function HomePageTwo() {
   const [scrolled, setScrolled] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
+  const [authForm, setAuthForm] = useState<AuthFormState>({
+    fullName: '',
+    email: '',
+    password: '',
+  });
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
   const openAuth = (mode: AuthMode) => {
     setAuthMode(mode);
+    setAuthError(null);
     setIsAuthOpen(true);
     setMobileMenuOpen(false);
   };
 
-  const handleAuthSubmit = () => {
-    setIsAuthOpen(false);
-    router.push('/dashboard');
+  const handleAuthModeChange = (mode: AuthMode) => {
+    setAuthMode(mode);
+    setAuthError(null);
+  };
+
+  const handleAuthFieldChange = (field: AuthField, value: string) => {
+    setAuthForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleAuthSubmit = async () => {
+    setAuthError(null);
+
+    const email = authForm.email.trim();
+    const password = authForm.password;
+    const fullName = authForm.fullName.trim();
+
+    if (!email || !password) {
+      setAuthError('Email and password are required.');
+      return;
+    }
+
+    if (authMode === 'signup' && fullName.length < 2) {
+      setAuthError('Please enter your full name.');
+      return;
+    }
+
+    setIsSubmittingAuth(true);
+
+    try {
+      const response = await apiRequest<AuthResponse>(
+        authMode === 'signin' ? '/api/v1/auth/signin' : '/api/v1/auth/signup',
+        {
+          method: 'POST',
+          body:
+            authMode === 'signin'
+              ? { email, password }
+              : {
+                  full_name: fullName,
+                  email,
+                  password,
+                },
+        }
+      );
+
+      setStoredAccessToken(response.access_token);
+      setIsAuthOpen(false);
+      router.push('/dashboard');
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setAuthError(error.detail);
+      } else {
+        setAuthError('Unable to continue right now. Please try again.');
+      }
+    } finally {
+      setIsSubmittingAuth(false);
+    }
   };
 
   useEffect(() => {
@@ -1369,9 +1468,13 @@ export default function HomePageTwo() {
       <HomeTwoAuthModal
         isOpen={isAuthOpen}
         mode={authMode}
-        onModeChange={setAuthMode}
+        onModeChange={handleAuthModeChange}
         onClose={() => setIsAuthOpen(false)}
         onSubmit={handleAuthSubmit}
+        form={authForm}
+        onFieldChange={handleAuthFieldChange}
+        isSubmitting={isSubmittingAuth}
+        authError={authError}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Fraunces, DM_Sans } from 'next/font/google';
 import {
   ArrowLeft,
@@ -14,6 +15,7 @@ import {
   Sparkles,
   Target,
 } from 'lucide-react';
+import { ApiError, apiRequest, clearStoredAccessToken, getStoredAccessToken } from '@/lib/api';
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -31,6 +33,7 @@ const dmSans = DM_Sans({
 
 type Stage = 'onboarding' | 'workspace';
 type OnboardingPhase = 'choice' | 'steps';
+type OnboardingPath = 'upload' | 'create';
 type Tab = 'overview' | 'resumes' | 'jobs' | 'templates';
 
 type ResumeDraft = {
@@ -48,28 +51,56 @@ type JobLead = {
   saved: boolean;
 };
 
-const onboardingSteps = [
+type OnboardingStep = {
+  index: number;
+  title: string;
+  description: string;
+  action: string;
+};
+
+type OnboardingStateResponse = {
+  stage: Stage;
+  phase: OnboardingPhase;
+  selected_path: OnboardingPath | null;
+  current_step: number;
+  target_role: string | null;
+  steps: OnboardingStep[];
+  updated_at: string;
+};
+
+type MeResponse = {
+  id: string;
+  full_name: string;
+  email: string;
+  created_at: string;
+};
+
+const defaultOnboardingSteps: OnboardingStep[] = [
   {
+    index: 0,
     title: 'Upload Resume',
     description: 'Import your existing resume for AI-powered optimization',
     action: 'Upload Resume',
   },
   {
+    index: 1,
     title: 'AI Analysis',
     description: 'Get instant ATS score and AI-powered improvement suggestions',
     action: 'Analyze Resume',
   },
   {
+    index: 2,
     title: 'Find Jobs',
     description: 'Discover jobs that match your skills and experience',
     action: 'Browse Jobs',
   },
   {
+    index: 3,
     title: 'Apply & Track',
     description: 'Apply with tailored resumes and track your applications',
     action: 'Start Applying',
   },
-] as const;
+];
 
 const initialDrafts: ResumeDraft[] = [
   { id: 'd1', title: 'Product Designer Resume', score: 91, mood: 'Warm and clear' },
@@ -109,16 +140,81 @@ const templateLibrary = [
 ] as const;
 
 export default function DashboardTwoPage() {
+  const router = useRouter();
+
   const [stage, setStage] = useState<Stage>('onboarding');
   const [onboardingPhase, setOnboardingPhase] = useState<OnboardingPhase>('choice');
   const [onboardingStep, setOnboardingStep] = useState(0);
-  const name = 'Jordan';
+  const [onboardingSteps, setOnboardingSteps] = useState<OnboardingStep[]>(defaultOnboardingSteps);
+  const [displayName, setDisplayName] = useState('friend');
   const [targetRole, setTargetRole] = useState('');
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [drafts, setDrafts] = useState<ResumeDraft[]>(initialDrafts);
   const [leads, setLeads] = useState<JobLead[]>(initialLeads);
+
+  const [token, setToken] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isOnboardingBusy, setIsOnboardingBusy] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const applyOnboardingState = useCallback((state: OnboardingStateResponse) => {
+    setStage(state.stage);
+    setOnboardingPhase(state.phase);
+    setOnboardingStep(state.current_step);
+    setTargetRole(state.target_role ?? '');
+
+    if (Array.isArray(state.steps) && state.steps.length > 0) {
+      const orderedSteps = [...state.steps].sort((a, b) => a.index - b.index);
+      setOnboardingSteps(orderedSteps);
+      return;
+    }
+
+    setOnboardingSteps(defaultOnboardingSteps);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const initialize = async () => {
+      const storedToken = getStoredAccessToken();
+      if (!storedToken) {
+        router.replace('/');
+        return;
+      }
+
+      setToken(storedToken);
+
+      try {
+        const me = await apiRequest<MeResponse>('/api/v1/auth/me', { token: storedToken });
+        if (cancelled) return;
+
+        const firstName = me.full_name.trim().split(/\s+/)[0];
+        setDisplayName(firstName || 'friend');
+
+        const onboardingState = await apiRequest<OnboardingStateResponse>('/api/v1/onboarding', {
+          token: storedToken,
+        });
+        if (cancelled) return;
+
+        applyOnboardingState(onboardingState);
+      } catch {
+        if (cancelled) return;
+        clearStoredAccessToken();
+        router.replace('/');
+        return;
+      } finally {
+        if (!cancelled) setIsInitializing(false);
+      }
+    };
+
+    void initialize();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyOnboardingState, router]);
 
   const completedToday = useMemo(
     () => checklistItems.filter((item) => checked[item]).length,
@@ -129,8 +225,11 @@ export default function DashboardTwoPage() {
     () => Math.round(drafts.reduce((sum, draft) => sum + draft.score, 0) / drafts.length),
     [drafts]
   );
-  const completedOnboardingSteps = onboardingStep;
-  const onboardingProgress = (completedOnboardingSteps / onboardingSteps.length) * 100;
+
+  const completedOnboardingSteps = Math.min(onboardingStep, onboardingSteps.length);
+  const onboardingProgress = onboardingSteps.length > 0
+    ? (completedOnboardingSteps / onboardingSteps.length) * 100
+    : 0;
 
   const toggleChecklist = (item: string) => {
     setChecked((prev) => ({ ...prev, [item]: !prev[item] }));
@@ -165,37 +264,96 @@ export default function DashboardTwoPage() {
     setLeads((prev) => prev.map((lead) => (lead.id === id ? { ...lead, saved: !lead.saved } : lead)));
   };
 
-  const signOut = () => {
-    window.location.href = '/';
-  };
+  const runOnboardingMutation = useCallback(
+    async (path: string, body?: unknown): Promise<OnboardingStateResponse | null> => {
+      if (!token) return null;
 
-  const handleChooseUpload = () => {
-    setOnboardingStep(0);
-    setOnboardingPhase('steps');
-  };
+      setApiError(null);
+      setIsOnboardingBusy(true);
 
-  const handleChooseCreate = () => {
-    window.location.href = '/editor';
-  };
-
-  const handleBackToOptions = () => {
-    setOnboardingStep(0);
-    setOnboardingPhase('choice');
-  };
-
-  const handleOnboardingStepAction = (stepIndex: number) => {
-    if (stepIndex !== onboardingStep) return;
-
-    if (stepIndex < onboardingSteps.length - 1) {
-      if (stepIndex === 2) {
-        setTargetRole((current) => current || 'Senior Product Designer');
+      try {
+        const nextState = await apiRequest<OnboardingStateResponse>(path, {
+          method: 'POST',
+          token,
+          body,
+        });
+        applyOnboardingState(nextState);
+        return nextState;
+      } catch (error) {
+        if (error instanceof ApiError) {
+          if (error.status === 401) {
+            clearStoredAccessToken();
+            router.replace('/');
+            return null;
+          }
+          setApiError(error.detail);
+        } else {
+          setApiError('Could not update onboarding right now. Please try again.');
+        }
+        return null;
+      } finally {
+        setIsOnboardingBusy(false);
       }
-      setOnboardingStep((current) => current + 1);
-      return;
+    },
+    [applyOnboardingState, router, token]
+  );
+
+  const signOut = async () => {
+    if (token) {
+      try {
+        await apiRequest<{ detail: string }>('/api/v1/auth/signout', {
+          method: 'POST',
+          token,
+        });
+      } catch {
+        // Signout cleanup should still happen locally.
+      }
     }
 
-    setStage('workspace');
+    clearStoredAccessToken();
+    router.push('/');
   };
+
+  const handleChooseUpload = async () => {
+    await runOnboardingMutation('/api/v1/onboarding/choose', { path: 'upload' });
+  };
+
+  const handleChooseCreate = async () => {
+    const nextState = await runOnboardingMutation('/api/v1/onboarding/choose', { path: 'create' });
+    if (nextState) {
+      router.push('/editor');
+    }
+  };
+
+  const handleBackToOptions = async () => {
+    await runOnboardingMutation('/api/v1/onboarding/back-to-options');
+  };
+
+  const handleSkipOnboarding = async () => {
+    await runOnboardingMutation('/api/v1/onboarding/skip');
+  };
+
+  const handleOnboardingStepAction = async (stepIndex: number) => {
+    if (stepIndex !== onboardingStep || isOnboardingBusy) return;
+
+    await runOnboardingMutation('/api/v1/onboarding/step-action', {
+      step_index: stepIndex,
+      target_role: stepIndex === 2 ? targetRole || undefined : undefined,
+    });
+  };
+
+  if (isInitializing) {
+    return (
+      <div
+        className={`${fraunces.variable} ${dmSans.variable} min-h-screen bg-[#faf7f2] text-[#2c1810] flex items-center justify-center px-4`}
+        style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+      >
+        <div className="rounded-2xl border border-[#eadfce] bg-[#fffaf4] px-6 py-4 text-sm text-[#8b7355]">
+          Loading dashboard...
+        </div>
+      </div>
+    );
+  }
 
   if (stage === 'onboarding') {
     return (
@@ -214,6 +372,12 @@ export default function DashboardTwoPage() {
             onboardingPhase === 'choice' ? 'max-w-5xl' : 'max-w-3xl'
           }`}
         >
+          {apiError && (
+            <div className="mb-6 rounded-2xl border border-[#f0c6b8] bg-[#fff3ef] px-4 py-3 text-sm text-[#9e3f29]">
+              {apiError}
+            </div>
+          )}
+
           {onboardingPhase === 'choice' ? (
             <>
               <div className="mb-8 flex items-start justify-between gap-4">
@@ -232,8 +396,11 @@ export default function DashboardTwoPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <button
                   type="button"
-                  onClick={handleChooseUpload}
-                  className="relative rounded-3xl border border-[#e4d3be] bg-white p-6 text-left transition-all hover:border-[#c96442] hover:shadow-[0_15px_35px_rgba(201,100,66,0.15)]"
+                  onClick={() => {
+                    void handleChooseUpload();
+                  }}
+                  disabled={isOnboardingBusy}
+                  className="relative rounded-3xl border border-[#e4d3be] bg-white p-6 text-left transition-all hover:border-[#c96442] hover:shadow-[0_15px_35px_rgba(201,100,66,0.15)] disabled:opacity-70"
                 >
                   <span className="absolute -top-3 left-6 rounded-full bg-[#2d5a3d] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white">
                     Recommended
@@ -263,8 +430,11 @@ export default function DashboardTwoPage() {
 
                 <button
                   type="button"
-                  onClick={handleChooseCreate}
-                  className="rounded-3xl border border-[#e4d3be] bg-white p-6 text-left transition-all hover:border-[#2d5a3d] hover:shadow-[0_15px_35px_rgba(45,90,61,0.12)]"
+                  onClick={() => {
+                    void handleChooseCreate();
+                  }}
+                  disabled={isOnboardingBusy}
+                  className="rounded-3xl border border-[#e4d3be] bg-white p-6 text-left transition-all hover:border-[#2d5a3d] hover:shadow-[0_15px_35px_rgba(45,90,61,0.12)] disabled:opacity-70"
                 >
                   <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eef5ef] text-[#2d5a3d]">
                     <PenTool className="h-6 w-6" />
@@ -293,8 +463,11 @@ export default function DashboardTwoPage() {
               <div className="mt-8 text-center">
                 <button
                   type="button"
-                  onClick={() => setStage('workspace')}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white px-5 py-2.5 text-sm text-[#8b7355] hover:bg-[#f8f1e8]"
+                  onClick={() => {
+                    void handleSkipOnboarding();
+                  }}
+                  disabled={isOnboardingBusy}
+                  className="inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white px-5 py-2.5 text-sm text-[#8b7355] hover:bg-[#f8f1e8] disabled:opacity-70"
                 >
                   Skip for now
                   <ArrowRight className="h-4 w-4" />
@@ -305,8 +478,11 @@ export default function DashboardTwoPage() {
             <>
               <button
                 type="button"
-                onClick={handleBackToOptions}
-                className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white px-4 py-2 text-sm text-[#8b7355] hover:bg-[#f8f1e8]"
+                onClick={() => {
+                  void handleBackToOptions();
+                }}
+                disabled={isOnboardingBusy}
+                className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white px-4 py-2 text-sm text-[#8b7355] hover:bg-[#f8f1e8] disabled:opacity-70"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to options
@@ -375,8 +551,11 @@ export default function DashboardTwoPage() {
                       {isActive ? (
                         <button
                           type="button"
-                          onClick={() => handleOnboardingStepAction(index)}
-                          className="inline-flex items-center gap-1 rounded-full bg-[#c96442] px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110"
+                          onClick={() => {
+                            void handleOnboardingStepAction(index);
+                          }}
+                          disabled={isOnboardingBusy}
+                          className="inline-flex items-center gap-1 rounded-full bg-[#c96442] px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-70"
                         >
                           {step.action}
                           <ArrowRight className="h-3.5 w-3.5" />
@@ -399,8 +578,11 @@ export default function DashboardTwoPage() {
               <div className="mt-6">
                 <button
                   type="button"
-                  onClick={() => setStage('workspace')}
-                  className="inline-flex items-center gap-2 text-sm text-[#8b7355] underline-offset-4 hover:underline"
+                  onClick={() => {
+                    void handleSkipOnboarding();
+                  }}
+                  disabled={isOnboardingBusy}
+                  className="inline-flex items-center gap-2 text-sm text-[#8b7355] underline-offset-4 hover:underline disabled:opacity-70"
                 >
                   Skip for now
                   <ArrowRight className="h-4 w-4" />
@@ -427,7 +609,7 @@ export default function DashboardTwoPage() {
         <header className="mb-6 rounded-[30px] border border-[#eadfce] bg-[#fffaf4] px-5 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-[#2d5a3d]">Hello {name || 'friend'}</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-[#2d5a3d]">Hello {displayName || 'friend'}</p>
               <h1 className="text-3xl font-bold" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
                 Your Career Garden
               </h1>
@@ -438,11 +620,11 @@ export default function DashboardTwoPage() {
                 <Plus className="h-4 w-4" />
                 New Draft
               </button>
-              <button type="button" onClick={() => (window.location.href = '/editor')} className="inline-flex items-center gap-2 rounded-full bg-[#2d5a3d] px-4 py-2 text-sm font-semibold text-white">
+              <button type="button" onClick={() => router.push('/editor')} className="inline-flex items-center gap-2 rounded-full bg-[#2d5a3d] px-4 py-2 text-sm font-semibold text-white">
                 <ArrowRight className="h-4 w-4" />
                 Open Editor
               </button>
-              <button type="button" onClick={signOut} className="inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white px-4 py-2 text-sm text-[#8b7355]">
+              <button type="button" onClick={() => void signOut()} className="inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white px-4 py-2 text-sm text-[#8b7355]">
                 <LogOut className="h-4 w-4" />
                 Sign Out
               </button>
@@ -568,7 +750,7 @@ export default function DashboardTwoPage() {
               </h2>
               <button
                 type="button"
-                onClick={() => (window.location.href = '/editor')}
+                onClick={() => router.push('/editor')}
                 className="inline-flex items-center gap-2 rounded-full bg-[#2d5a3d] px-4 py-2 text-sm font-semibold text-white"
               >
                 <ArrowRight className="h-4 w-4" />
