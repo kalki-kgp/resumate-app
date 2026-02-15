@@ -1,0 +1,13 @@
+export { AuthModal } from './AuthModal';
+export type { AuthModalProps, AuthMode, AuthField, AuthFormState } from './AuthModal';
+export { Navbar } from './Navbar';
+export type { NavbarProps } from './Navbar';
+export { Hero } from './Hero';
+export type { HeroProps } from './Hero';
+export { WhyResuMate } from './WhyResuMate';
+export { ProductShowcase } from './ProductShowcase';
+export { HowItWorks } from './HowItWorks';
+export { Testimonials } from './Testimonials';
+export { CTA } from './CTA';
+export type { CTAProps } from './CTA';
+export { Footer } from './Footer';

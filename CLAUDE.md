@@ -22,34 +22,29 @@
 ```
 src/
 ├── app/                        # Next.js App Router
-│   ├── _components/            # Homepage-specific components (private)
-│   │   ├── Hero.tsx
-│   │   ├── Features.tsx
-│   │   ├── Templates.tsx
-│   │   ├── Pricing.tsx
-│   │   ├── Testimonials.tsx
-│   │   ├── CTA.tsx
-│   │   └── index.ts            # Barrel export
-│   ├── dashboard/              # Dashboard route
-│   │   ├── _components/        # Dashboard-specific components
-│   │   │   ├── views/          # Dashboard view components
-│   │   │   │   ├── OverviewView.tsx
-│   │   │   │   ├── ResumesView.tsx
-│   │   │   │   ├── JobsView.tsx
-│   │   │   │   ├── TemplatesView.tsx
-│   │   │   │   └── index.ts
-│   │   │   ├── Sidebar.tsx
-│   │   │   ├── DashboardTopbar.tsx
-│   │   │   ├── UserProfileDropdown.tsx
+│   ├── home/                   # Landing page route (/home)
+│   │   ├── _components/        # Home-specific components (private)
+│   │   │   ├── AuthModal.tsx
+│   │   │   ├── Navbar.tsx
+│   │   │   ├── Hero.tsx
+│   │   │   ├── WhyResuMate.tsx
+│   │   │   ├── ProductShowcase.tsx
+│   │   │   ├── HowItWorks.tsx
+│   │   │   ├── Testimonials.tsx
+│   │   │   ├── CTA.tsx
+│   │   │   ├── Footer.tsx
+│   │   │   └── index.ts        # Barrel export
+│   │   └── page.tsx            # Landing page
+│   ├── dashboard/              # Dashboard route (/dashboard)
+│   │   ├── _components/       # Dashboard-specific components
 │   │   │   ├── OnboardingWizard.tsx
-│   │   │   ├── DevToggle.tsx
-│   │   │   ├── ResumeCard.tsx
-│   │   │   ├── JobCard.tsx
-│   │   │   ├── ATSScore.tsx
-│   │   │   ├── ExtractContentModal.tsx
+│   │   │   ├── DashboardSidebar.tsx
+│   │   │   ├── dashboard-types.ts   # API types, onboarding types
+│   │   │   ├── constants.ts        # Steps, templates, sidebar config
+│   │   │   ├── utils.ts            # formatFileSize, resumeThumbnailSrc, etc.
 │   │   │   └── index.ts
-│   │   └── page.tsx            # Dashboard page (with onboarding flow)
-│   ├── editor/                 # Resume Editor route
+│   │   └── page.tsx            # Dashboard page (onboarding + workspace)
+│   ├── editor/                 # Resume Editor route (/editor)
 │   │   ├── _components/        # Editor-specific components
 │   │   │   ├── InputGroup.tsx        # Collapsible form section
 │   │   │   ├── InputField.tsx        # Form input component
@@ -58,7 +53,7 @@ src/
 │   │   └── page.tsx            # Full resume editor with live preview
 │   ├── globals.css             # Global styles + custom animations
 │   ├── layout.tsx              # Root layout (metadata, fonts)
-│   └── page.tsx                # Homepage
+│   └── page.tsx                # Root redirect to /home
 │
 ├── components/                  # Shared/Global components
 │   ├── ui/                      # Reusable UI primitives
@@ -136,18 +131,28 @@ import type { Theme } from '@/types';
 - The hook uses `applyTheme()` helper to add/remove `.dark` class on `<html>`
 - Pass `theme` and `toggleTheme` props to components that need theme awareness
 
+## Routes
+
+| Path | Purpose |
+|------|---------|
+| `/` | Redirects to `/home` |
+| `/home` | Landing page (marketing, auth) |
+| `/dashboard` | User workspace (onboarding + resumes, templates, AI features) |
+| `/editor` | Resume editor with live preview |
+
 ## Key Files Reference
 
 | File | Purpose |
 |------|---------|
-| `src/app/page.tsx` | Homepage - composes all sections |
-| `src/app/dashboard/page.tsx` | Dashboard - user's main workspace |
+| `src/app/page.tsx` | Root route - redirects `/` to `/home` |
+| `src/app/home/page.tsx` | Landing page - composes Hero, WhyResuMate, etc. |
+| `src/app/dashboard/page.tsx` | Dashboard - onboarding flow + workspace |
 | `src/app/editor/page.tsx` | Resume editor with live preview |
 | `src/app/layout.tsx` | Root layout, metadata, fonts |
 | `src/app/globals.css` | Global styles, CSS variables, animations |
 | `src/types/index.ts` | All TypeScript interfaces |
 | `src/hooks/useTheme.ts` | Dark mode toggle logic |
-| `src/components/ui/AuthModal.tsx` | Sign in/Sign up modal |
+| `src/app/home/_components/AuthModal.tsx` | Sign in/Sign up modal (home route) |
 
 ## Development Commands
 

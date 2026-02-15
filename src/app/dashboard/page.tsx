@@ -4,34 +4,39 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fraunces, DM_Sans } from 'next/font/google';
-import {
-  Bot,
-  ArrowLeft,
-  ArrowRight,
-  BadgeCheck,
-  CalendarDays,
-  CheckCircle2,
-  ChevronDown,
-  CircleHelp,
-  Compass,
-  FileText,
-  FileUp,
-  FolderOpen,
-  Heart,
-  LayoutGrid,
-  LoaderCircle,
-  LogOut,
-  Mail,
-  Search,
-  Settings,
-  PenTool,
-  Sparkles,
-  Target,
-  WandSparkles,
-} from 'lucide-react';
-import { ApiError, apiRequest, clearStoredAccessToken, getApiBaseUrl, getStoredAccessToken } from '@/lib/api';
+import { ArrowRight, LoaderCircle } from 'lucide-react';
+import { ApiError, apiRequest, clearStoredAccessToken, getStoredAccessToken } from '@/lib/api';
 import { TemplatePreview } from '@/app/editor/_components';
-import type { ResumeData, TemplateType } from '@/types';
+import {
+  OnboardingWizard,
+  DashboardSidebar,
+  defaultOnboardingSteps,
+  exampleJobs,
+  templateCards,
+  templatePreviewData,
+  getSectionHeading,
+  formatFileSize,
+  formatRelativeTime,
+  resumeThumbnailSrc,
+  getCategoryBadge,
+  clamp,
+  isPdfFile,
+} from '@/app/dashboard/_components';
+import type {
+  Stage,
+  OnboardingPhase,
+  OnboardingStep,
+  DashboardSection,
+  DashboardResume,
+  ResumeAnalysisResult,
+  OnboardingStateResponse,
+  AnalyzeResumeResponse,
+  UploadResumeResponse,
+  AnalyzeDashboardResumeResponse,
+  DashboardResponse,
+  MeResponse,
+  ExampleJob,
+} from '@/app/dashboard/_components';
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -46,247 +51,6 @@ const dmSans = DM_Sans({
   variable: '--font-dm-sans',
   display: 'swap',
 });
-
-type Stage = 'onboarding' | 'workspace';
-type OnboardingPhase = 'choice' | 'steps';
-type OnboardingPath = 'upload' | 'create';
-type DashboardSection =
-  | 'overview'
-  | 'resumes'
-  | 'templates'
-  | 'analytics'
-  | 'ai-insights'
-  | 'job-match'
-  | 'ai-assistant'
-  | 'ai-experiments'
-  | 'faq'
-  | 'settings';
-
-type OnboardingStep = {
-  index: number;
-  title: string;
-  description: string;
-  action: string;
-};
-
-type ResumeAnalysisRole = {
-  title: string;
-  reason: string;
-};
-
-type ResumeAnalysisBullet = {
-  original: string;
-  improved: string;
-};
-
-type ResumeAnalysisCategoryScores = {
-  impact: number | null;
-  brevity: number | null;
-  style: number | null;
-  soft_skills: number | null;
-};
-
-type ResumeAnalysisSectionScores = {
-  headline: number | null;
-  summary: number | null;
-  experience: number | null;
-  education: number | null;
-};
-
-type ResumeAnalysisResult = {
-  candidate_headline: string | null;
-  summary: string | null;
-  ats_score_estimate: number | null;
-  category_scores: ResumeAnalysisCategoryScores | null;
-  section_scores: ResumeAnalysisSectionScores | null;
-  strengths: string[];
-  gaps: string[];
-  priority_fixes: string[];
-  keywords_to_add: string[];
-  recommended_roles: ResumeAnalysisRole[];
-  improved_bullets: ResumeAnalysisBullet[];
-  confidence_note: string | null;
-  raw_response: string | null;
-  analyzed_at: string | null;
-};
-
-type OnboardingStateResponse = {
-  stage: Stage;
-  phase: OnboardingPhase;
-  selected_path: OnboardingPath | null;
-  current_step: number;
-  target_role: string | null;
-  steps: OnboardingStep[];
-  analysis: ResumeAnalysisResult | null;
-  updated_at: string;
-};
-
-type AnalyzeResumeResponse = {
-  onboarding: OnboardingStateResponse;
-  analysis: ResumeAnalysisResult;
-};
-
-type DashboardResume = {
-  id: string;
-  filename: string;
-  title: string;
-  uploaded_at: string;
-  file_size_bytes: number;
-  analysis: ResumeAnalysisResult | null;
-  thumbnail_url: string | null;
-};
-
-type UploadResumeResponse = DashboardResume;
-type AnalyzeDashboardResumeResponse = DashboardResume;
-
-type DashboardResponse = {
-  display_name: string;
-  target_role: string | null;
-  selected_resume_id: string | null;
-  resumes: DashboardResume[];
-};
-
-type MeResponse = {
-  id: string;
-  full_name: string;
-  email: string;
-  created_at: string;
-};
-
-type ExampleJob = {
-  id: string;
-  title: string;
-  company: string;
-  match: number;
-  type: string;
-  reason?: string;
-};
-
-const defaultOnboardingSteps: OnboardingStep[] = [
-  {
-    index: 0,
-    title: 'Upload Resume',
-    description: 'Import your existing resume for AI-powered optimization',
-    action: 'Upload Resume',
-  },
-  {
-    index: 1,
-    title: 'AI Analysis',
-    description: 'Get instant ATS score and AI-powered improvement suggestions',
-    action: 'Analyze Resume',
-  },
-  {
-    index: 2,
-    title: 'Find Jobs',
-    description: 'Discover jobs that match your skills and experience',
-    action: 'Browse Jobs',
-  },
-  {
-    index: 3,
-    title: 'Apply & Track',
-    description: 'Apply with tailored resumes and track your applications',
-    action: 'Start Applying',
-  },
-];
-
-const exampleJobs: ExampleJob[] = [
-  { id: 'j1', title: 'Senior Product Designer', company: 'Notion', match: 93, type: 'Remote' },
-  { id: 'j2', title: 'Design Systems Lead', company: 'Airbnb', match: 89, type: 'Hybrid' },
-  { id: 'j3', title: 'Principal UX Designer', company: 'Stripe', match: 86, type: 'Remote' },
-];
-
-const templateCards: { id: TemplateType; name: string; tone: string }[] = [
-  { id: 'modern', name: 'Modern', tone: 'Balanced hierarchy for product and tech roles.' },
-  { id: 'classic', name: 'Classic', tone: 'Sharper structure for leadership and consulting applications.' },
-  { id: 'creative', name: 'Creative', tone: 'Expressive style for design and brand-facing positions.' },
-  { id: 'minimal', name: 'Minimal', tone: 'Compact high-signal format for recruiter scans.' },
-];
-
-const templatePreviewData: ResumeData = {
-  personal: {
-    fullName: 'Alex Morgan',
-    role: 'Senior Product Designer',
-    email: 'alex@resumate.ai',
-    phone: '+1 (555) 908-1102',
-    location: 'San Francisco, CA',
-    summary: 'Product designer focused on shipping user-centered, measurable outcomes.',
-  },
-  experience: [
-    {
-      id: 1,
-      role: 'Senior Product Designer',
-      company: 'Figma',
-      date: '2021 - Present',
-      description: 'Led onboarding redesign and improved activation metrics by 24%.',
-    },
-    {
-      id: 2,
-      role: 'Product Designer',
-      company: 'Notion',
-      date: '2018 - 2021',
-      description: 'Built design systems and workflow features for distributed teams.',
-    },
-  ],
-  education: [
-    {
-      id: 1,
-      degree: 'B.S. in HCI',
-      school: 'UC San Diego',
-      date: '2014 - 2018',
-    },
-  ],
-  skills: ['Figma', 'Product Strategy', 'UX Research', 'Design Systems', 'Prototyping'],
-};
-
-const sidebarPrimaryItems = [
-  { key: 'overview', label: 'Overview', icon: LayoutGrid },
-  { key: 'resumes', label: 'My Resumes', icon: FolderOpen },
-  { key: 'templates', label: 'Templates Library', icon: FileText },
-  { key: 'analytics', label: 'Analytics', icon: Target },
-] as const;
-
-const sidebarAiItems = [
-  { key: 'ai-insights', label: 'AI Insights', icon: Sparkles, badge: undefined },
-  { key: 'job-match', label: 'Job Match', icon: Compass, badge: undefined },
-  { key: 'ai-assistant', label: 'AI Assistant', icon: Bot, badge: undefined },
-  { key: 'ai-experiments', label: 'AI Experiments', icon: WandSparkles, badge: 'Beta' },
-] as const;
-
-const isPdfFile = (file: File): boolean => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-
-const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
-
-const formatFileSize = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${Math.round(kb)} KB`;
-  return `${(kb / 1024).toFixed(1)} MB`;
-};
-
-const formatRelativeTime = (isoDate: string): string => {
-  const date = new Date(isoDate);
-  const diffMs = Date.now() - date.getTime();
-  const minute = 60_000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-
-  if (diffMs < minute) return 'edited just now';
-  if (diffMs < hour) return `edited ${Math.max(1, Math.floor(diffMs / minute))}m ago`;
-  if (diffMs < day) return `edited ${Math.max(1, Math.floor(diffMs / hour))}h ago`;
-  return `edited ${Math.max(1, Math.floor(diffMs / day))}d ago`;
-};
-
-const formatJoinDate = (isoDate: string | null): string => {
-  if (!isoDate) return 'Unknown';
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return 'Unknown';
-  return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-};
-
-const resumeThumbnailSrc = (resume: DashboardResume): string | null => {
-  if (!resume.thumbnail_url) return null;
-  return `${getApiBaseUrl()}${resume.thumbnail_url}`;
-};
 
 export default function DashboardTwoPage() {
   const router = useRouter();
@@ -579,48 +343,7 @@ export default function DashboardTwoPage() {
   const keywords = selectedDashboardAnalysis?.keywords_to_add ?? [];
   const improvedBullets = selectedDashboardAnalysis?.improved_bullets ?? [];
 
-  const sectionHeading: Record<DashboardSection, { title: string; subtitle: string }> = {
-    overview: {
-      title: `Good Morning, ${displayName || 'there'}!`,
-      subtitle: "A new day, a new opportunity. Let's create something amazing together.",
-    },
-    resumes: {
-      title: 'My Resumes',
-      subtitle: 'Browse uploaded resumes, analysis status, and select one to inspect.',
-    },
-    templates: {
-      title: 'Templates Library',
-      subtitle: 'Pick a visual direction and continue in the editor.',
-    },
-    analytics: {
-      title: 'Analytics',
-      subtitle: 'Track ATS quality, section health, and high-impact fixes.',
-    },
-    'ai-insights': {
-      title: 'AI Insights',
-      subtitle: 'Strengths, gaps, and actionable suggestions from analysis.',
-    },
-    'job-match': {
-      title: 'Job Match',
-      subtitle: 'Role alignment suggestions generated from your selected resume.',
-    },
-    'ai-assistant': {
-      title: 'AI Assistant',
-      subtitle: 'Use guided prompts and rewritten bullets to speed up edits.',
-    },
-    'ai-experiments': {
-      title: 'AI Experiments',
-      subtitle: 'Preview beta workflows and advanced optimization tools.',
-    },
-    faq: {
-      title: 'FAQ',
-      subtitle: 'Quick answers for common resume and ATS questions.',
-    },
-    settings: {
-      title: 'Settings',
-      subtitle: 'Manage preferences for dashboard behavior and AI output.',
-    },
-  };
+  const sectionHeading = getSectionHeading(activeSection, displayName);
 
   const runOnboardingMutation = useCallback(
     async (path: string, body?: unknown): Promise<OnboardingStateResponse | null> => {
@@ -939,278 +662,6 @@ export default function DashboardTwoPage() {
       stopDashboardAnalysisAnimation();
       setIsResumeAnalysisBusy(false);
     }
-  };
-
-  const renderStepDetails = () => {
-    if (!currentOnboardingStep) return null;
-
-    if (currentOnboardingStep.index === 0) {
-      return (
-        <div className="space-y-5">
-          <div
-            className={`rounded-3xl border-2 border-dashed px-6 py-10 text-center transition-all ${
-              isDragOver
-                ? 'border-[#c96442] bg-[#fff3ec]'
-                : 'border-[#e4d3be] bg-white'
-            }`}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setIsDragOver(true);
-            }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={(event) => {
-              event.preventDefault();
-              setIsDragOver(false);
-              const droppedFile = event.dataTransfer.files?.[0] ?? null;
-              handleFileSelected(droppedFile);
-            }}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf,.pdf"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0] ?? null;
-                handleFileSelected(file);
-              }}
-            />
-
-            <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#fff1e8] text-[#c96442]">
-              <FileUp className="h-7 w-7" />
-            </div>
-            <h3 className="text-xl font-semibold text-[#2c1810]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
-              Drag and drop your resume PDF
-            </h3>
-            <p className="mt-2 text-sm text-[#8b7355]">
-              Drop your file here or browse from your computer. We only accept PDF.
-            </p>
-            <button
-              type="button"
-              onClick={openFilePicker}
-              className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-[#fffaf4] px-4 py-2 text-sm font-semibold text-[#8b7355] hover:bg-[#f8f1e8]"
-            >
-              Choose PDF
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="rounded-2xl border border-[#eadfce] bg-white px-4 py-3 text-sm text-[#8b7355]">
-            {selectedResumeFile ? (
-              <span>
-                Selected: <span className="font-semibold text-[#2c1810]">{selectedResumeFile.name}</span>
-              </span>
-            ) : (
-              'No file selected yet.'
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              void handleUploadStep();
-            }}
-            disabled={isOnboardingBusy || !selectedResumeFile}
-            className="inline-flex items-center gap-2 rounded-full bg-[#c96442] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-65"
-          >
-            {isOnboardingBusy ? (
-              <>
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                Upload Resume
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
-        </div>
-      );
-    }
-
-    if (currentOnboardingStep.index === 1) {
-      return (
-        <div className="space-y-5">
-          <div className="rounded-3xl border border-[#eadfce] bg-white px-6 py-6">
-            <div className="relative mb-6 overflow-hidden rounded-2xl border border-[#f0e5d6] bg-[#faf7f2] p-5">
-              <div className="absolute -right-8 -top-6 h-24 w-24 rounded-full bg-[#c96442]/15 blur-2xl" />
-              <div className="absolute -left-10 bottom-0 h-20 w-20 rounded-full bg-[#2d5a3d]/15 blur-2xl" />
-
-              <div className="relative mb-4 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em] text-[#8b7355]">
-                <span>AI Analysis Progress</span>
-                <span className="text-[#2d5a3d]">{analysisProgress}%</span>
-              </div>
-
-              <div className="relative mb-4 h-2 overflow-hidden rounded-full bg-[#e8dfd2]">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#2d5a3d] via-[#c96442] to-[#8b7355] transition-all duration-500"
-                  style={{ width: `${analysisProgress}%` }}
-                />
-              </div>
-
-              <p className="mb-4 text-sm text-[#5f4c3a]">{analysisStatusText}</p>
-
-              <div className="grid gap-2 sm:grid-cols-3">
-                <div className="rounded-xl border border-[#eadfce] bg-white px-3 py-2">
-                  <p className="text-[11px] font-semibold text-[#8b7355]">Document Parsing</p>
-                  <p className="mt-1 text-xs text-[#2c1810]">PDF pages to image snapshots</p>
-                </div>
-                <div className="rounded-xl border border-[#eadfce] bg-white px-3 py-2">
-                  <p className="text-[11px] font-semibold text-[#8b7355]">Vision Review</p>
-                  <p className="mt-1 text-xs text-[#2c1810]">Gemma reads structure and content</p>
-                </div>
-                <div className="rounded-xl border border-[#eadfce] bg-white px-3 py-2">
-                  <p className="text-[11px] font-semibold text-[#8b7355]">Output Build</p>
-                  <p className="mt-1 text-xs text-[#2c1810]">ATS score + improvements + roles</p>
-                </div>
-              </div>
-
-              <div className="mt-4 inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 animate-bounce rounded-full bg-[#c96442]" />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-[#2d5a3d]" style={{ animationDelay: '120ms' }} />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-[#8b7355]" style={{ animationDelay: '240ms' }} />
-                <span className="ml-2 text-xs font-medium text-[#8b7355]">Live processing</span>
-              </div>
-            </div>
-
-            {analysisResult && !isOnboardingBusy && (
-              <div className="rounded-2xl border border-[#e7d9c7] bg-[#fffaf4] px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8b7355]">Latest Analysis Snapshot</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {analysisResult.ats_score_estimate !== null && (
-                    <span className="rounded-full bg-[#edf6ef] px-3 py-1 text-xs font-semibold text-[#2d5a3d]">
-                      ATS Estimate: {analysisResult.ats_score_estimate}%
-                    </span>
-                  )}
-                  {(analysisResult.recommended_roles ?? []).slice(0, 2).map((role) => (
-                    <span key={role.title} className="rounded-full bg-[#fff1e8] px-3 py-1 text-xs font-semibold text-[#c96442]">
-                      {role.title}
-                    </span>
-                  ))}
-                </div>
-                {analysisResult.summary && (
-                  <p className="mt-2 text-xs text-[#6d5a46]">{analysisResult.summary}</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              void handleAnalyzeStep();
-            }}
-            disabled={isOnboardingBusy}
-            className="inline-flex items-center gap-2 rounded-full bg-[#2d5a3d] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-65"
-          >
-            {isOnboardingBusy ? (
-              <>
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-                Running AI analysis...
-              </>
-            ) : (
-              <>
-                Run Deep AI Analysis
-                <Sparkles className="h-4 w-4" />
-              </>
-            )}
-          </button>
-        </div>
-      );
-    }
-
-    if (currentOnboardingStep.index === 2) {
-      return (
-        <div className="space-y-5">
-          <div className="grid gap-3 md:grid-cols-3">
-            {jobOptions.map((job) => {
-              const isSelected = selectedJobId === job.id;
-
-              return (
-                <button
-                  key={job.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedJobId(job.id);
-                    setApiError(null);
-                  }}
-                  className={`rounded-2xl border px-4 py-4 text-left transition-all ${
-                    isSelected
-                      ? 'border-[#2d5a3d] bg-[#edf6ef]'
-                      : 'border-[#eadfce] bg-white hover:border-[#cbb7a0]'
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-[#2c1810]">{job.title}</p>
-                  <p className="mt-1 text-xs text-[#8b7355]">{job.company} · {job.type}</p>
-                  {job.reason && (
-                    <p className="mt-2 text-[11px] text-[#6d5a46]">{job.reason}</p>
-                  )}
-                  <p className="mt-3 text-xs font-semibold text-[#2d5a3d]">{job.match}% match</p>
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              void handleJobsStep();
-            }}
-            disabled={isOnboardingBusy || !selectedJob}
-            className="inline-flex items-center gap-2 rounded-full bg-[#c96442] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-65"
-          >
-            {isOnboardingBusy ? (
-              <>
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-                Saving selection...
-              </>
-            ) : (
-              <>
-                Continue with Selected Role
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-5">
-        <div className="rounded-3xl border border-[#eadfce] bg-white px-6 py-6">
-          <p className="text-sm text-[#5f4c3a]">
-            Your profile is now calibrated. We&apos;ll guide you to apply with tailored resumes and track outcomes.
-          </p>
-          <div className="mt-4 space-y-2 text-sm text-[#8b7355]">
-            <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#2d5a3d]" /> Resume imported and analyzed</p>
-            <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#2d5a3d]" /> Target role selected: {targetRole || 'Product Designer'}</p>
-            <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#2d5a3d]" /> Application workflow ready</p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            void handleFinalStep();
-          }}
-          disabled={isOnboardingBusy}
-          className="inline-flex items-center gap-2 rounded-full bg-[#2d5a3d] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-65"
-        >
-          {isOnboardingBusy ? (
-            <>
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-              Finalizing...
-            </>
-          ) : (
-            <>
-              Start Applying
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </button>
-      </div>
-    );
   };
 
   const renderDashboardSection = () => {
@@ -1904,187 +1355,40 @@ export default function DashboardTwoPage() {
         className={`${fraunces.variable} ${dmSans.variable} min-h-screen bg-[#faf7f2] text-[#2c1810] px-4 py-10`}
         style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
       >
-        <div className="pointer-events-none fixed inset-0 overflow-hidden">
-          <div className="absolute -left-16 top-20 h-72 w-72 rounded-full bg-[#f0e6d8] opacity-60 blur-3xl" />
-          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-[#c96442] opacity-20 blur-3xl" />
-          <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-[#2d5a3d] opacity-15 blur-3xl" />
-        </div>
-
-        <div
-          className={`relative mx-auto rounded-[34px] border border-[#eadfce] bg-[#fffaf4] p-6 shadow-[0_30px_70px_rgba(44,24,16,0.16)] sm:p-8 ${
-            onboardingPhase === 'choice' ? 'max-w-5xl' : 'max-w-4xl'
-          }`}
-        >
-          {apiError && (
-            <div className="mb-6 rounded-2xl border border-[#f0c6b8] bg-[#fff3ef] px-4 py-3 text-sm text-[#9e3f29]">
-              {apiError}
-            </div>
-          )}
-
-          {onboardingPhase === 'choice' ? (
-            <>
-              <div className="mb-8 flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#2d5a3d]">Warm & Human Journey</p>
-                  <h1 className="mt-2 text-3xl font-bold" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
-                    How would you like to start?
-                  </h1>
-                  <p className="mt-2 text-sm text-[#8b7355]">
-                    Pick your preferred onboarding path from the previous flow.
-                  </p>
-                </div>
-                <Heart className="h-7 w-7 text-[#c96442]" />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleChooseUpload();
-                  }}
-                  disabled={isOnboardingBusy}
-                  className="relative rounded-3xl border border-[#e4d3be] bg-white p-6 text-left transition-all hover:border-[#c96442] hover:shadow-[0_15px_35px_rgba(201,100,66,0.15)] disabled:opacity-70"
-                >
-                  <span className="absolute -top-3 left-6 rounded-full bg-[#2d5a3d] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white">
-                    Recommended
-                  </span>
-                  <div className="mb-4 mt-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff1e8] text-[#c96442]">
-                    <FileUp className="h-6 w-6" />
-                  </div>
-                  <h2 className="text-xl font-semibold text-[#2c1810]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
-                    Upload Existing Resume
-                  </h2>
-                  <p className="mt-2 text-sm text-[#8b7355]">
-                    Already have a resume? Upload it and optimize with ATS scoring and AI feedback.
-                  </p>
-                  <ul className="mt-4 space-y-2">
-                    {['AI-powered analysis', 'ATS optimization', 'Instant feedback'].map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-sm text-[#5f4c3a]">
-                        <CheckCircle2 className="h-4 w-4 text-[#2d5a3d]" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#c96442]">
-                    Get Started
-                    <ArrowRight className="h-4 w-4" />
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleChooseCreate();
-                  }}
-                  disabled={isOnboardingBusy}
-                  className="rounded-3xl border border-[#e4d3be] bg-white p-6 text-left transition-all hover:border-[#2d5a3d] hover:shadow-[0_15px_35px_rgba(45,90,61,0.12)] disabled:opacity-70"
-                >
-                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eef5ef] text-[#2d5a3d]">
-                    <PenTool className="h-6 w-6" />
-                  </div>
-                  <h2 className="text-xl font-semibold text-[#2c1810]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
-                    Create From Scratch
-                  </h2>
-                  <p className="mt-2 text-sm text-[#8b7355]">
-                    Start fresh in the editor and build a new resume with guided templates.
-                  </p>
-                  <ul className="mt-4 space-y-2">
-                    {['Guided step-by-step', 'Professional templates', 'AI suggestions'].map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-sm text-[#5f4c3a]">
-                        <CheckCircle2 className="h-4 w-4 text-[#2d5a3d]" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#2d5a3d]">
-                    Open Editor
-                    <ArrowRight className="h-4 w-4" />
-                  </div>
-                </button>
-              </div>
-
-              <div className="mt-8 text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleSkipOnboarding();
-                  }}
-                  disabled={isOnboardingBusy}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white px-5 py-2.5 text-sm text-[#8b7355] hover:bg-[#f8f1e8] disabled:opacity-70"
-                >
-                  Skip for now
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  void handleBackToOptions();
-                }}
-                disabled={isOnboardingBusy}
-                className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white px-4 py-2 text-sm text-[#8b7355] hover:bg-[#f8f1e8] disabled:opacity-70"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to options
-              </button>
-
-              <div className="mb-8 text-center">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#2d5a3d]">
-                  <Heart className="h-4 w-4 text-[#c96442]" />
-                  Upload & Optimize
-                </div>
-                <h1 className="mt-4 text-3xl font-bold text-[#2c1810]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
-                  Let&apos;s optimize your resume
-                </h1>
-                <p className="mt-2 text-sm text-[#8b7355]">
-                  One focused step at a time with richer guidance.
-                </p>
-              </div>
-
-              <div className="mb-8 rounded-2xl border border-[#eadfce] bg-white px-4 py-3">
-                <div className="mb-2 flex items-center justify-between text-xs font-medium text-[#8b7355]">
-                  <span>Progress</span>
-                  <span className="text-[#2d5a3d]">{completedOnboardingSteps}/{onboardingSteps.length} completed</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-[#f2e8da]">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#2d5a3d] to-[#c96442] transition-all duration-300"
-                    style={{ width: `${onboardingProgress}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-[#eadfce] bg-[#fffdf9] p-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2d5a3d]">
-                  Step {currentOnboardingStep.index + 1} · {currentOnboardingStep.title}
-                </p>
-                <h2 className="mt-2 text-2xl font-bold text-[#2c1810]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
-                  {currentOnboardingStep.action}
-                </h2>
-                <p className="mt-2 text-sm text-[#8b7355]">{currentOnboardingStep.description}</p>
-
-                <div className="mt-6">{renderStepDetails()}</div>
-              </div>
-
-              <div className="mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleSkipOnboarding();
-                  }}
-                  disabled={isOnboardingBusy}
-                  className="inline-flex items-center gap-2 text-sm text-[#8b7355] underline-offset-4 hover:underline disabled:opacity-70"
-                >
-                  Skip for now
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        <OnboardingWizard
+          onboardingPhase={onboardingPhase}
+          apiError={apiError}
+          onboardingSteps={onboardingSteps}
+          completedOnboardingSteps={completedOnboardingSteps}
+          onboardingProgress={onboardingProgress}
+          currentOnboardingStep={currentOnboardingStep}
+          isOnboardingBusy={isOnboardingBusy}
+          targetRole={targetRole}
+          isDragOver={isDragOver}
+          selectedResumeFile={selectedResumeFile}
+          analysisProgress={analysisProgress}
+          analysisStatusText={analysisStatusText}
+          analysisResult={analysisResult}
+          jobOptions={jobOptions}
+          selectedJobId={selectedJobId}
+          onChooseUpload={handleChooseUpload}
+          onChooseCreate={handleChooseCreate}
+          onBackToOptions={handleBackToOptions}
+          onSkipOnboarding={handleSkipOnboarding}
+          onFileSelected={handleFileSelected}
+          onOpenFilePicker={openFilePicker}
+          onUploadStep={handleUploadStep}
+          onAnalyzeStep={handleAnalyzeStep}
+          onJobsStep={handleJobsStep}
+          onFinalStep={handleFinalStep}
+          onSelectJob={(id) => {
+            setSelectedJobId(id);
+            setApiError(null);
+          }}
+          onDragOver={() => setIsDragOver(true)}
+          onDragLeave={() => setIsDragOver(false)}
+          fileInputRef={fileInputRef}
+        />
       </div>
     );
   }
@@ -2105,162 +1409,17 @@ export default function DashboardTwoPage() {
         }}
       />
       <div className="mx-auto flex h-full w-full max-w-[1680px] gap-4 p-4 lg:p-5">
-        <aside className="flex h-full w-full max-w-[270px] flex-col rounded-[28px] border border-[#e3e5e8] bg-[#f7f7f8] p-4 shadow-[0_10px_30px_rgba(26,31,44,0.06)]">
-          <div className="relative mb-4" ref={profilePopupRef}>
-            <button
-              type="button"
-              onClick={() => setIsProfilePopupOpen((value) => !value)}
-              className="flex w-full items-center gap-2 rounded-2xl border border-[#e3e5e8] bg-white px-3 py-3 text-left"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#ffbe86] via-[#ff9a38] to-[#ff7b33] text-xs font-bold text-white">
-                {profileFullName.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-[#1d2026]">{profileFullName}</p>
-                <p className="text-xs text-[#8b8f98]">Free Plan</p>
-              </div>
-              <ChevronDown className={`h-4 w-4 text-[#9298a3] transition-transform ${isProfilePopupOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isProfilePopupOpen && (
-              <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-50">
-                <div className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/45 p-3 backdrop-blur-xl shadow-[0_18px_45px_rgba(20,24,33,0.24)]">
-                  <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-[#ff9a38]/30 blur-2xl" />
-                  <div className="pointer-events-none absolute -left-8 bottom-0 h-20 w-20 rounded-full bg-[#64bf42]/20 blur-2xl" />
-                  <div className="relative space-y-3">
-                    <div className="rounded-xl border border-white/70 bg-white/55 p-3">
-                      <p className="truncate text-sm font-semibold text-[#1f2430]">{profileFullName}</p>
-                      <p className="mt-1 flex items-center gap-1.5 truncate text-[11px] text-[#5c6271]">
-                        <Mail className="h-3 w-3 text-[#7d8390]" />
-                        {profileEmail}
-                      </p>
-                      <p className="mt-1 flex items-center gap-1.5 text-[11px] text-[#5c6271]">
-                        <CalendarDays className="h-3 w-3 text-[#7d8390]" />
-                        Joined {formatJoinDate(profileCreatedAt)}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-white/70 bg-gradient-to-br from-white/65 via-[#fff8ef]/55 to-[#fff0e4]/60 p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8c5d39]">Plan</p>
-                          <p className="text-sm font-semibold text-[#2f3542]">Free Plan</p>
-                        </div>
-                        <span className="rounded-full bg-[#ff9a38] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
-                          Active
-                        </span>
-                      </div>
-                      <div className="mt-2 space-y-1 text-[11px] text-[#5f6675]">
-                        <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> Multi-resume dashboard</p>
-                        <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> ATS analysis</p>
-                        <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> Template library</p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfilePopupOpen(false);
-                        void signOut();
-                      }}
-                      className="w-full rounded-xl border border-white/70 bg-white/60 px-3 py-2 text-xs font-semibold text-[#394150] hover:bg-white/75"
-                    >
-                      Sign out
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#e3e5e8] bg-white px-3 py-2 text-[#8a8f97]">
-            <Search className="h-4 w-4" />
-            <span className="text-xs">Search anything</span>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-            <div className="space-y-1">
-              {sidebarPrimaryItems.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => setActiveSection(item.key)}
-                  className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm ${
-                    activeSection === item.key
-                      ? 'bg-[#eceff3] font-semibold text-[#272c35]'
-                      : 'text-[#535a66] hover:bg-[#eceff3]'
-                  }`}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-6">
-              <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9aa0aa]">AI Features</p>
-              <div className="mt-2 space-y-1">
-                {sidebarAiItems.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => setActiveSection(item.key)}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm ${
-                      activeSection === item.key
-                        ? 'bg-[#eceff3] font-semibold text-[#272c35]'
-                        : 'text-[#535a66] hover:bg-[#eceff3]'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2.5">
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
-                    </span>
-                    {item.badge && (
-                      <span className="rounded-full bg-[#ff9a38] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-1 border-t border-[#e7eaee] pt-3">
-            <button
-              type="button"
-              onClick={() => setActiveSection('faq')}
-              className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm ${
-                activeSection === 'faq'
-                  ? 'bg-[#eceff3] font-semibold text-[#272c35]'
-                  : 'text-[#535a66] hover:bg-[#eceff3]'
-              }`}
-            >
-              <CircleHelp className="h-4 w-4" />
-              FAQ
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSection('settings')}
-              className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm ${
-                activeSection === 'settings'
-                  ? 'bg-[#eceff3] font-semibold text-[#272c35]'
-                  : 'text-[#535a66] hover:bg-[#eceff3]'
-              }`}
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </button>
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-[#535a66] hover:bg-[#eceff3]"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </button>
-          </div>
-        </aside>
+        <DashboardSidebar
+          activeSection={activeSection}
+          profileFullName={profileFullName}
+          profileEmail={profileEmail}
+          profileCreatedAt={profileCreatedAt}
+          isProfilePopupOpen={isProfilePopupOpen}
+          onSetActiveSection={setActiveSection}
+          onToggleProfilePopup={() => setIsProfilePopupOpen((v) => !v)}
+          onSignOut={signOut}
+          profilePopupRef={profilePopupRef}
+        />
 
         <main className="h-full flex-1 overflow-y-auto rounded-[30px] border border-[#e3e5e8] bg-[#fafafa] p-5 shadow-[0_20px_45px_rgba(24,30,43,0.08)] sm:p-6">
           {apiError && (
@@ -2272,9 +1431,9 @@ export default function DashboardTwoPage() {
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h1 className="text-4xl font-bold text-[#1e232d]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
-                {sectionHeading[activeSection].title}
+                {sectionHeading.title}
               </h1>
-              <p className="mt-1 text-sm text-[#7a818d]">{sectionHeading[activeSection].subtitle}</p>
+              <p className="mt-1 text-sm text-[#7a818d]">{sectionHeading.subtitle}</p>
             </div>
             <div className="flex items-center gap-2">
               <button
