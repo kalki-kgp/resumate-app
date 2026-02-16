@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     CHUTES_API_TOKEN: str | None = None
     CHUTES_BASE_URL: str = "https://llm.chutes.ai/v1/"
     CHUTES_MODEL: str = "Qwen/Qwen3-VL-235B-A22B-Instruct"
+    RESUME_ANALYSIS_DEBUG: bool = False
     RESUME_ANALYSIS_MAX_PAGES: int = 2
     RESUME_ANALYSIS_MAX_TOKENS: int = 1200
     RESUME_ANALYSIS_TEMPERATURE: float = 0.35

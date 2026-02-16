@@ -1,6 +1,8 @@
 import base64
 import json
+import logging
 import re
+import time
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -18,6 +20,8 @@ from app.schemas.onboarding import (
     ResumeAnalysisRole,
     ResumeAnalysisSectionScores,
 )
+
+logger = logging.getLogger(__name__)
 
 RESUME_ANALYSIS_PROMPT = """
 You are a senior resume strategist combining ATS screening expertise and hiring-manager judgment.
@@ -112,6 +116,20 @@ IMPORTANT RETRY MODE:
 
 class ResumeAnalysisError(Exception):
     pass
+
+
+def _analysis_debug(event: str, **payload: Any) -> None:
+    if not settings.RESUME_ANALYSIS_DEBUG:
+        return
+
+    safe_payload: dict[str, Any] = {}
+    for key, value in payload.items():
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            safe_payload[key] = value
+        else:
+            safe_payload[key] = str(value)
+
+    logger.warning("resume_analysis_debug %s %s", event, json.dumps(safe_payload, ensure_ascii=True))
 
 
 def _user_resume_dir(user_id: UUID | str) -> Path:
@@ -387,16 +405,54 @@ def _call_openai_compatible_chat_completion(
     client: OpenAI,
     request_kwargs: dict[str, Any],
     provider_name: str,
+    request_id: str | None = None,
+    call_mode: str = "normal",
 ):
+    started = time.perf_counter()
+    _analysis_debug(
+        "call_start",
+        request_id=request_id,
+        provider=provider_name,
+        mode=call_mode,
+        max_tokens=request_kwargs.get("max_tokens"),
+        has_extra_body="extra_body" in request_kwargs,
+    )
     try:
-        return client.chat.completions.create(
+        response = client.chat.completions.create(
             **request_kwargs,
             response_format={"type": "json_object"},
         )
+        _analysis_debug(
+            "call_success",
+            request_id=request_id,
+            provider=provider_name,
+            mode=call_mode,
+            variant="strict_json",
+            elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+        )
+        return response
     except BadRequestError:
         # Some providers may not support strict JSON response_format.
+        _analysis_debug(
+            "call_variant_fallback",
+            request_id=request_id,
+            provider=provider_name,
+            mode=call_mode,
+            from_variant="strict_json",
+            to_variant="plain",
+            elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+        )
         try:
-            return client.chat.completions.create(**request_kwargs)
+            response = client.chat.completions.create(**request_kwargs)
+            _analysis_debug(
+                "call_success",
+                request_id=request_id,
+                provider=provider_name,
+                mode=call_mode,
+                variant="plain",
+                elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+            )
+            return response
         except BadRequestError:
             # Retry with minimal kwargs for stricter OpenAI-compatible implementations.
             minimal_request_kwargs = {
@@ -405,13 +461,58 @@ def _call_openai_compatible_chat_completion(
                 "max_tokens": request_kwargs["max_tokens"],
                 "temperature": request_kwargs["temperature"],
             }
+            _analysis_debug(
+                "call_variant_fallback",
+                request_id=request_id,
+                provider=provider_name,
+                mode=call_mode,
+                from_variant="plain",
+                to_variant="minimal",
+                elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+            )
             try:
-                return client.chat.completions.create(**minimal_request_kwargs)
+                response = client.chat.completions.create(**minimal_request_kwargs)
+                _analysis_debug(
+                    "call_success",
+                    request_id=request_id,
+                    provider=provider_name,
+                    mode=call_mode,
+                    variant="minimal",
+                    elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+                )
+                return response
             except Exception as exc:
+                _analysis_debug(
+                    "call_error",
+                    request_id=request_id,
+                    provider=provider_name,
+                    mode=call_mode,
+                    variant="minimal",
+                    elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+                    error=str(exc),
+                )
                 raise ResumeAnalysisError(f"{provider_name} analysis request failed: {exc}") from exc
         except Exception as exc:
+            _analysis_debug(
+                "call_error",
+                request_id=request_id,
+                provider=provider_name,
+                mode=call_mode,
+                variant="plain",
+                elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+                error=str(exc),
+            )
             raise ResumeAnalysisError(f"{provider_name} analysis request failed: {exc}") from exc
     except Exception as exc:
+        _analysis_debug(
+            "call_error",
+            request_id=request_id,
+            provider=provider_name,
+            mode=call_mode,
+            variant="strict_json",
+            elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+            error=str(exc),
+        )
         raise ResumeAnalysisError(f"{provider_name} analysis request failed: {exc}") from exc
 
 
@@ -430,6 +531,17 @@ def _analyze_with_openai_compatible_provider(
     base64_png_images: list[str],
     extra_body: dict[str, Any] | None = None,
 ) -> ResumeAnalysisResult:
+    request_id = f"{provider_name.lower()}-{int(time.time() * 1000)}"
+    started = time.perf_counter()
+    _analysis_debug(
+        "analysis_start",
+        request_id=request_id,
+        provider=provider_name,
+        model=model,
+        images=len(base64_png_images),
+        max_tokens=settings.RESUME_ANALYSIS_MAX_TOKENS,
+    )
+
     message_content = _build_message_content(base64_png_images)
 
     request_kwargs: dict[str, Any] = {
@@ -451,15 +563,41 @@ def _analyze_with_openai_compatible_provider(
         client=client,
         request_kwargs=request_kwargs,
         provider_name=provider_name,
+        request_id=request_id,
+        call_mode="normal",
     )
     raw_text = _extract_response_text(response)
     parsed_json = _extract_json_object(raw_text)
+    _analysis_debug(
+        "analysis_parse",
+        request_id=request_id,
+        provider=provider_name,
+        mode="normal",
+        raw_length=len(raw_text),
+        parsed=parsed_json is not None,
+        truncated_hint=_is_likely_truncated_json(raw_text),
+        elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+    )
     if parsed_json is not None:
+        _analysis_debug(
+            "analysis_done",
+            request_id=request_id,
+            provider=provider_name,
+            path="normal",
+            elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+        )
         return _build_analysis_result(parsed_json, raw_text)
 
     if _is_likely_truncated_json(raw_text):
         compact_prompt = f"{RESUME_ANALYSIS_PROMPT}\n\n{RESUME_ANALYSIS_COMPACT_RETRY_APPENDIX}"
         compact_message_content = _build_message_content(base64_png_images, prompt_text=compact_prompt)
+        _analysis_debug(
+            "analysis_compact_retry_start",
+            request_id=request_id,
+            provider=provider_name,
+            first_raw_length=len(raw_text),
+            elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+        )
         retry_kwargs: dict[str, Any] = {
             "model": model,
             "max_tokens": max(settings.RESUME_ANALYSIS_MAX_TOKENS, 1800),
@@ -479,11 +617,37 @@ def _analyze_with_openai_compatible_provider(
             client=client,
             request_kwargs=retry_kwargs,
             provider_name=provider_name,
+            request_id=request_id,
+            call_mode="compact_retry",
         )
         retry_raw_text = _extract_response_text(retry_response)
         retry_parsed_json = _extract_json_object(retry_raw_text)
+        _analysis_debug(
+            "analysis_parse",
+            request_id=request_id,
+            provider=provider_name,
+            mode="compact_retry",
+            raw_length=len(retry_raw_text),
+            parsed=retry_parsed_json is not None,
+            truncated_hint=_is_likely_truncated_json(retry_raw_text),
+            elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+        )
+        _analysis_debug(
+            "analysis_done",
+            request_id=request_id,
+            provider=provider_name,
+            path="compact_retry",
+            elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+        )
         return _build_analysis_result(retry_parsed_json, retry_raw_text)
 
+    _analysis_debug(
+        "analysis_done",
+        request_id=request_id,
+        provider=provider_name,
+        path="fallback_raw",
+        elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+    )
     return _build_analysis_result(parsed_json, raw_text)
 
 

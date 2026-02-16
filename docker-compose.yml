@@ -36,7 +36,6 @@ services:
       NEBIUS_BASE_URL: https://api.tokenfactory.nebius.com/v1/
       NEBIUS_MODEL: google/gemma-3-27b-it-fast
       RESUME_ANALYSIS_MAX_PAGES: 2
-      RESUME_ANALYSIS_MAX_TOKENS: 1200
       RESUME_ANALYSIS_TEMPERATURE: 0.35
       RESUME_ANALYSIS_TOP_P: 0.9
       RESUME_ANALYSIS_TOP_K: 50
