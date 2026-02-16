@@ -345,18 +345,7 @@ def _build_analysis_result(parsed_json: dict[str, Any] | None, raw_text: str) ->
     )
 
 
-def analyze_resume_with_nebius(base64_png_images: list[str]) -> ResumeAnalysisResult:
-    if not base64_png_images:
-        raise ResumeAnalysisError("No resume pages were available for analysis")
-
-    if not settings.NEBIUS_API_KEY:
-        raise ResumeAnalysisError("NEBIUS_API_KEY is not configured on the backend")
-
-    client = OpenAI(
-        base_url=settings.NEBIUS_BASE_URL,
-        api_key=settings.NEBIUS_API_KEY,
-    )
-
+def _build_message_content(base64_png_images: list[str]) -> list[dict[str, Any]]:
     message_content: list[dict[str, Any]] = [
         {
             "type": "text",
@@ -374,6 +363,56 @@ def analyze_resume_with_nebius(base64_png_images: list[str]) -> ResumeAnalysisRe
             }
         )
 
+    return message_content
+
+
+def _call_openai_compatible_chat_completion(
+    *,
+    client: OpenAI,
+    request_kwargs: dict[str, Any],
+    provider_name: str,
+):
+    try:
+        return client.chat.completions.create(
+            **request_kwargs,
+            response_format={"type": "json_object"},
+        )
+    except BadRequestError:
+        # Some providers may not support strict JSON response_format.
+        try:
+            return client.chat.completions.create(**request_kwargs)
+        except BadRequestError:
+            # Retry with minimal kwargs for stricter OpenAI-compatible implementations.
+            minimal_request_kwargs = {
+                "model": request_kwargs["model"],
+                "messages": request_kwargs["messages"],
+                "max_tokens": request_kwargs["max_tokens"],
+                "temperature": request_kwargs["temperature"],
+            }
+            try:
+                return client.chat.completions.create(**minimal_request_kwargs)
+            except Exception as exc:
+                raise ResumeAnalysisError(f"{provider_name} analysis request failed: {exc}") from exc
+        except Exception as exc:
+            raise ResumeAnalysisError(f"{provider_name} analysis request failed: {exc}") from exc
+    except Exception as exc:
+        raise ResumeAnalysisError(f"{provider_name} analysis request failed: {exc}") from exc
+
+
+def analyze_resume_with_nebius(base64_png_images: list[str]) -> ResumeAnalysisResult:
+    if not base64_png_images:
+        raise ResumeAnalysisError("No resume pages were available for analysis")
+
+    if not settings.NEBIUS_API_KEY:
+        raise ResumeAnalysisError("NEBIUS_API_KEY is not configured on the backend")
+
+    client = OpenAI(
+        base_url=settings.NEBIUS_BASE_URL,
+        api_key=settings.NEBIUS_API_KEY,
+    )
+
+    message_content = _build_message_content(base64_png_images)
+
     request_kwargs: dict[str, Any] = {
         "model": settings.NEBIUS_MODEL,
         "max_tokens": settings.RESUME_ANALYSIS_MAX_TOKENS,
@@ -390,20 +429,64 @@ def analyze_resume_with_nebius(base64_png_images: list[str]) -> ResumeAnalysisRe
         ],
     }
 
-    try:
-        response = client.chat.completions.create(
-            **request_kwargs,
-            response_format={"type": "json_object"},
-        )
-    except BadRequestError:
-        # Some providers may not support strict JSON response_format.
-        try:
-            response = client.chat.completions.create(**request_kwargs)
-        except Exception as exc:
-            raise ResumeAnalysisError(f"Nebius analysis request failed: {exc}") from exc
-    except Exception as exc:
-        raise ResumeAnalysisError(f"Nebius analysis request failed: {exc}") from exc
+    response = _call_openai_compatible_chat_completion(
+        client=client,
+        request_kwargs=request_kwargs,
+        provider_name="Nebius",
+    )
 
     raw_text = _extract_response_text(response)
     parsed_json = _extract_json_object(raw_text)
     return _build_analysis_result(parsed_json, raw_text)
+
+
+def analyze_resume_with_chutes(base64_png_images: list[str]) -> ResumeAnalysisResult:
+    if not base64_png_images:
+        raise ResumeAnalysisError("No resume pages were available for analysis")
+
+    if not settings.CHUTES_API_TOKEN:
+        raise ResumeAnalysisError("CHUTES_API_TOKEN is not configured on the backend")
+
+    client = OpenAI(
+        base_url=settings.CHUTES_BASE_URL,
+        api_key=settings.CHUTES_API_TOKEN,
+    )
+
+    message_content = _build_message_content(base64_png_images)
+
+    request_kwargs: dict[str, Any] = {
+        "model": settings.CHUTES_MODEL,
+        "max_tokens": settings.RESUME_ANALYSIS_MAX_TOKENS,
+        "temperature": settings.RESUME_ANALYSIS_TEMPERATURE,
+        "top_p": settings.RESUME_ANALYSIS_TOP_P,
+        "messages": [
+            {
+                "role": "user",
+                "content": message_content,
+            }
+        ],
+    }
+
+    response = _call_openai_compatible_chat_completion(
+        client=client,
+        request_kwargs=request_kwargs,
+        provider_name="Chutes",
+    )
+
+    raw_text = _extract_response_text(response)
+    parsed_json = _extract_json_object(raw_text)
+    return _build_analysis_result(parsed_json, raw_text)
+
+
+def analyze_resume(base64_png_images: list[str]) -> ResumeAnalysisResult:
+    provider = settings.RESUME_IMAGE_PROCESSING_PROVIDER.strip().lower()
+
+    if provider == "nebius":
+        return analyze_resume_with_nebius(base64_png_images)
+
+    if provider == "chutes":
+        return analyze_resume_with_chutes(base64_png_images)
+
+    raise ResumeAnalysisError(
+        "RESUME_IMAGE_PROCESSING_PROVIDER must be either 'nebius' or 'chutes'"
+    )

@@ -25,9 +25,13 @@ class Settings(BaseSettings):
     AUTH_SESSION_TTL_HOURS: int = 720
     UPLOAD_DIR: str = "uploads"
     MAX_RESUME_UPLOAD_SIZE_MB: int = 8
+    RESUME_IMAGE_PROCESSING_PROVIDER: str = "nebius"
     NEBIUS_API_KEY: str | None = None
     NEBIUS_BASE_URL: str = "https://api.tokenfactory.nebius.com/v1/"
     NEBIUS_MODEL: str = "google/gemma-3-27b-it-fast"
+    CHUTES_API_TOKEN: str | None = None
+    CHUTES_BASE_URL: str = "https://llm.chutes.ai/v1/"
+    CHUTES_MODEL: str = "Qwen/Qwen3-VL-235B-A22B-Instruct"
     RESUME_ANALYSIS_MAX_PAGES: int = 2
     RESUME_ANALYSIS_MAX_TOKENS: int = 1200
     RESUME_ANALYSIS_TEMPERATURE: float = 0.35

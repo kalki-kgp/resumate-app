@@ -12,7 +12,7 @@ from app.models.user import User
 from app.schemas.dashboard import DashboardResume
 from app.services.resume_analysis import (
     ResumeAnalysisError,
-    analyze_resume_with_nebius,
+    analyze_resume,
     pdf_to_base64_png_images,
     save_latest_analysis_result,
 )
@@ -118,7 +118,7 @@ def analyze_resume_from_library(
             resume_pdf_path,
             max_pages=settings.RESUME_ANALYSIS_MAX_PAGES,
         )
-        analysis = analyze_resume_with_nebius(page_images)
+        analysis = analyze_resume(page_images)
     except ResumeAnalysisError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     except Exception as exc:

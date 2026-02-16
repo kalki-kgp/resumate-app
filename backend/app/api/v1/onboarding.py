@@ -12,7 +12,7 @@ from app.schemas.onboarding import (
 )
 from app.services.resume_analysis import (
     ResumeAnalysisError,
-    analyze_resume_with_nebius,
+    analyze_resume,
     clear_latest_analysis_result,
     load_latest_analysis_result,
     pdf_to_base64_png_images,
@@ -156,7 +156,7 @@ def onboarding_analyze_resume(
             resume_pdf_path,
             max_pages=settings.RESUME_ANALYSIS_MAX_PAGES,
         )
-        analysis = analyze_resume_with_nebius(page_images)
+        analysis = analyze_resume(page_images)
     except ResumeAnalysisError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     except Exception as exc:

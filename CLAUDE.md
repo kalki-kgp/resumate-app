@@ -108,7 +108,7 @@ import type { Theme } from '@/types';
 
 ### 4. Styling
 - Use Tailwind CSS utility classes
-- Dark mode: Use `dark:` variant (e.g., `dark:bg-slate-900`)
+- Pages use **inline styles** for brand colors (hex values) to ensure consistency
 - Custom animations defined in `globals.css`
 - Available animation classes:
   - `animate-fade-in-up`
@@ -123,13 +123,46 @@ import type { Theme } from '@/types';
   - `animate-pulse-border`
   - `animate-slide-up-fade`
 
-### 5. Theme System (Tailwind CSS v4)
-- **IMPORTANT**: Tailwind v4 requires explicit dark mode configuration
-- Dark mode is enabled via `@custom-variant dark (&:where(.dark, .dark *));` in `globals.css`
-- Theme state managed in `useTheme` hook with proper SSR handling
-- Persisted to `localStorage`
-- The hook uses `applyTheme()` helper to add/remove `.dark` class on `<html>`
-- Pass `theme` and `toggleTheme` props to components that need theme awareness
+### 5. Style Theme (Home, Dashboard, Editor)
+
+All three routes share **Fraunces** (serif) and **DM Sans** (sans) fonts. Apply via:
+```tsx
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['700','800','900'], variable: '--font-fraunces', display: 'swap' });
+const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400','500','600','700'], variable: '--font-dm-sans', display: 'swap' });
+// Page: className={`${fraunces.variable} ${dmSans.variable} ...`}
+// Headings: style={{ fontFamily: 'var(--font-fraunces), serif' }}
+// Body: style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+```
+
+**Warm palette** (Home, Editor, Dashboard onboarding):
+| Token | Hex | Usage |
+|-------|-----|-------|
+| Primary accent | `#c96442` | CTAs, buttons, highlights, underlines |
+| Primary green | `#2d5a3d` | Secondary accent, success, badges, icons |
+| Muted tan | `#8b7355` | Secondary text, labels, placeholders |
+| Dark text | `#2c1810` | Headings, body text |
+| Background | `#faf7f2` | Page background (cream) |
+| Card/panel | `#fffaf4`, `#fff8f1` | Cards, modals, sidebars |
+| Borders | `#eadfce`, `#e8e0d4`, `#e4d3be` | Borders, dividers |
+| Blur accents | `#f0e6d8`, `#e6efe7` | Decorative blobs |
+
+**Dashboard workspace** (cooler, app-like):
+| Token | Hex | Usage |
+|-------|-----|-------|
+| Background | `#f3f4f6` | Page background |
+| Main content | `#fafafa` | Content area |
+| Sidebar | `#f7f7f8` | Sidebar background |
+| Borders | `#e3e5e8`, `#dce0e5` | Borders |
+| Text | `#1b1d21`, `#2a2f3a` | Primary text |
+| Muted text | `#7a818d`, `#8a909b` | Secondary text |
+| Accent | `#ff8b2f`, `#ff9a38` | Buttons, highlights |
+
+**Rounded corners**: `rounded-2xl`, `rounded-3xl`, `rounded-full` for buttons and cards.
+
+### 6. Theme System (Tailwind CSS v4)
+- Dark mode is configured via `@custom-variant dark (&:where(.dark, .dark *));` in `globals.css`
+- Home, Dashboard, and Editor currently use **light-only** custom palettes (no dark mode)
+- For shared components needing theme: use `useTheme` hook, pass `theme` and `toggleTheme` props
 
 ## Routes
 
@@ -194,10 +227,11 @@ Currently using React's built-in state (`useState`, `useEffect`). For future:
 
 ## Styling Guidelines
 
-1. **Colors**: Use Tailwind's `slate` palette for neutrals, `blue`/`indigo` for primary
-2. **Spacing**: Follow Tailwind's spacing scale
-3. **Responsive**: Mobile-first (`sm:`, `md:`, `lg:` breakpoints)
-4. **Transitions**: Use `transition-all` or specific `transition-colors`
+1. **Colors**: Use the brand palette above. Warm pages (Home, Editor, onboarding) use `#c96442`, `#2d5a3d`, `#8b7355`, `#2c1810`. Dashboard workspace uses cooler grays and `#ff8b2f` accent.
+2. **Fonts**: Fraunces for headings, DM Sans for body. Apply via CSS variables.
+3. **Spacing**: Follow Tailwind's spacing scale (`p-4`, `gap-4`, `mt-6`, etc.)
+4. **Responsive**: Mobile-first (`sm:`, `md:`, `lg:`, `xl:` breakpoints)
+5. **Transitions**: Use `transition-all` or `transition-colors` for hover states
 
 ## Notes for AI Assistants
 

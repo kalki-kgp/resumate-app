@@ -51,4 +51,7 @@ When running with Docker Compose, persist `/app/uploads` using a named volume (c
 
 ## AI Analysis Setup
 
-Set `NEBIUS_API_KEY` in `backend/.env` (or docker environment) to enable `/api/v1/onboarding/analyze-resume`.
+Set provider config in `backend/.env` (or docker environment) to enable `/api/v1/onboarding/analyze-resume`:
+
+- `RESUME_IMAGE_PROCESSING_PROVIDER=nebius` with `NEBIUS_API_KEY=...`
+- `RESUME_IMAGE_PROCESSING_PROVIDER=chutes` with `CHUTES_API_TOKEN=...`
