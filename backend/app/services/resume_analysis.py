@@ -93,6 +93,22 @@ STYLE:
 - Improved bullets should be stronger, clearer, and outcome-oriented.
 """.strip()
 
+RESUME_ANALYSIS_COMPACT_RETRY_APPENDIX = """
+IMPORTANT RETRY MODE:
+- Your previous response was likely truncated.
+- Return valid JSON only, with compact values.
+- Keep each list item to 6-14 words.
+- Keep each role reason to <= 18 words.
+- Keep each improved bullet field to <= 24 words.
+- Use these exact counts:
+  strengths: 4
+  gaps: 4
+  priority_fixes: 6
+  keywords_to_add: 10
+  recommended_roles: 3
+  improved_bullets: 4
+""".strip()
+
 
 class ResumeAnalysisError(Exception):
     pass
@@ -345,11 +361,11 @@ def _build_analysis_result(parsed_json: dict[str, Any] | None, raw_text: str) ->
     )
 
 
-def _build_message_content(base64_png_images: list[str]) -> list[dict[str, Any]]:
+def _build_message_content(base64_png_images: list[str], prompt_text: str = RESUME_ANALYSIS_PROMPT) -> list[dict[str, Any]]:
     message_content: list[dict[str, Any]] = [
         {
             "type": "text",
-            "text": RESUME_ANALYSIS_PROMPT,
+            "text": prompt_text,
         }
     ]
 
@@ -399,6 +415,78 @@ def _call_openai_compatible_chat_completion(
         raise ResumeAnalysisError(f"{provider_name} analysis request failed: {exc}") from exc
 
 
+def _is_likely_truncated_json(raw_text: str) -> bool:
+    text = raw_text.strip()
+    if not text.startswith("{"):
+        return False
+    return text.count("{") > text.count("}") or not text.endswith("}")
+
+
+def _analyze_with_openai_compatible_provider(
+    *,
+    client: OpenAI,
+    provider_name: str,
+    model: str,
+    base64_png_images: list[str],
+    extra_body: dict[str, Any] | None = None,
+) -> ResumeAnalysisResult:
+    message_content = _build_message_content(base64_png_images)
+
+    request_kwargs: dict[str, Any] = {
+        "model": model,
+        "max_tokens": settings.RESUME_ANALYSIS_MAX_TOKENS,
+        "temperature": settings.RESUME_ANALYSIS_TEMPERATURE,
+        "top_p": settings.RESUME_ANALYSIS_TOP_P,
+        "messages": [
+            {
+                "role": "user",
+                "content": message_content,
+            }
+        ],
+    }
+    if extra_body is not None:
+        request_kwargs["extra_body"] = extra_body
+
+    response = _call_openai_compatible_chat_completion(
+        client=client,
+        request_kwargs=request_kwargs,
+        provider_name=provider_name,
+    )
+    raw_text = _extract_response_text(response)
+    parsed_json = _extract_json_object(raw_text)
+    if parsed_json is not None:
+        return _build_analysis_result(parsed_json, raw_text)
+
+    if _is_likely_truncated_json(raw_text):
+        compact_prompt = f"{RESUME_ANALYSIS_PROMPT}\n\n{RESUME_ANALYSIS_COMPACT_RETRY_APPENDIX}"
+        compact_message_content = _build_message_content(base64_png_images, prompt_text=compact_prompt)
+        retry_kwargs: dict[str, Any] = {
+            "model": model,
+            "max_tokens": max(settings.RESUME_ANALYSIS_MAX_TOKENS, 1800),
+            "temperature": min(settings.RESUME_ANALYSIS_TEMPERATURE, 0.25),
+            "top_p": settings.RESUME_ANALYSIS_TOP_P,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": compact_message_content,
+                }
+            ],
+        }
+        if extra_body is not None:
+            retry_kwargs["extra_body"] = extra_body
+
+        retry_response = _call_openai_compatible_chat_completion(
+            client=client,
+            request_kwargs=retry_kwargs,
+            provider_name=provider_name,
+        )
+        retry_raw_text = _extract_response_text(retry_response)
+        retry_parsed_json = _extract_json_object(retry_raw_text)
+        return _build_analysis_result(retry_parsed_json, retry_raw_text)
+
+    return _build_analysis_result(parsed_json, raw_text)
+
+
 def analyze_resume_with_nebius(base64_png_images: list[str]) -> ResumeAnalysisResult:
     if not base64_png_images:
         raise ResumeAnalysisError("No resume pages were available for analysis")
@@ -410,34 +498,13 @@ def analyze_resume_with_nebius(base64_png_images: list[str]) -> ResumeAnalysisRe
         base_url=settings.NEBIUS_BASE_URL,
         api_key=settings.NEBIUS_API_KEY,
     )
-
-    message_content = _build_message_content(base64_png_images)
-
-    request_kwargs: dict[str, Any] = {
-        "model": settings.NEBIUS_MODEL,
-        "max_tokens": settings.RESUME_ANALYSIS_MAX_TOKENS,
-        "temperature": settings.RESUME_ANALYSIS_TEMPERATURE,
-        "top_p": settings.RESUME_ANALYSIS_TOP_P,
-        "extra_body": {
-            "top_k": settings.RESUME_ANALYSIS_TOP_K,
-        },
-        "messages": [
-            {
-                "role": "user",
-                "content": message_content,
-            }
-        ],
-    }
-
-    response = _call_openai_compatible_chat_completion(
+    return _analyze_with_openai_compatible_provider(
         client=client,
-        request_kwargs=request_kwargs,
         provider_name="Nebius",
+        model=settings.NEBIUS_MODEL,
+        base64_png_images=base64_png_images,
+        extra_body={"top_k": settings.RESUME_ANALYSIS_TOP_K},
     )
-
-    raw_text = _extract_response_text(response)
-    parsed_json = _extract_json_object(raw_text)
-    return _build_analysis_result(parsed_json, raw_text)
 
 
 def analyze_resume_with_chutes(base64_png_images: list[str]) -> ResumeAnalysisResult:
@@ -451,31 +518,12 @@ def analyze_resume_with_chutes(base64_png_images: list[str]) -> ResumeAnalysisRe
         base_url=settings.CHUTES_BASE_URL,
         api_key=settings.CHUTES_API_TOKEN,
     )
-
-    message_content = _build_message_content(base64_png_images)
-
-    request_kwargs: dict[str, Any] = {
-        "model": settings.CHUTES_MODEL,
-        "max_tokens": settings.RESUME_ANALYSIS_MAX_TOKENS,
-        "temperature": settings.RESUME_ANALYSIS_TEMPERATURE,
-        "top_p": settings.RESUME_ANALYSIS_TOP_P,
-        "messages": [
-            {
-                "role": "user",
-                "content": message_content,
-            }
-        ],
-    }
-
-    response = _call_openai_compatible_chat_completion(
+    return _analyze_with_openai_compatible_provider(
         client=client,
-        request_kwargs=request_kwargs,
         provider_name="Chutes",
+        model=settings.CHUTES_MODEL,
+        base64_png_images=base64_png_images,
     )
-
-    raw_text = _extract_response_text(response)
-    parsed_json = _extract_json_object(raw_text)
-    return _build_analysis_result(parsed_json, raw_text)
 
 
 def analyze_resume(base64_png_images: list[str]) -> ResumeAnalysisResult:
