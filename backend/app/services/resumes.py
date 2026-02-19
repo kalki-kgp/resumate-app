@@ -144,6 +144,29 @@ def get_resume_by_id(db: Session, resume_id: UUID) -> Resume | None:
     return db.get(Resume, resume_id)
 
 
+def set_resume_extracted_data(
+    db: Session,
+    resume: Resume,
+    extracted_data: dict,
+) -> Resume:
+    resume.extracted_data = extracted_data
+    db.add(resume)
+    db.commit()
+    db.refresh(resume)
+    return resume
+
+
+def get_resume_extracted_data(
+    db: Session,
+    user_id: UUID,
+    resume_id: UUID,
+) -> dict | None:
+    resume = get_user_resume_by_id(db, user_id, resume_id)
+    if resume is None:
+        return None
+    return resume.extracted_data
+
+
 def set_resume_analysis(
     db: Session,
     resume: Resume,

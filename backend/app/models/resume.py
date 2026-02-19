@@ -25,6 +25,7 @@ class Resume(Base):
     mime_type: Mapped[str] = mapped_column(String(120), nullable=False, default="application/pdf")
     file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     analysis_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    extracted_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

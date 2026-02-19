@@ -1,8 +1,9 @@
+import logging
 import re
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, File, Form, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -10,9 +11,15 @@ from app.api.deps import get_current_user, get_db
 from app.core.config import settings
 from app.models.user import User
 from app.schemas.dashboard import DashboardResume
+from app.schemas.resumes import (
+    ExtractedDataResponse,
+    FillTemplateRequest,
+    FillTemplateResponse,
+    ResumeDataFilled,
+)
 from app.services.resume_analysis import (
     ResumeAnalysisError,
-    analyze_resume,
+    analyze_and_extract_resume,
     pdf_to_base64_png_images,
     save_latest_analysis_result,
 )
@@ -24,7 +31,11 @@ from app.services.resumes import (
     resolve_storage_path,
     save_user_uploaded_resume,
     set_resume_analysis,
+    set_resume_extracted_data,
 )
+from app.services.template_fill import fill_template_from_extracted_data
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -118,7 +129,7 @@ def analyze_resume_from_library(
             resume_pdf_path,
             max_pages=settings.RESUME_ANALYSIS_MAX_PAGES,
         )
-        analysis = analyze_resume(page_images)
+        analysis, extracted_data = analyze_and_extract_resume(page_images)
     except ResumeAnalysisError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     except Exception as exc:
@@ -126,6 +137,8 @@ def analyze_resume_from_library(
 
     save_latest_analysis_result(current_user.id, resume_pdf_path, analysis)
     updated_resume = set_resume_analysis(db, resume, analysis)
+    if extracted_data is not None:
+        updated_resume = set_resume_extracted_data(db, updated_resume, extracted_data)
 
     return DashboardResume(
         id=str(updated_resume.id),
@@ -135,4 +148,60 @@ def analyze_resume_from_library(
         file_size_bytes=max(0, updated_resume.file_size_bytes),
         analysis=parse_resume_analysis(updated_resume),
         thumbnail_url=f"/api/v1/resumes/{updated_resume.id}/thumbnail",
+    )
+
+
+@router.get("/{resume_id}/extracted-data", response_model=ExtractedDataResponse)
+def get_extracted_data(
+    resume_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    resume = get_user_resume_by_id(db, current_user.id, resume_id)
+    if resume is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
+
+    return ExtractedDataResponse(
+        resume_id=str(resume.id),
+        extracted_data=resume.extracted_data,
+    )
+
+
+@router.post("/{resume_id}/fill-template", response_model=FillTemplateResponse)
+def fill_template(
+    resume_id: UUID,
+    payload: FillTemplateRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    resume = get_user_resume_by_id(db, current_user.id, resume_id)
+    if resume is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
+
+    extracted = (payload.extracted_data_override if payload else None) or resume.extracted_data
+    if not extracted:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No extracted data available. Analyze the resume first.",
+        )
+
+    filled = fill_template_from_extracted_data(extracted)
+    if filled is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Template fill service unavailable. Please try again.",
+        )
+
+    try:
+        data = ResumeDataFilled.model_validate(filled)
+    except Exception:
+        logger.exception("Failed to validate filled template data")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Filled data did not match expected schema.",
+        )
+
+    return FillTemplateResponse(
+        resume_id=str(resume.id),
+        data=data,
     )

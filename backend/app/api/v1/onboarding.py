@@ -12,13 +12,13 @@ from app.schemas.onboarding import (
 )
 from app.services.resume_analysis import (
     ResumeAnalysisError,
-    analyze_resume,
+    analyze_and_extract_resume,
     clear_latest_analysis_result,
     load_latest_analysis_result,
     pdf_to_base64_png_images,
     save_latest_analysis_result,
 )
-from app.services.resumes import latest_user_resume, save_user_uploaded_resume, set_resume_analysis, resolve_storage_path
+from app.services.resumes import latest_user_resume, save_user_uploaded_resume, set_resume_analysis, set_resume_extracted_data, resolve_storage_path
 from app.services.onboarding import (
     advance_step,
     back_to_options,
@@ -156,7 +156,7 @@ def onboarding_analyze_resume(
             resume_pdf_path,
             max_pages=settings.RESUME_ANALYSIS_MAX_PAGES,
         )
-        analysis = analyze_resume(page_images)
+        analysis, extracted_data = analyze_and_extract_resume(page_images)
     except ResumeAnalysisError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     except Exception as exc:
@@ -164,6 +164,8 @@ def onboarding_analyze_resume(
 
     save_latest_analysis_result(current_user.id, resume_pdf_path, analysis)
     set_resume_analysis(db, latest_resume, analysis)
+    if extracted_data is not None:
+        set_resume_extracted_data(db, latest_resume, extracted_data)
 
     target_role = analysis.recommended_roles[0].title if analysis.recommended_roles else None
     progress = advance_step(db, progress, step_index=1, target_role=target_role)

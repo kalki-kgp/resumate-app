@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -702,3 +703,199 @@ def analyze_resume(base64_png_images: list[str]) -> ResumeAnalysisResult:
     raise ResumeAnalysisError(
         "RESUME_IMAGE_PROCESSING_PROVIDER must be either 'nebius' or 'chutes'"
     )
+
+
+# ---------------------------------------------------------------------------
+# Resume Data Extraction (parallel with analysis)
+# ---------------------------------------------------------------------------
+
+RESUME_EXTRACTION_PROMPT = """
+You are a precise resume data extractor. Extract ALL structured content visible on the resume.
+
+INPUT:
+- Resume page images in order (page 1, page 2, ...).
+- Treat the images as the complete source of truth.
+
+EXTRACTION RULES:
+1) Extract EVERY piece of information visible on the resume.
+2) Do NOT invent, infer, or embellish any data.
+3) If a field is not present, omit it or use null.
+4) Preserve original wording for descriptions and bullets.
+5) For experience bullet points, combine them into a single description string separated by newlines.
+
+OUTPUT CONTRACT:
+- Return ONLY valid JSON (no markdown, no prose outside JSON).
+- Include ALL keys exactly as specified.
+- Use empty arrays when no items exist.
+
+JSON schema:
+{
+  "personal": {
+    "full_name": "string",
+    "role_title": "string or null",
+    "email": "string or null",
+    "phone": "string or null",
+    "location": "string or null",
+    "linkedin": "string or null",
+    "website": "string or null",
+    "summary": "string or null"
+  },
+  "experience": [
+    {
+      "role": "string",
+      "company": "string",
+      "date_range": "string",
+      "location": "string or null",
+      "description": "string (all bullet points joined with newlines)"
+    }
+  ],
+  "education": [
+    {
+      "degree": "string",
+      "institution": "string",
+      "date_range": "string or null",
+      "gpa": "string or null",
+      "details": "string or null"
+    }
+  ],
+  "skills": [
+    {
+      "category": "string or null",
+      "items": ["string"]
+    }
+  ],
+  "certifications": ["string"],
+  "projects": [
+    {
+      "name": "string",
+      "description": "string or null",
+      "date_range": "string or null"
+    }
+  ],
+  "languages": ["string"],
+  "awards": ["string"],
+  "publications": ["string"],
+  "volunteer": [
+    {
+      "role": "string",
+      "organization": "string",
+      "date_range": "string or null",
+      "description": "string or null"
+    }
+  ]
+}
+
+IMPORTANT:
+- Extract ALL experience entries, not just the first few.
+- Extract ALL education entries.
+- Extract ALL skills, grouped by category if the resume groups them.
+- For bullet points under an experience, join them with newline characters into the description field.
+""".strip()
+
+
+def _extract_with_openai_compatible_provider(
+    *,
+    client: OpenAI,
+    provider_name: str,
+    model: str,
+    base64_png_images: list[str],
+    extra_body: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    request_id = f"{provider_name.lower()}-extract-{int(time.time() * 1000)}"
+    _analysis_debug(
+        "extraction_start",
+        request_id=request_id,
+        provider=provider_name,
+        model=model,
+        images=len(base64_png_images),
+        max_tokens=settings.RESUME_EXTRACTION_MAX_TOKENS,
+    )
+
+    message_content = _build_message_content(base64_png_images, prompt_text=RESUME_EXTRACTION_PROMPT)
+
+    request_kwargs: dict[str, Any] = {
+        "model": model,
+        "max_tokens": settings.RESUME_EXTRACTION_MAX_TOKENS,
+        "temperature": settings.RESUME_EXTRACTION_TEMPERATURE,
+        "top_p": settings.RESUME_ANALYSIS_TOP_P,
+        "messages": [
+            {
+                "role": "user",
+                "content": message_content,
+            }
+        ],
+    }
+    if extra_body is not None:
+        request_kwargs["extra_body"] = extra_body
+
+    response = _call_openai_compatible_chat_completion(
+        client=client,
+        request_kwargs=request_kwargs,
+        provider_name=provider_name,
+        request_id=request_id,
+        call_mode="extraction",
+    )
+    raw_text = _extract_response_text(response)
+    parsed_json = _extract_json_object(raw_text)
+    _analysis_debug(
+        "extraction_done",
+        request_id=request_id,
+        provider=provider_name,
+        raw_length=len(raw_text),
+        parsed=parsed_json is not None,
+    )
+    return parsed_json
+
+
+def extract_resume_data(base64_png_images: list[str]) -> dict[str, Any] | None:
+    if not base64_png_images:
+        return None
+
+    provider = settings.RESUME_IMAGE_PROCESSING_PROVIDER.strip().lower()
+
+    if provider == "nebius":
+        if not settings.NEBIUS_API_KEY:
+            logger.warning("NEBIUS_API_KEY not configured, skipping extraction")
+            return None
+        client = OpenAI(base_url=settings.NEBIUS_BASE_URL, api_key=settings.NEBIUS_API_KEY)
+        return _extract_with_openai_compatible_provider(
+            client=client,
+            provider_name="Nebius",
+            model=settings.NEBIUS_MODEL,
+            base64_png_images=base64_png_images,
+            extra_body={"top_k": settings.RESUME_ANALYSIS_TOP_K},
+        )
+
+    if provider == "chutes":
+        if not settings.CHUTES_API_TOKEN:
+            logger.warning("CHUTES_API_TOKEN not configured, skipping extraction")
+            return None
+        client = OpenAI(base_url=settings.CHUTES_BASE_URL, api_key=settings.CHUTES_API_TOKEN)
+        return _extract_with_openai_compatible_provider(
+            client=client,
+            provider_name="Chutes",
+            model=settings.CHUTES_MODEL,
+            base64_png_images=base64_png_images,
+        )
+
+    logger.warning("Unknown provider '%s', skipping extraction", provider)
+    return None
+
+
+def analyze_and_extract_resume(
+    base64_png_images: list[str],
+) -> tuple[ResumeAnalysisResult, dict[str, Any] | None]:
+    """Run analysis and extraction in parallel. Extraction failure is non-fatal."""
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        analysis_future = executor.submit(analyze_resume, base64_png_images)
+        extraction_future = executor.submit(extract_resume_data, base64_png_images)
+
+        analysis_result = analysis_future.result()
+
+        try:
+            extracted_data = extraction_future.result()
+        except Exception:
+            logger.exception("Resume data extraction failed (non-fatal)")
+            extracted_data = None
+
+    return analysis_result, extracted_data
