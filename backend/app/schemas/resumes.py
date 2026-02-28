@@ -39,9 +39,17 @@ class EducationFilled(BaseModel):
     date: str = ""
 
 
+class ProjectFilled(BaseModel):
+    id: int
+    name: str = ""
+    description: str = ""
+    date: str = ""
+
+
 class ResumeDataFilled(BaseModel):
     personal: PersonalInfoFilled = Field(default_factory=PersonalInfoFilled)
     experience: list[ExperienceFilled] = Field(default_factory=list)
+    projects: list[ProjectFilled] = Field(default_factory=list)
     education: list[EducationFilled] = Field(default_factory=list)
     skills: list[str] = Field(default_factory=list)
 
