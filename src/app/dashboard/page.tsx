@@ -1040,7 +1040,7 @@ export default function DashboardTwoPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => router.push('/editor')}
+                  onClick={() => router.push(`/editor?resume_id=${selectedDashboardResume.id}`)}
                   className="rounded-full bg-[#ff8b2f] px-4 py-2 text-sm font-semibold text-white"
                 >
                   Open in Editor
