@@ -169,11 +169,24 @@ export interface Education {
   date: string;
 }
 
+export interface Project {
+  id: number;
+  name: string;
+  description: string;
+  date: string;
+}
+
 export interface ResumeData {
   personal: PersonalInfo;
   experience: Experience[];
+  projects: Project[];
   education: Education[];
   skills: string[];
 }
 
 export type TemplateType = 'modern' | 'classic' | 'creative' | 'minimal';
+
+export interface FillTemplateResponse {
+  resume_id: string;
+  data: ResumeData;
+}
