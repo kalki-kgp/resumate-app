@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     RESUME_IMAGE_PROCESSING_PROVIDER: str = "nebius"
     NEBIUS_API_KEY: str | None = None
     NEBIUS_BASE_URL: str = "https://api.tokenfactory.nebius.com/v1/"
-    NEBIUS_MODEL: str = "google/gemma-3-27b-it-fast"
+    NEBIUS_MODEL: str = "Qwen/Qwen2.5-VL-72B-Instruct"
     CHUTES_API_TOKEN: str | None = None
     CHUTES_BASE_URL: str = "https://llm.chutes.ai/v1/"
     CHUTES_MODEL: str = "Qwen/Qwen3-VL-235B-A22B-Instruct"

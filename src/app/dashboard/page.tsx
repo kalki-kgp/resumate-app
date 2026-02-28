@@ -875,6 +875,14 @@ export default function DashboardTwoPage() {
                     'This resume has not been analyzed yet',
                     'Run AI analysis to generate ATS score, category breakdown, and section insights.'
                   )}
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/editor?resume_id=${selectedDashboardResume!.id}`)}
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#dfe4eb] bg-[#f8fafc] px-4 py-2 text-xs font-semibold text-[#3b4352] hover:bg-white"
+                  >
+                    Open in Editor
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               ) : (
                 <>
@@ -923,6 +931,15 @@ export default function DashboardTwoPage() {
                       </div>
                     ))}
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/editor?resume_id=${selectedDashboardResume!.id}`)}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#ff8b2f] px-4 py-2.5 text-sm font-semibold text-white hover:brightness-110 transition-all"
+                  >
+                    Open in Editor
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
                 </>
               )}
             </article>
@@ -1040,10 +1057,11 @@ export default function DashboardTwoPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => router.push('/editor')}
-                  className="rounded-full bg-[#ff8b2f] px-4 py-2 text-sm font-semibold text-white"
+                  onClick={() => router.push(`/editor?resume_id=${selectedDashboardResume!.id}`)}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#ff8b2f] px-4 py-2 text-sm font-semibold text-white hover:brightness-110 transition-all"
                 >
                   Open in Editor
+                  <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
             ) : (
@@ -1445,7 +1463,7 @@ export default function DashboardTwoPage() {
               </button>
               <button
                 type="button"
-                onClick={() => router.push('/editor')}
+                onClick={() => router.push(selectedDashboardResumeId ? `/editor?resume_id=${selectedDashboardResumeId}` : '/editor')}
                 className="rounded-full bg-[#ff8b2f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#f47f22]"
               >
                 Open Editor

@@ -10,23 +10,22 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 FILL_TEMPLATE_PROMPT = """
-You are a resume data mapper. Convert extracted resume data into the exact JSON schema used by the frontend editor.
+You are a resume data mapper. Convert a plain-text resume transcription into the exact JSON schema used by the frontend editor.
 
 INPUT:
-- Extracted resume data (JSON) containing personal info, experience, education, skills, and other sections.
+- A plain-text transcription of a resume, organized by section headings.
 
-MAPPING RULES:
-1) Map personal.full_name → personal.fullName
-2) Map personal.role_title → personal.role
-3) Map personal.email → personal.email
-4) Map personal.phone → personal.phone
-5) Map personal.location → personal.location
-6) Map personal.summary → personal.summary (keep full text)
-7) For each experience entry: combine all bullet points into a single description string joined by newlines. Use sequential IDs starting from 1.
-8) For each education entry: map degree, institution → school, date_range → date. Use sequential IDs starting from 1.
-9) Flatten all skill categories into a single flat array of skill strings. Remove duplicates.
-10) Include ALL entries — do not truncate or limit.
-11) If a field is missing or null, use an empty string.
+CRITICAL RULES:
+1) ONLY use information that is explicitly present in the transcription. Do NOT invent, infer, or fabricate any data.
+2) If something is not mentioned, use an empty string — do NOT make it up.
+3) Clearly distinguish between EXPERIENCE (jobs, internships at companies) and PROJECTS (academic, personal, competition, or hackathon projects).
+   - Experience entries have a company/organization they worked AT.
+   - Projects are things the person BUILT — often for competitions, coursework, or personal interest.
+4) For each experience/project entry: combine all bullet points into a single description string joined by newlines.
+5) Use sequential IDs starting from 1 for experience, projects, and education.
+6) Flatten all skills into a single flat array of skill strings. Remove duplicates.
+7) Include ALL entries — do not truncate or limit.
+8) If a field is missing or null, use an empty string.
 
 OUTPUT CONTRACT:
 - Return ONLY valid JSON (no markdown, no prose).
@@ -48,6 +47,14 @@ OUTPUT CONTRACT:
       "company": "string",
       "date": "string",
       "description": "string"
+    }
+  ],
+  "projects": [
+    {
+      "id": 1,
+      "name": "string",
+      "description": "string",
+      "date": "string"
     }
   ],
   "education": [
@@ -115,10 +122,16 @@ def fill_template_from_extracted_data(extracted_data: dict[str, Any]) -> dict[st
         logger.warning("Unknown provider '%s' for template fill", provider)
         return None
 
+    # extracted_data may be {"transcription": "..."} (plain text) or legacy JSON
+    transcription = extracted_data.get("transcription")
+    if isinstance(transcription, str) and transcription.strip():
+        data_block = transcription.strip()
+    else:
+        data_block = json.dumps(extracted_data, ensure_ascii=False, indent=2)
+
     user_message = (
         f"{FILL_TEMPLATE_PROMPT}\n\n"
-        f"Here is the extracted resume data to map:\n"
-        f"```json\n{json.dumps(extracted_data, ensure_ascii=False, indent=2)}\n```"
+        f"Here is the resume transcription to map:\n\n{data_block}"
     )
 
     request_kwargs: dict[str, Any] = {
