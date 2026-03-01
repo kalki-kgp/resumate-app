@@ -1,3 +1,4 @@
+export { AIWriteAssist } from './AIWriteAssist';
 export { InputGroup } from './InputGroup';
 export { InputField } from './InputField';
 export {

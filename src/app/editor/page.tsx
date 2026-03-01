@@ -26,6 +26,7 @@ import {
   Leaf,
 } from 'lucide-react';
 import {
+  AIWriteAssist,
   InputGroup,
   InputField,
   TemplatePreview,
@@ -392,13 +393,24 @@ function EditorInner() {
               value={data.personal.location}
               onChange={(v) => updatePersonal('location', v)}
             />
-            <InputField
-              variant="warm"
-              label="Professional Summary"
-              value={data.personal.summary}
-              onChange={(v) => updatePersonal('summary', v)}
-              multiline
-            />
+            <AIWriteAssist
+              sectionType="summary"
+              currentValue={data.personal.summary}
+              onValueChange={(v) => updatePersonal('summary', v)}
+              context={{
+                fullName: data.personal.fullName,
+                role: data.personal.role,
+                experienceTitles: data.experience.map((e) => e.role).filter(Boolean).join(', '),
+              }}
+            >
+              <InputField
+                variant="warm"
+                label="Professional Summary"
+                value={data.personal.summary}
+                onChange={(v) => updatePersonal('summary', v)}
+                multiline
+              />
+            </AIWriteAssist>
           </InputGroup>
 
           <InputGroup
@@ -448,13 +460,24 @@ function EditorInner() {
                     onChange={(v) => updateExperience(job.id, 'date', v)}
                     placeholder="e.g. 2020 - Present"
                   />
-                  <InputField
-                    variant="warm"
-                    label="Description"
-                    value={job.description}
-                    onChange={(v) => updateExperience(job.id, 'description', v)}
-                    multiline
-                  />
+                  <AIWriteAssist
+                    sectionType="experience"
+                    currentValue={job.description}
+                    onValueChange={(v) => updateExperience(job.id, 'description', v)}
+                    context={{
+                      role: job.role,
+                      company: job.company,
+                      date: job.date,
+                    }}
+                  >
+                    <InputField
+                      variant="warm"
+                      label="Description"
+                      value={job.description}
+                      onChange={(v) => updateExperience(job.id, 'description', v)}
+                      multiline
+                    />
+                  </AIWriteAssist>
                 </div>
               </div>
             ))}
@@ -506,13 +529,23 @@ function EditorInner() {
                     onChange={(v) => updateProject(proj.id, 'date', v)}
                     placeholder="e.g. Nov 2024 - Dec 2024"
                   />
-                  <InputField
-                    variant="warm"
-                    label="Description"
-                    value={proj.description}
-                    onChange={(v) => updateProject(proj.id, 'description', v)}
-                    multiline
-                  />
+                  <AIWriteAssist
+                    sectionType="project"
+                    currentValue={proj.description}
+                    onValueChange={(v) => updateProject(proj.id, 'description', v)}
+                    context={{
+                      name: proj.name,
+                      date: proj.date,
+                    }}
+                  >
+                    <InputField
+                      variant="warm"
+                      label="Description"
+                      value={proj.description}
+                      onChange={(v) => updateProject(proj.id, 'description', v)}
+                      multiline
+                    />
+                  </AIWriteAssist>
                 </div>
               </div>
             ))}
@@ -591,17 +624,32 @@ function EditorInner() {
               setActiveSection(activeSection === 'skills' ? null : 'skills')
             }
           >
-            <textarea
-              className="w-full p-3 rounded-2xl bg-white border border-[#eadfce] focus:border-[#c96442] focus:outline-none transition-all text-sm h-32 resize-y text-[#2c1810]"
-              value={data.skills.join(', ')}
-              onChange={(e) =>
+            <AIWriteAssist
+              sectionType="skills"
+              currentValue={data.skills.join(', ')}
+              onValueChange={(v) =>
                 setData({
                   ...data,
-                  skills: e.target.value.split(',').map((s) => s.trim()),
+                  skills: v.split(',').map((s) => s.trim()).filter(Boolean),
                 })
               }
-            />
-            <p className="text-[10px] text-[#8b7355] mt-1 ml-1">Separate skills with commas</p>
+              context={{
+                role: data.personal.role,
+                experienceTitles: data.experience.map((e) => e.role).filter(Boolean).join(', '),
+              }}
+            >
+              <textarea
+                className="w-full p-3 rounded-2xl bg-white border border-[#eadfce] focus:border-[#c96442] focus:outline-none transition-all text-sm h-32 resize-y text-[#2c1810]"
+                value={data.skills.join(', ')}
+                onChange={(e) =>
+                  setData({
+                    ...data,
+                    skills: e.target.value.split(',').map((s) => s.trim()),
+                  })
+                }
+              />
+              <p className="text-[10px] text-[#8b7355] mt-1 ml-1">Separate skills with commas</p>
+            </AIWriteAssist>
           </InputGroup>
         </div>
 
@@ -613,10 +661,9 @@ function EditorInner() {
                 Writing Coach
               </span>
             </div>
-            <p className="text-sm text-[#8b7355] mb-3">Get warm, human wording suggestions for stronger impact.</p>
-            <button className="w-full py-2 px-4 rounded-full bg-[#2d5a3d] text-white text-sm font-medium hover:brightness-110 transition-colors">
-              Get Suggestions
-            </button>
+            <p className="text-sm text-[#8b7355]">
+              Click the <span className="inline-flex align-middle"><Sparkles size={12} className="text-[#c96442]" /></span> icon on any description field to get AI-powered writing assistance.
+            </p>
           </div>
         </div>
       </aside>

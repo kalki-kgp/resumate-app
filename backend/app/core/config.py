@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     RESUME_ANALYSIS_TOP_K: int = 50
     RESUME_RENDER_SCALE: float = 1.6
     RESUME_RENDER_MAX_WIDTH: int = 1400
+    AI_WRITE_MAX_TOKENS: int = 2000
+    AI_WRITE_TEMPERATURE: float = 0.7
 
     @property
     def cors_origins(self) -> list[str]:

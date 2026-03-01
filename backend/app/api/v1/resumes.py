@@ -12,6 +12,8 @@ from app.core.config import settings
 from app.models.user import User
 from app.schemas.dashboard import DashboardResume
 from app.schemas.resumes import (
+    AIWriteRequest,
+    AIWriteResponse,
     ExtractedDataResponse,
     FillTemplateRequest,
     FillTemplateResponse,
@@ -33,6 +35,7 @@ from app.services.resumes import (
     set_resume_analysis,
     set_resume_extracted_data,
 )
+from app.services.ai_write import generate_ai_text
 from app.services.template_fill import fill_template_from_extracted_data
 
 logger = logging.getLogger(__name__)
@@ -204,4 +207,35 @@ def fill_template(
     return FillTemplateResponse(
         resume_id=str(resume.id),
         data=data,
+    )
+
+
+@router.post("/ai-write", response_model=AIWriteResponse)
+def ai_write(
+    payload: AIWriteRequest,
+    current_user: User = Depends(get_current_user),
+):
+    valid_sections = {"summary", "experience", "project", "skills"}
+    if payload.section_type not in valid_sections:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid section_type. Must be one of: {', '.join(sorted(valid_sections))}",
+        )
+
+    generated = generate_ai_text(
+        section_type=payload.section_type,
+        prompt=payload.prompt,
+        current_text=payload.current_text,
+        context=payload.context,
+    )
+
+    if generated is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI writing service unavailable. Please try again.",
+        )
+
+    return AIWriteResponse(
+        generated_text=generated,
+        section_type=payload.section_type,
     )

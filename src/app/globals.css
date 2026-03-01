@@ -248,6 +248,118 @@ canvas, video {
   animation: slide-up-fade 0.6s ease-out forwards;
 }
 
+/* AI Writing Assist — neon edge-tracing glow */
+@property --ai-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes ai-neon-trace {
+  to {
+    --ai-angle: 360deg;
+  }
+}
+
+@keyframes ai-neon-bloom {
+  0%, 100% {
+    opacity: 0.6;
+    filter: blur(6px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(10px);
+  }
+}
+
+@keyframes ai-result-glow {
+  0% {
+    opacity: 0.9;
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
+
+/* Neon tracing border — applied to prompt input bar during loading */
+.ai-neon-border {
+  position: relative;
+  z-index: 0;
+}
+
+/* Sharp neon border trace */
+.ai-neon-border::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--ai-angle),
+    transparent 0%,
+    #3b82f6 10%,
+    #8b5cf6 25%,
+    #d946ef 40%,
+    transparent 50%,
+    transparent 100%
+  );
+  animation: ai-neon-trace 2s linear infinite;
+  z-index: -2;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Soft bloom/diffusion layer behind the trace */
+.ai-neon-border::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  padding: 6px;
+  background: conic-gradient(
+    from var(--ai-angle),
+    transparent 0%,
+    #3b82f6 10%,
+    #8b5cf6 25%,
+    #d946ef 40%,
+    transparent 50%,
+    transparent 100%
+  );
+  animation: ai-neon-trace 2s linear infinite, ai-neon-bloom 2s ease-in-out infinite;
+  z-index: -3;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Success flash on textarea after AI applies text */
+.ai-result-border {
+  position: relative;
+  z-index: 0;
+}
+
+.ai-result-border::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6, #d946ef, #8b5cf6, #3b82f6);
+  background-size: 300% 300%;
+  animation: ai-result-glow 2s ease-out forwards;
+  z-index: -2;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
 /* Performance Optimizations */
 
 /* Reduced motion support for accessibility */

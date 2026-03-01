@@ -190,3 +190,8 @@ export interface FillTemplateResponse {
   resume_id: string;
   data: ResumeData;
 }
+
+export interface AIWriteResponse {
+  generated_text: string;
+  section_type: string;
+}
