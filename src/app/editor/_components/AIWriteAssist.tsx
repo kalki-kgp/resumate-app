@@ -7,6 +7,7 @@ import type { AIWriteResponse } from '@/types';
 
 interface AIWriteAssistProps {
   sectionType: 'summary' | 'experience' | 'project' | 'skills';
+  label: string;
   currentValue: string;
   onValueChange: (value: string) => void;
   context?: Record<string, string>;
@@ -22,6 +23,7 @@ const PLACEHOLDERS: Record<string, string> = {
 
 export const AIWriteAssist = ({
   sectionType,
+  label,
   currentValue,
   onValueChange,
   context = {},
@@ -70,7 +72,6 @@ export const AIWriteAssist = ({
       onValueChange(res.generated_text);
       setShowResult(true);
       setPrompt('');
-      setIsOpen(false);
 
       setTimeout(() => setShowResult(false), 2000);
     } catch {
@@ -102,37 +103,44 @@ export const AIWriteAssist = ({
   );
 
   return (
-    <div className="relative">
-      {/* AI trigger button — visible when prompt bar is closed */}
-      {!isOpen && (
-        <div className="flex items-center gap-1.5 mb-2">
-          <button
-            type="button"
-            onClick={handleOpen}
-            className="group flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#f3e8ff] to-[#ede4ff] hover:from-[#ebe0ff] hover:to-[#e0d4ff] border border-[#d8c8f0] hover:border-[#c4a8e8] transition-all text-xs font-semibold text-[#7c4dba] hover:text-[#6a3dad] shadow-sm hover:shadow"
-          >
-            <Sparkles size={12} className="text-[#9b6dd7] group-hover:text-[#7c4dba] transition-colors" />
-            AI Write
-          </button>
+    <div>
+      {/* Label row: label text + AI Write button + Undo (all same line) */}
+      <div className="flex items-center mb-1.5 ml-1">
+        <label className="block text-xs font-bold uppercase text-[#8b7355]">
+          {label}
+        </label>
+        <div className="ml-auto flex items-center gap-1">
           {previousValueRef.current !== null && !loading && (
             <button
               type="button"
               onClick={handleUndo}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-[#8b7355] hover:text-[#c96442] hover:bg-[#f4ecdf] transition-colors"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium text-[#8b7355] hover:text-[#c96442] hover:bg-[#f4ecdf] transition-colors"
               title="Undo AI change"
             >
-              <Undo2 size={12} />
+              <Undo2 size={10} />
               Undo
             </button>
           )}
+          <button
+            type="button"
+            onClick={isOpen ? handleClose : handleOpen}
+            className={`group flex items-center gap-1 px-2 py-0.5 rounded-md transition-all text-[10px] font-semibold ${
+              isOpen
+                ? 'bg-[#ebe0ff] text-[#7c4dba] border border-[#c4a8e8]'
+                : 'bg-gradient-to-r from-[#f3e8ff] to-[#ede4ff] hover:from-[#ebe0ff] hover:to-[#e0d4ff] text-[#7c4dba] hover:text-[#6a3dad] border border-[#d8c8f0] hover:border-[#c4a8e8]'
+            }`}
+          >
+            <Sparkles size={10} className="text-[#9b6dd7]" />
+            AI Write
+          </button>
         </div>
-      )}
+      </div>
 
-      {/* Prompt input bar — replaces the trigger button */}
+      {/* Prompt input bar */}
       {isOpen && (
-        <div className={`mb-2 rounded-xl overflow-hidden ${loading ? 'ai-neon-border' : ''}`}>
-          <div className="flex items-center gap-1.5 bg-[#1a1a2e] rounded-xl p-1.5">
-            <Sparkles size={14} className="text-[#a78bfa] ml-1.5 flex-shrink-0" />
+        <div className={`mb-2 rounded-2xl ${loading ? 'ai-neon-border' : ''}`}>
+          <div className="flex items-center gap-1.5 rounded-2xl border border-[#eadfce] bg-[#fff8f1] p-1.5">
+            <Sparkles size={14} className="text-[#9b6dd7] ml-1.5 flex-shrink-0" />
             <input
               ref={inputRef}
               type="text"
@@ -141,13 +149,13 @@ export const AIWriteAssist = ({
               onKeyDown={handleKeyDown}
               placeholder={PLACEHOLDERS[sectionType]}
               disabled={loading}
-              className="flex-1 px-2 py-1.5 text-xs bg-transparent text-[#e2e0ff] placeholder:text-[#5a5680] focus:outline-none disabled:opacity-50"
+              className="flex-1 px-2 py-1.5 text-xs bg-transparent text-[#2c1810] placeholder:text-[#c4b29e] focus:outline-none disabled:opacity-50"
             />
             <button
               type="button"
               onClick={handleSend}
               disabled={!prompt.trim() || loading}
-              className="p-1.5 rounded-lg bg-[#7c4dba] hover:bg-[#6a3dad] text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+              className="p-1.5 rounded-xl bg-[#7c4dba] hover:bg-[#6a3dad] text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
             >
               {loading ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -159,7 +167,7 @@ export const AIWriteAssist = ({
               type="button"
               onClick={handleClose}
               disabled={loading}
-              className="p-1.5 rounded-lg text-[#6b6894] hover:text-[#e2e0ff] hover:bg-[#2a2a4a] transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+              className="p-1.5 rounded-xl text-[#b59e86] hover:text-[#c96442] hover:bg-[#f4ecdf] transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
             >
               <X size={14} />
             </button>
@@ -167,7 +175,7 @@ export const AIWriteAssist = ({
         </div>
       )}
 
-      {/* Wrapped textarea with success glow */}
+      {/* Textarea only — neon result glow wraps just this */}
       <div className={`rounded-2xl ${showResult ? 'ai-result-border' : ''}`}>
         {children}
       </div>

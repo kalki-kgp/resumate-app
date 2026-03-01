@@ -395,6 +395,7 @@ function EditorInner() {
             />
             <AIWriteAssist
               sectionType="summary"
+              label="Professional Summary"
               currentValue={data.personal.summary}
               onValueChange={(v) => updatePersonal('summary', v)}
               context={{
@@ -403,12 +404,10 @@ function EditorInner() {
                 experienceTitles: data.experience.map((e) => e.role).filter(Boolean).join(', '),
               }}
             >
-              <InputField
-                variant="warm"
-                label="Professional Summary"
+              <textarea
                 value={data.personal.summary}
-                onChange={(v) => updatePersonal('summary', v)}
-                multiline
+                onChange={(e) => updatePersonal('summary', e.target.value)}
+                className="w-full p-3 rounded-2xl bg-white border border-[#eadfce] focus:border-[#c96442] focus:outline-none transition-all text-sm min-h-[100px] resize-y text-[#2c1810]"
               />
             </AIWriteAssist>
           </InputGroup>
@@ -462,6 +461,7 @@ function EditorInner() {
                   />
                   <AIWriteAssist
                     sectionType="experience"
+                    label="Description"
                     currentValue={job.description}
                     onValueChange={(v) => updateExperience(job.id, 'description', v)}
                     context={{
@@ -470,12 +470,10 @@ function EditorInner() {
                       date: job.date,
                     }}
                   >
-                    <InputField
-                      variant="warm"
-                      label="Description"
+                    <textarea
                       value={job.description}
-                      onChange={(v) => updateExperience(job.id, 'description', v)}
-                      multiline
+                      onChange={(e) => updateExperience(job.id, 'description', e.target.value)}
+                      className="w-full p-3 rounded-2xl bg-white border border-[#eadfce] focus:border-[#c96442] focus:outline-none transition-all text-sm min-h-[100px] resize-y text-[#2c1810]"
                     />
                   </AIWriteAssist>
                 </div>
@@ -531,6 +529,7 @@ function EditorInner() {
                   />
                   <AIWriteAssist
                     sectionType="project"
+                    label="Description"
                     currentValue={proj.description}
                     onValueChange={(v) => updateProject(proj.id, 'description', v)}
                     context={{
@@ -538,12 +537,10 @@ function EditorInner() {
                       date: proj.date,
                     }}
                   >
-                    <InputField
-                      variant="warm"
-                      label="Description"
+                    <textarea
                       value={proj.description}
-                      onChange={(v) => updateProject(proj.id, 'description', v)}
-                      multiline
+                      onChange={(e) => updateProject(proj.id, 'description', e.target.value)}
+                      className="w-full p-3 rounded-2xl bg-white border border-[#eadfce] focus:border-[#c96442] focus:outline-none transition-all text-sm min-h-[100px] resize-y text-[#2c1810]"
                     />
                   </AIWriteAssist>
                 </div>
@@ -626,6 +623,7 @@ function EditorInner() {
           >
             <AIWriteAssist
               sectionType="skills"
+              label="Skills"
               currentValue={data.skills.join(', ')}
               onValueChange={(v) =>
                 setData({
