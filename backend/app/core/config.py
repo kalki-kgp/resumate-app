@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     RESUME_FILL_TEMPLATE_MAX_TOKENS: int = 30000
     RESUME_FILL_TEMPLATE_TEMPERATURE: float = 0.15
     RESUME_FILL_PROVIDER: str = "nebius"
-    NEBIUS_FILL_MODEL: str = "moonshotai/Kimi-K2.5"
+    NEBIUS_FILL_MODEL: str = "deepseek-ai/DeepSeek-V3-0324-fast"
     CHUTES_FILL_MODEL: str = "zai-org/GLM-5-TEE"
     RESUME_ANALYSIS_TOP_P: float = 0.9
     RESUME_ANALYSIS_TOP_K: int = 50
