@@ -29,11 +29,11 @@ import {
   AIWriteAssist,
   InputGroup,
   InputField,
-  TemplatePreview,
   ModernPreview,
   ClassicPreview,
   CreativePreview,
   MinimalPreview,
+  TemplateThumbnail,
 } from './_components';
 
 const fraunces = Fraunces({
@@ -760,7 +760,7 @@ function EditorInner() {
                       }`}
                     >
                       <div className="bg-white rounded-lg overflow-hidden">
-                        <TemplatePreview template={templateOption.id} data={deferredData} scale={0.12} />
+                        <TemplateThumbnail template={templateOption.id} />
                       </div>
 
                       {!isSelected && <div className="absolute inset-0 bg-gradient-to-t from-[#2d5a3d]/80 via-[#2d5a3d]/20 to-transparent" />}
