@@ -195,3 +195,26 @@ export interface AIWriteResponse {
   generated_text: string;
   section_type: string;
 }
+
+// Cover Letter Types
+export interface CoverLetterData {
+  recipientName: string;
+  companyName: string;
+  date: string;
+  greeting: string;
+  opening: string;
+  body: string[];
+  closing: string;
+  signOff: string;
+  senderName: string;
+}
+
+export interface GenerateCoverLetterResponse {
+  resume_id: string;
+  cover_letter: CoverLetterData;
+}
+
+export interface RefineParagraphResponse {
+  refined_text: string;
+  paragraph_type: string;
+}
