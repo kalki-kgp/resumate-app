@@ -601,7 +601,7 @@ def _analyze_with_openai_compatible_provider(
         )
         retry_kwargs: dict[str, Any] = {
             "model": model,
-            "max_tokens": max(settings.RESUME_ANALYSIS_MAX_TOKENS, 1800),
+            "max_tokens": settings.RESUME_ANALYSIS_MAX_TOKENS,
             "temperature": min(settings.RESUME_ANALYSIS_TEMPERATURE, 0.25),
             "top_p": settings.RESUME_ANALYSIS_TOP_P,
             "messages": [
@@ -710,87 +710,55 @@ def analyze_resume(base64_png_images: list[str]) -> ResumeAnalysisResult:
 # ---------------------------------------------------------------------------
 
 RESUME_EXTRACTION_PROMPT = """
-You are a precise resume data extractor. Extract ALL structured content visible on the resume.
+You are a precise resume transcriber. Your ONLY job is to read the resume images and write out EXACTLY what is on the resume — word for word, section by section.
 
 INPUT:
 - Resume page images in order (page 1, page 2, ...).
-- Treat the images as the complete source of truth.
+- Treat the images as the complete and ONLY source of truth.
 
-EXTRACTION RULES:
-1) Extract EVERY piece of information visible on the resume.
-2) Do NOT invent, infer, or embellish any data.
-3) If a field is not present, omit it or use null.
-4) Preserve original wording for descriptions and bullets.
-5) For experience bullet points, combine them into a single description string separated by newlines.
+TRANSCRIPTION RULES:
+1) Write out EVERY piece of text visible on the resume, organized by section.
+2) Do NOT invent, infer, embellish, or add ANY information that is not visually present on the resume.
+3) Do NOT paraphrase or reword — use the EXACT text from the resume.
+4) Preserve the original section headings as they appear on the resume.
+5) For bullet points, copy them exactly as written.
+6) If a section is labeled "Projects" or "Academic Projects" or similar, transcribe it under a PROJECTS heading.
+7) If a section is labeled "Experience" or "Work Experience" or "Internships", transcribe it under an EXPERIENCE heading.
+8) Keep the distinction between Experience (jobs/internships at companies) and Projects (academic, personal, or competition projects).
 
-OUTPUT CONTRACT:
-- Return ONLY valid JSON (no markdown, no prose outside JSON).
-- Include ALL keys exactly as specified.
-- Use empty arrays when no items exist.
+OUTPUT FORMAT:
+- Plain text, organized by section.
+- Use section headings in ALL CAPS (e.g., PERSONAL INFO, EXPERIENCE, PROJECTS, EDUCATION, SKILLS).
+- Under each section, write out the content exactly as it appears.
+- Do NOT output JSON. Do NOT add any analysis or commentary.
+- If you are unsure about a word, write what you see. Do NOT guess.
 
-JSON schema:
-{
-  "personal": {
-    "full_name": "string",
-    "role_title": "string or null",
-    "email": "string or null",
-    "phone": "string or null",
-    "location": "string or null",
-    "linkedin": "string or null",
-    "website": "string or null",
-    "summary": "string or null"
-  },
-  "experience": [
-    {
-      "role": "string",
-      "company": "string",
-      "date_range": "string",
-      "location": "string or null",
-      "description": "string (all bullet points joined with newlines)"
-    }
-  ],
-  "education": [
-    {
-      "degree": "string",
-      "institution": "string",
-      "date_range": "string or null",
-      "gpa": "string or null",
-      "details": "string or null"
-    }
-  ],
-  "skills": [
-    {
-      "category": "string or null",
-      "items": ["string"]
-    }
-  ],
-  "certifications": ["string"],
-  "projects": [
-    {
-      "name": "string",
-      "description": "string or null",
-      "date_range": "string or null"
-    }
-  ],
-  "languages": ["string"],
-  "awards": ["string"],
-  "publications": ["string"],
-  "volunteer": [
-    {
-      "role": "string",
-      "organization": "string",
-      "date_range": "string or null",
-      "description": "string or null"
-    }
-  ]
-}
+EXAMPLE:
+PERSONAL INFO
+Name: John Doe
+Email: john@example.com
+Phone: 555-1234
 
-IMPORTANT:
-- Extract ALL experience entries, not just the first few.
-- Extract ALL education entries.
-- Extract ALL skills, grouped by category if the resume groups them.
-- For bullet points under an experience, join them with newline characters into the description field.
+EXPERIENCE
+Software Engineer Intern | Google | Jun 2024 - Aug 2024
+- Built a microservice for user authentication
+- Reduced API latency by 30%
+
+PROJECTS
+FedEx Web-App | Inter-IIT Problem Statement | Nov 2024 - Dec 2024
+- Built an interactive Next.js frontend with 3D cargo visualization
+
+EDUCATION
+B.Tech in Computer Science | IIT Delhi | 2021 - 2025
+GPA: 8.5/10
+
+SKILLS
+Languages: Python, JavaScript, Java
+Frameworks: React, Django, Spring Boot
 """.strip()
+
+_EXTRACTION_MAX_RETRIES = 3
+_EXTRACTION_RETRY_BACKOFF = [2, 4, 8]
 
 
 def _extract_with_openai_compatible_provider(
@@ -828,23 +796,56 @@ def _extract_with_openai_compatible_provider(
     if extra_body is not None:
         request_kwargs["extra_body"] = extra_body
 
-    response = _call_openai_compatible_chat_completion(
-        client=client,
-        request_kwargs=request_kwargs,
-        provider_name=provider_name,
-        request_id=request_id,
-        call_mode="extraction",
-    )
-    raw_text = _extract_response_text(response)
-    parsed_json = _extract_json_object(raw_text)
-    _analysis_debug(
-        "extraction_done",
-        request_id=request_id,
-        provider=provider_name,
-        raw_length=len(raw_text),
-        parsed=parsed_json is not None,
-    )
-    return parsed_json
+    for attempt in range(_EXTRACTION_MAX_RETRIES):
+        started = time.perf_counter()
+        _analysis_debug(
+            "call_start",
+            request_id=request_id,
+            provider=provider_name,
+            mode="extraction",
+            max_tokens=request_kwargs.get("max_tokens"),
+            has_extra_body="extra_body" in request_kwargs,
+            attempt=attempt + 1,
+        )
+        try:
+            try:
+                response = client.chat.completions.create(**request_kwargs)
+            except BadRequestError:
+                minimal_kwargs = {
+                    "model": request_kwargs["model"],
+                    "messages": request_kwargs["messages"],
+                    "max_tokens": request_kwargs["max_tokens"],
+                    "temperature": request_kwargs["temperature"],
+                }
+                response = client.chat.completions.create(**minimal_kwargs)
+
+            raw_text = _extract_response_text(response)
+            _analysis_debug(
+                "extraction_done",
+                request_id=request_id,
+                provider=provider_name,
+                raw_length=len(raw_text),
+                elapsed_ms=round((time.perf_counter() - started) * 1000, 1),
+                attempt=attempt + 1,
+            )
+            if raw_text.strip():
+                return {"transcription": raw_text.strip()}
+
+            logger.warning(
+                "Extraction attempt %d/%d returned empty response, retrying...",
+                attempt + 1, _EXTRACTION_MAX_RETRIES,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Extraction attempt %d/%d failed: %s",
+                attempt + 1, _EXTRACTION_MAX_RETRIES, exc,
+            )
+
+        if attempt < _EXTRACTION_MAX_RETRIES - 1:
+            time.sleep(_EXTRACTION_RETRY_BACKOFF[attempt])
+
+    logger.error("Resume extraction failed after %d attempts", _EXTRACTION_MAX_RETRIES)
+    return None
 
 
 def extract_resume_data(base64_png_images: list[str]) -> dict[str, Any] | None:

@@ -21,32 +21,36 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "ResuMate API"
     VERSION: str = "0.1.0"
     DATABASE_URL: str = "postgresql+psycopg://resumate:resumate@localhost:5432/resumate"
-    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    BACKEND_CORS_ORIGINS: str = "[REDACTED]"
     AUTH_SESSION_TTL_HOURS: int = 720
     UPLOAD_DIR: str = "uploads"
     MAX_RESUME_UPLOAD_SIZE_MB: int = 8
     RESUME_IMAGE_PROCESSING_PROVIDER: str = "nebius"
     NEBIUS_API_KEY: str | None = None
-    NEBIUS_BASE_URL: str = "https://api.tokenfactory.nebius.com/v1/"
+    NEBIUS_BASE_URL: str = "[REDACTED]"
     NEBIUS_MODEL: str = "google/gemma-3-27b-it-fast"
     CHUTES_API_TOKEN: str | None = None
-    CHUTES_BASE_URL: str = "https://llm.chutes.ai/v1/"
-    CHUTES_MODEL: str = "Qwen/Qwen3-VL-235B-A22B-Instruct"
+    CHUTES_BASE_URL: str = "[REDACTED]"
+    CHUTES_MODEL: str = "[REDACTED]"
     RESUME_ANALYSIS_DEBUG: bool = False
     RESUME_ANALYSIS_MAX_PAGES: int = 2
-    RESUME_ANALYSIS_MAX_TOKENS: int = 1200
+    RESUME_ANALYSIS_MAX_TOKENS: int = 30000
     RESUME_ANALYSIS_TEMPERATURE: float = 0.35
-    RESUME_EXTRACTION_MAX_TOKENS: int = 4000
+    RESUME_EXTRACTION_MAX_TOKENS: int = 30000
     RESUME_EXTRACTION_TEMPERATURE: float = 0.2
-    RESUME_FILL_TEMPLATE_MAX_TOKENS: int = 3000
+    RESUME_FILL_TEMPLATE_MAX_TOKENS: int = 30000
     RESUME_FILL_TEMPLATE_TEMPERATURE: float = 0.15
     RESUME_FILL_PROVIDER: str = "nebius"
-    NEBIUS_FILL_MODEL: str = "moonshotai/Kimi-K2.5"
+    NEBIUS_FILL_MODEL: str = "deepseek-ai/DeepSeek-V3-0324-fast"
     CHUTES_FILL_MODEL: str = "zai-org/GLM-5-TEE"
     RESUME_ANALYSIS_TOP_P: float = 0.9
     RESUME_ANALYSIS_TOP_K: int = 50
     RESUME_RENDER_SCALE: float = 1.6
     RESUME_RENDER_MAX_WIDTH: int = 1400
+    AI_WRITE_MAX_TOKENS: int = 2000
+    AI_WRITE_TEMPERATURE: float = 0.7
+    COVER_LETTER_MAX_TOKENS: int = 3000
+    COVER_LETTER_TEMPERATURE: float = 0.7
 
     @property
     def cors_origins(self) -> list[str]:

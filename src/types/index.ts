@@ -169,11 +169,52 @@ export interface Education {
   date: string;
 }
 
+export interface Project {
+  id: number;
+  name: string;
+  description: string;
+  date: string;
+}
+
 export interface ResumeData {
   personal: PersonalInfo;
   experience: Experience[];
+  projects: Project[];
   education: Education[];
   skills: string[];
 }
 
 export type TemplateType = 'modern' | 'classic' | 'creative' | 'minimal';
+
+export interface FillTemplateResponse {
+  resume_id: string;
+  data: ResumeData;
+}
+
+export interface AIWriteResponse {
+  generated_text: string;
+  section_type: string;
+}
+
+// Cover Letter Types
+export interface CoverLetterData {
+  recipientName: string;
+  companyName: string;
+  date: string;
+  greeting: string;
+  opening: string;
+  body: string[];
+  closing: string;
+  signOff: string;
+  senderName: string;
+}
+
+export interface GenerateCoverLetterResponse {
+  resume_id: string;
+  cover_letter: CoverLetterData;
+}
+
+export interface RefineParagraphResponse {
+  refined_text: string;
+  paragraph_type: string;
+}

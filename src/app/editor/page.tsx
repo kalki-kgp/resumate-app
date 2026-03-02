@@ -1,13 +1,15 @@
 'use client';
 
-import { useMemo, useState, useDeferredValue, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo, useState, useDeferredValue, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Fraunces, DM_Sans } from 'next/font/google';
-import type { ResumeData, TemplateType } from '@/types';
+import type { ResumeData, TemplateType, FillTemplateResponse } from '@/types';
+import { apiRequest, getStoredAccessToken } from '@/lib/api';
 import {
   ArrowLeft,
   User,
   Briefcase,
+  FolderOpen,
   GraduationCap,
   Wrench,
   Download,
@@ -24,13 +26,14 @@ import {
   Leaf,
 } from 'lucide-react';
 import {
+  AIWriteAssist,
   InputGroup,
   InputField,
-  TemplatePreview,
   ModernPreview,
   ClassicPreview,
   CreativePreview,
   MinimalPreview,
+  TemplateThumbnail,
 } from './_components';
 
 const fraunces = Fraunces({
@@ -47,50 +50,19 @@ const dmSans = DM_Sans({
   display: 'swap',
 });
 
-const INITIAL_DATA: ResumeData = {
+const EMPTY_RESUME_DATA: ResumeData = {
   personal: {
-    fullName: 'Amara Okafor',
-    role: 'Senior Product Designer',
-    email: 'amara.okafor@example.com',
-    phone: '+1 (555) 0142-3311',
-    location: 'Austin, TX',
-    summary:
-      'Product designer who blends user empathy with crisp execution. I love translating messy workflows into experiences that feel simple, human, and trustworthy.',
+    fullName: '',
+    role: '',
+    email: '',
+    phone: '',
+    location: '',
+    summary: '',
   },
-  experience: [
-    {
-      id: 1,
-      role: 'Senior Product Designer',
-      company: 'Stripe',
-      date: '2021 - Present',
-      description:
-        'Led onboarding redesign that improved activation by 26% and reduced support tickets during first-week setup.',
-    },
-    {
-      id: 2,
-      role: 'Product Designer',
-      company: 'Figma',
-      date: '2018 - 2021',
-      description:
-        'Partnered with PM and engineering to ship collaboration features used daily by distributed design teams.',
-    },
-  ],
-  education: [
-    {
-      id: 1,
-      degree: 'B.A. in Visual Communication',
-      school: 'University of Texas',
-      date: '2014 - 2018',
-    },
-  ],
-  skills: [
-    'Figma',
-    'User Research',
-    'Design Systems',
-    'Prototyping',
-    'Accessibility',
-    'Collaboration',
-  ],
+  experience: [],
+  projects: [],
+  education: [],
+  skills: [],
 };
 
 const TEMPLATES: { id: TemplateType; name: string; color: string }[] = [
@@ -105,8 +77,19 @@ const MAX_SIDEBAR_WIDTH = 620;
 const MIN_MAIN_WIDTH = 420;
 
 export default function EditorTwoPage() {
+  return (
+    <Suspense fallback={null}>
+      <EditorInner />
+    </Suspense>
+  );
+}
+
+function EditorInner() {
   const router = useRouter();
-  const [data, setData] = useState<ResumeData>(INITIAL_DATA);
+  const searchParams = useSearchParams();
+  const resumeId = searchParams.get('resume_id');
+  const [data, setData] = useState<ResumeData>(EMPTY_RESUME_DATA);
+  const [loading, setLoading] = useState(!!resumeId);
   const deferredData = useDeferredValue(data);
   const [activeSection, setActiveSection] = useState<string | null>('personal');
   const [zoom, setZoom] = useState(0.75);
@@ -116,6 +99,32 @@ export default function EditorTwoPage() {
   const [sidebarWidth, setSidebarWidth] = useState(380);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const resizeStateRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  useEffect(() => {
+    if (!resumeId) return;
+    const token = getStoredAccessToken();
+    if (!token) return;
+
+    let cancelled = false;
+
+    apiRequest<FillTemplateResponse>(`/api/v1/resumes/${resumeId}/fill-template`, {
+      method: 'POST',
+      token,
+    })
+      .then((res) => {
+        if (!cancelled && res.data) {
+          setData(res.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resumeId]);
 
   const updatePersonal = (field: keyof typeof data.personal, value: string) => {
     setData((prev) => ({
@@ -194,6 +203,37 @@ export default function EditorTwoPage() {
     setData((prev) => ({
       ...prev,
       education: prev.education.filter((edu) => edu.id !== id),
+    }));
+  };
+
+  const updateProject = (
+    id: number,
+    field: keyof (typeof data.projects)[0],
+    value: string
+  ) => {
+    setData((prev) => ({
+      ...prev,
+      projects: prev.projects.map((proj) =>
+        proj.id === id ? { ...proj, [field]: value } : proj
+      ),
+    }));
+  };
+
+  const addProject = () => {
+    const newId = Math.max(...data.projects.map((p) => p.id), 0) + 1;
+    setData((prev) => ({
+      ...prev,
+      projects: [
+        ...prev.projects,
+        { id: newId, name: '', description: '', date: '' },
+      ],
+    }));
+  };
+
+  const deleteProject = (id: number) => {
+    setData((prev) => ({
+      ...prev,
+      projects: prev.projects.filter((proj) => proj.id !== id),
     }));
   };
 
@@ -353,13 +393,23 @@ export default function EditorTwoPage() {
               value={data.personal.location}
               onChange={(v) => updatePersonal('location', v)}
             />
-            <InputField
-              variant="warm"
+            <AIWriteAssist
+              sectionType="summary"
               label="Professional Summary"
-              value={data.personal.summary}
-              onChange={(v) => updatePersonal('summary', v)}
-              multiline
-            />
+              currentValue={data.personal.summary}
+              onValueChange={(v) => updatePersonal('summary', v)}
+              context={{
+                fullName: data.personal.fullName,
+                role: data.personal.role,
+                experienceTitles: data.experience.map((e) => e.role).filter(Boolean).join(', '),
+              }}
+            >
+              <textarea
+                value={data.personal.summary}
+                onChange={(e) => updatePersonal('summary', e.target.value)}
+                className="w-full p-3 rounded-2xl bg-white border border-[#eadfce] focus:border-[#c96442] focus:outline-none transition-all text-sm min-h-[100px] resize-y text-[#2c1810]"
+              />
+            </AIWriteAssist>
           </InputGroup>
 
           <InputGroup
@@ -409,13 +459,23 @@ export default function EditorTwoPage() {
                     onChange={(v) => updateExperience(job.id, 'date', v)}
                     placeholder="e.g. 2020 - Present"
                   />
-                  <InputField
-                    variant="warm"
+                  <AIWriteAssist
+                    sectionType="experience"
                     label="Description"
-                    value={job.description}
-                    onChange={(v) => updateExperience(job.id, 'description', v)}
-                    multiline
-                  />
+                    currentValue={job.description}
+                    onValueChange={(v) => updateExperience(job.id, 'description', v)}
+                    context={{
+                      role: job.role,
+                      company: job.company,
+                      date: job.date,
+                    }}
+                  >
+                    <textarea
+                      value={job.description}
+                      onChange={(e) => updateExperience(job.id, 'description', e.target.value)}
+                      className="w-full p-3 rounded-2xl bg-white border border-[#eadfce] focus:border-[#c96442] focus:outline-none transition-all text-sm min-h-[100px] resize-y text-[#2c1810]"
+                    />
+                  </AIWriteAssist>
                 </div>
               </div>
             ))}
@@ -425,6 +485,73 @@ export default function EditorTwoPage() {
             >
               <Plus size={16} />
               Add Position
+            </button>
+          </InputGroup>
+
+          <InputGroup
+            title="Projects"
+            icon={FolderOpen}
+            variant="warm"
+            isOpen={activeSection === 'projects'}
+            onToggle={() =>
+              setActiveSection(activeSection === 'projects' ? null : 'projects')
+            }
+          >
+            {data.projects.map((proj, i) => (
+              <div
+                key={proj.id}
+                className="p-4 rounded-2xl bg-white border border-[#eadfce] mb-3 relative group"
+              >
+                <div className="absolute top-2 right-2 flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#d1bca4]">#{i + 1}</span>
+                  {data.projects.length > 1 && (
+                    <button
+                      onClick={() => deleteProject(proj.id)}
+                      className="p-1 rounded text-[#b59e86] hover:text-[#c96442] transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <InputField
+                    variant="warm"
+                    label="Project Name"
+                    value={proj.name}
+                    onChange={(v) => updateProject(proj.id, 'name', v)}
+                  />
+                  <InputField
+                    variant="warm"
+                    label="Date Range"
+                    value={proj.date}
+                    onChange={(v) => updateProject(proj.id, 'date', v)}
+                    placeholder="e.g. Nov 2024 - Dec 2024"
+                  />
+                  <AIWriteAssist
+                    sectionType="project"
+                    label="Description"
+                    currentValue={proj.description}
+                    onValueChange={(v) => updateProject(proj.id, 'description', v)}
+                    context={{
+                      name: proj.name,
+                      date: proj.date,
+                    }}
+                  >
+                    <textarea
+                      value={proj.description}
+                      onChange={(e) => updateProject(proj.id, 'description', e.target.value)}
+                      className="w-full p-3 rounded-2xl bg-white border border-[#eadfce] focus:border-[#c96442] focus:outline-none transition-all text-sm min-h-[100px] resize-y text-[#2c1810]"
+                    />
+                  </AIWriteAssist>
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={addProject}
+              className="w-full py-2.5 border border-dashed border-[#d9cbb8] rounded-2xl text-[#8b7355] font-bold text-xs hover:border-[#c96442] hover:text-[#c96442] transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus size={16} />
+              Add Project
             </button>
           </InputGroup>
 
@@ -494,17 +621,33 @@ export default function EditorTwoPage() {
               setActiveSection(activeSection === 'skills' ? null : 'skills')
             }
           >
-            <textarea
-              className="w-full p-3 rounded-2xl bg-white border border-[#eadfce] focus:border-[#c96442] focus:outline-none transition-all text-sm h-32 resize-y text-[#2c1810]"
-              value={data.skills.join(', ')}
-              onChange={(e) =>
+            <AIWriteAssist
+              sectionType="skills"
+              label="Skills"
+              currentValue={data.skills.join(', ')}
+              onValueChange={(v) =>
                 setData({
                   ...data,
-                  skills: e.target.value.split(',').map((s) => s.trim()),
+                  skills: v.split(',').map((s) => s.trim()).filter(Boolean),
                 })
               }
-            />
-            <p className="text-[10px] text-[#8b7355] mt-1 ml-1">Separate skills with commas</p>
+              context={{
+                role: data.personal.role,
+                experienceTitles: data.experience.map((e) => e.role).filter(Boolean).join(', '),
+              }}
+            >
+              <textarea
+                className="w-full p-3 rounded-2xl bg-white border border-[#eadfce] focus:border-[#c96442] focus:outline-none transition-all text-sm h-32 resize-y text-[#2c1810]"
+                value={data.skills.join(', ')}
+                onChange={(e) =>
+                  setData({
+                    ...data,
+                    skills: e.target.value.split(',').map((s) => s.trim()),
+                  })
+                }
+              />
+              <p className="text-[10px] text-[#8b7355] mt-1 ml-1">Separate skills with commas</p>
+            </AIWriteAssist>
           </InputGroup>
         </div>
 
@@ -516,10 +659,9 @@ export default function EditorTwoPage() {
                 Writing Coach
               </span>
             </div>
-            <p className="text-sm text-[#8b7355] mb-3">Get warm, human wording suggestions for stronger impact.</p>
-            <button className="w-full py-2 px-4 rounded-full bg-[#2d5a3d] text-white text-sm font-medium hover:brightness-110 transition-colors">
-              Get Suggestions
-            </button>
+            <p className="text-sm text-[#8b7355]">
+              Click the <span className="inline-flex align-middle"><Sparkles size={12} className="text-[#c96442]" /></span> icon on any description field to get AI-powered writing assistance.
+            </p>
           </div>
         </div>
       </aside>
@@ -535,6 +677,14 @@ export default function EditorTwoPage() {
       />
 
       <main className="flex-1 h-full relative flex flex-col items-center bg-[#f3ece2]/50 overflow-auto pt-20 pb-8">
+        {loading && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#faf7f2]/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-3 border-[#c96442] border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm font-medium text-[#8b7355]">Loading resume data...</span>
+            </div>
+          </div>
+        )}
         <div className="absolute top-6 flex items-center gap-2 bg-[#fffaf4]/95 rounded-full px-4 py-2 shadow-lg z-30 border border-[#eadfce]">
           <button
             onClick={() => setZoom(Math.max(0.35, zoom - 0.05))}
@@ -610,7 +760,7 @@ export default function EditorTwoPage() {
                       }`}
                     >
                       <div className="bg-white rounded-lg overflow-hidden">
-                        <TemplatePreview template={templateOption.id} data={deferredData} scale={0.12} />
+                        <TemplateThumbnail template={templateOption.id} />
                       </div>
 
                       {!isSelected && <div className="absolute inset-0 bg-gradient-to-t from-[#2d5a3d]/80 via-[#2d5a3d]/20 to-transparent" />}

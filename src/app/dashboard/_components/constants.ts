@@ -76,6 +76,7 @@ export const templatePreviewData: ResumeData = {
       description: 'Built design systems and workflow features for distributed teams.',
     },
   ],
+  projects: [],
   education: [
     {
       id: 1,

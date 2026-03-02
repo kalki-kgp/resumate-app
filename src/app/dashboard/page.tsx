@@ -4,16 +4,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fraunces, DM_Sans } from 'next/font/google';
-import { ArrowRight, LoaderCircle } from 'lucide-react';
+import { ArrowRight, Check, LoaderCircle } from 'lucide-react';
 import { ApiError, apiRequest, clearStoredAccessToken, getStoredAccessToken } from '@/lib/api';
-import { TemplatePreview } from '@/app/editor/_components';
+import { TemplateThumbnail } from '@/app/editor/_components';
 import {
   OnboardingWizard,
   DashboardSidebar,
+  ResumeSelectionModal,
   defaultOnboardingSteps,
   exampleJobs,
   templateCards,
-  templatePreviewData,
   getSectionHeading,
   formatFileSize,
   formatRelativeTime,
@@ -88,6 +88,10 @@ export default function DashboardTwoPage() {
     'Ready to analyze selected resume.'
   );
   const [dashboardNotice, setDashboardNotice] = useState<string | null>(null);
+  const [joinedWaitlist, setJoinedWaitlist] = useState<Set<string>>(new Set());
+  const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
+  const [actionToast, setActionToast] = useState<{ message: string } | null>(null);
+  const [isCoverLetterModalOpen, setIsCoverLetterModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const workspaceUploadInputRef = useRef<HTMLInputElement | null>(null);
   const profilePopupRef = useRef<HTMLDivElement | null>(null);
@@ -189,6 +193,26 @@ export default function DashboardTwoPage() {
       cancelled = true;
     };
   }, [applyOnboardingState, router]);
+
+  useEffect(() => {
+    if (!actionToast) return;
+    const timer = window.setTimeout(() => setActionToast(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [actionToast]);
+
+  const showActionToast = useCallback((message: string) => {
+    setActionToast({ message });
+  }, []);
+
+  const handleJoinWaitlist = useCallback((experimentName: string) => {
+    setJoinedWaitlist((prev) => new Set(prev).add(experimentName));
+    showActionToast('Joined Waitlist');
+  }, [showActionToast]);
+
+  const handleSaveJob = useCallback((roleTitle: string) => {
+    setSavedJobs((prev) => new Set(prev).add(roleTitle));
+    showActionToast('Saved');
+  }, [showActionToast]);
 
   useEffect(() => {
     if (!isProfilePopupOpen) return;
@@ -726,22 +750,31 @@ export default function DashboardTwoPage() {
               {
                 title: 'Help me build my resume',
                 subtitle: 'Start from AI-guided layout and impact bullets.',
+                onClick: () => router.push('/editor'),
               },
               {
                 title: 'Help me craft a cover letter',
                 subtitle: 'Generate a personalized letter in minutes.',
+                onClick: () => setIsCoverLetterModalOpen(true),
               },
               {
                 title: 'Help me find the right job match',
                 subtitle: 'See how well your resume fits each role.',
+                onClick: undefined,
               },
             ].map((item) => (
-              <div key={item.title} className="rounded-2xl border border-[#e4e7eb] bg-white px-4 py-4 shadow-[0_8px_16px_rgba(20,24,31,0.05)]">
+              <button
+                key={item.title}
+                type="button"
+                onClick={item.onClick}
+                disabled={!item.onClick}
+                className="rounded-2xl border border-[#e4e7eb] bg-white px-4 py-4 shadow-[0_8px_16px_rgba(20,24,31,0.05)] text-left transition-all hover:border-[#ccd0d5] hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+              >
                 <p className="text-2xl font-semibold leading-tight text-[#282c36]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
                   {item.title}
                 </p>
                 <p className="mt-3 text-xs text-[#8a909b]">{item.subtitle}</p>
-              </div>
+              </button>
             ))}
           </div>
 
@@ -923,6 +956,14 @@ export default function DashboardTwoPage() {
                       </div>
                     ))}
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/editor?resume_id=${selectedDashboardResume!.id}`)}
+                    className="mt-4 w-full rounded-full bg-[#ff8b2f] px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Open in Editor
+                  </button>
                 </>
               )}
             </article>
@@ -1040,7 +1081,7 @@ export default function DashboardTwoPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => router.push('/editor')}
+                  onClick={() => router.push(`/editor?resume_id=${selectedDashboardResume.id}`)}
                   className="rounded-full bg-[#ff8b2f] px-4 py-2 text-sm font-semibold text-white"
                 >
                   Open in Editor
@@ -1062,10 +1103,8 @@ export default function DashboardTwoPage() {
           {templateCards.map((tpl) => (
             <article key={tpl.id} className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
               <div className="mb-3 rounded-xl border border-[#eceff3] bg-gradient-to-b from-[#f8fafd] to-[#f0f3f7] p-3">
-                <div className="mx-auto flex h-[210px] items-center justify-center overflow-hidden rounded-lg border border-[#dfe4ea] bg-white shadow-[0_10px_18px_rgba(26,34,48,0.10)]">
-                  <div className="translate-y-0">
-                    <TemplatePreview template={tpl.id} data={templatePreviewData} scale={0.16} />
-                  </div>
+                <div className="mx-auto flex items-center justify-center overflow-hidden rounded-lg border border-[#dfe4ea] bg-white shadow-[0_10px_18px_rgba(26,34,48,0.10)]">
+                  <TemplateThumbnail template={tpl.id} />
                 </div>
               </div>
               <p className="text-lg font-semibold text-[#252b34]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
@@ -1200,19 +1239,38 @@ export default function DashboardTwoPage() {
 
       return (
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {roleCards.map((role) => (
-            <article key={role.title} className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
-              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#8a909b]">Match Role</p>
-              <h3 className="mt-2 text-xl font-semibold text-[#252b34]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>{role.title}</h3>
-              <p className="mt-2 text-sm text-[#5a6271]">{role.reason}</p>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="rounded-full bg-[#eaf8e2] px-3 py-1 text-xs font-semibold text-[#4f9b28]">{role.match}% fit</span>
-                <button type="button" className="rounded-full border border-[#dbe1e8] bg-[#f8fafc] px-3 py-1 text-xs font-semibold text-[#38404d]">
-                  Save
-                </button>
-              </div>
-            </article>
-          ))}
+          {roleCards.map((role) => {
+            const isSaved = savedJobs.has(role.title);
+            return (
+              <article key={role.title} className="rounded-2xl border border-[#e5e8ec] bg-white p-4 transition-all duration-300">
+                <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#8a909b]">Match Role</p>
+                <h3 className="mt-2 text-xl font-semibold text-[#252b34]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>{role.title}</h3>
+                <p className="mt-2 text-sm text-[#5a6271]">{role.reason}</p>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="rounded-full bg-[#eaf8e2] px-3 py-1 text-xs font-semibold text-[#4f9b28]">{role.match}% fit</span>
+                  <button
+                    type="button"
+                    onClick={() => handleSaveJob(role.title)}
+                    disabled={isSaved}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all duration-300 ${
+                      isSaved
+                        ? 'border border-[#67bf2b] bg-[#eaf8e2] text-[#2d8b46]'
+                        : 'border border-[#dbe1e8] bg-[#f8fafc] text-[#38404d] hover:border-[#ff9a38] hover:bg-[#fff8f1]'
+                    }`}
+                  >
+                    {isSaved ? (
+                      <>
+                        <Check className="h-3.5 w-3.5" />
+                        Saved
+                      </>
+                    ) : (
+                      'Save'
+                    )}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
         </section>
       );
     }
@@ -1269,24 +1327,44 @@ export default function DashboardTwoPage() {
     }
 
     if (activeSection === 'ai-experiments') {
+      const experiments = [
+        { name: 'Resume Voice Clone', status: 'Preview', desc: 'Maintain your tone while tightening ATS alignment.' },
+        { name: 'Keyword Heatmap', status: 'Beta', desc: 'Visual keyword coverage against target role descriptions.' },
+        { name: 'One-Click Tailor', status: 'Alpha', desc: 'Generate role-specific variants from a master resume.' },
+      ];
       return (
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {[
-            { name: 'Resume Voice Clone', status: 'Preview', desc: 'Maintain your tone while tightening ATS alignment.' },
-            { name: 'Keyword Heatmap', status: 'Beta', desc: 'Visual keyword coverage against target role descriptions.' },
-            { name: 'One-Click Tailor', status: 'Alpha', desc: 'Generate role-specific variants from a master resume.' },
-          ].map((exp) => (
-            <article key={exp.name} className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-[#2a2f3a]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>{exp.name}</h3>
-                <span className="rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#d88f54]">{exp.status}</span>
-              </div>
-              <p className="mt-2 text-sm text-[#5a6271]">{exp.desc}</p>
-              <button type="button" className="mt-4 rounded-full border border-[#dbe1e8] bg-[#f8fafc] px-3 py-1 text-xs font-semibold text-[#38404d]">
-                Join Waitlist
-              </button>
-            </article>
-          ))}
+          {experiments.map((exp) => {
+            const isJoined = joinedWaitlist.has(exp.name);
+            return (
+              <article key={exp.name} className="rounded-2xl border border-[#e5e8ec] bg-white p-4 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-[#2a2f3a]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>{exp.name}</h3>
+                  <span className="rounded-full bg-[#fff1e6] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#d88f54]">{exp.status}</span>
+                </div>
+                <p className="mt-2 text-sm text-[#5a6271]">{exp.desc}</p>
+                <button
+                  type="button"
+                  onClick={() => handleJoinWaitlist(exp.name)}
+                  disabled={isJoined}
+                  className={`mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all duration-300 ${
+                    isJoined
+                      ? 'border border-[#67bf2b] bg-[#eaf8e2] text-[#2d8b46]'
+                      : 'border border-[#dbe1e8] bg-[#f8fafc] text-[#38404d] hover:border-[#ff9a38] hover:bg-[#fff8f1]'
+                  }`}
+                >
+                  {isJoined ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      Joined Waitlist
+                    </>
+                  ) : (
+                    'Join Waitlist'
+                  )}
+                </button>
+              </article>
+            );
+          })}
         </section>
       );
     }
@@ -1455,6 +1533,28 @@ export default function DashboardTwoPage() {
 
           {renderDashboardSection()}
         </main>
+
+        {actionToast && (
+          <div
+            className="fixed bottom-8 left-1/2 z-50 -translate-x-1/2 animate-slide-up-fade"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="flex items-center gap-2 rounded-2xl border border-[#67bf2b] bg-[#eaf8e2] px-5 py-3 shadow-[0_12px_32px_rgba(45,139,70,0.25)]">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#67bf2b] text-white animate-scale-in">
+                <Check className="h-5 w-5" strokeWidth={2.5} />
+              </span>
+              <span className="text-sm font-semibold text-[#2d8b46]">{actionToast.message}</span>
+            </div>
+          </div>
+        )}
+
+        <ResumeSelectionModal
+          isOpen={isCoverLetterModalOpen}
+          onClose={() => setIsCoverLetterModalOpen(false)}
+          onSelect={(id) => router.push(`/cover-letter?resume_id=${id}`)}
+          resumes={dashboardResumes}
+        />
       </div>
     </div>
   );

@@ -39,9 +39,17 @@ class EducationFilled(BaseModel):
     date: str = ""
 
 
+class ProjectFilled(BaseModel):
+    id: int
+    name: str = ""
+    description: str = ""
+    date: str = ""
+
+
 class ResumeDataFilled(BaseModel):
     personal: PersonalInfoFilled = Field(default_factory=PersonalInfoFilled)
     experience: list[ExperienceFilled] = Field(default_factory=list)
+    projects: list[ProjectFilled] = Field(default_factory=list)
     education: list[EducationFilled] = Field(default_factory=list)
     skills: list[str] = Field(default_factory=list)
 
@@ -49,3 +57,25 @@ class ResumeDataFilled(BaseModel):
 class FillTemplateResponse(BaseModel):
     resume_id: str
     data: ResumeDataFilled
+
+
+class AIWriteRequest(BaseModel):
+    section_type: str = Field(
+        description="One of: summary, experience, project, skills",
+    )
+    prompt: str = Field(
+        description="User's instruction for what to write",
+    )
+    current_text: str = Field(
+        default="",
+        description="Current text in the field (may be empty)",
+    )
+    context: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Section-specific context (role, company, etc.)",
+    )
+
+
+class AIWriteResponse(BaseModel):
+    generated_text: str
+    section_type: str

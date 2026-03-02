@@ -1,245 +1,186 @@
-# CLAUDE.md - Project Intelligence
+# CLAUDE.md
 
-> This file provides context for AI assistants working on this codebase.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-**ResuMates** is an AI-powered resume builder application. This is the **frontend-only** implementation built with Next.js. Backend integration and API connections will be added later.
-
-## Tech Stack
-
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Bun | 1.x | Package manager & runtime (NOT npm) |
-| Next.js | 16.x | React framework with App Router |
-| React | 19.x | UI library |
-| TypeScript | 5.x | Type safety |
-| Tailwind CSS | 4.x | Styling |
-| Lucide React | Latest | Icon library |
-
-## Project Structure
-
-```
-src/
-├── app/                        # Next.js App Router
-│   ├── home/                   # Landing page route (/home)
-│   │   ├── _components/        # Home-specific components (private)
-│   │   │   ├── AuthModal.tsx
-│   │   │   ├── Navbar.tsx
-│   │   │   ├── Hero.tsx
-│   │   │   ├── WhyResuMate.tsx
-│   │   │   ├── ProductShowcase.tsx
-│   │   │   ├── HowItWorks.tsx
-│   │   │   ├── Testimonials.tsx
-│   │   │   ├── CTA.tsx
-│   │   │   ├── Footer.tsx
-│   │   │   └── index.ts        # Barrel export
-│   │   └── page.tsx            # Landing page
-│   ├── dashboard/              # Dashboard route (/dashboard)
-│   │   ├── _components/       # Dashboard-specific components
-│   │   │   ├── OnboardingWizard.tsx
-│   │   │   ├── DashboardSidebar.tsx
-│   │   │   ├── dashboard-types.ts   # API types, onboarding types
-│   │   │   ├── constants.ts        # Steps, templates, sidebar config
-│   │   │   ├── utils.ts            # formatFileSize, resumeThumbnailSrc, etc.
-│   │   │   └── index.ts
-│   │   └── page.tsx            # Dashboard page (onboarding + workspace)
-│   ├── editor/                 # Resume Editor route (/editor)
-│   │   ├── _components/        # Editor-specific components
-│   │   │   ├── InputGroup.tsx        # Collapsible form section
-│   │   │   ├── InputField.tsx        # Form input component
-│   │   │   ├── TemplatePreview.tsx   # Mini template previews
-│   │   │   └── index.ts
-│   │   └── page.tsx            # Full resume editor with live preview
-│   ├── globals.css             # Global styles + custom animations
-│   ├── layout.tsx              # Root layout (metadata, fonts)
-│   └── page.tsx                # Root redirect to /home
-│
-├── components/                  # Shared/Global components
-│   ├── ui/                      # Reusable UI primitives
-│   │   ├── AuthModal.tsx
-│   │   ├── ThemeToggle.tsx
-│   │   └── index.ts
-│   ├── layout/                  # Layout components
-│   │   ├── Navbar.tsx
-│   │   ├── Footer.tsx
-│   │   └── index.ts
-│   └── index.ts                 # Master barrel export
-│
-├── hooks/                       # Custom React hooks
-│   ├── useScrollAnimation.ts   # Intersection observer for animations
-│   ├── useTheme.ts             # Dark/light mode with localStorage
-│   └── index.ts
-│
-├── lib/                         # Utility functions (future)
-│
-└── types/                       # TypeScript interfaces
-    └── index.ts
-```
-
-## Key Conventions
-
-### 1. Folder Organization
-- **`_components/`** (with underscore): Private to the route, not exposed as URL paths
-- **`components/`**: Shared across multiple routes
-- Each folder has an `index.ts` for barrel exports
-
-### 2. Component Patterns
-```tsx
-// Always use 'use client' for interactive components
-'use client';
-
-// Import types from @/types
-import type { SomeProps } from '@/types';
-
-// Export named exports (not default)
-export const ComponentName = ({ prop }: SomeProps) => {
-  // ...
-};
-```
-
-### 3. Import Aliases
-```tsx
-// Use @ alias for absolute imports
-import { useTheme } from '@/hooks';
-import { Button } from '@/components/ui';
-import type { Theme } from '@/types';
-```
-
-### 4. Styling
-- Use Tailwind CSS utility classes
-- Pages use **inline styles** for brand colors (hex values) to ensure consistency
-- Custom animations defined in `globals.css`
-- Available animation classes:
-  - `animate-fade-in-up`
-  - `animate-bounce-subtle`
-  - `animate-pulse-slow`
-  - `animate-gradient`
-  - `animate-float`
-  - `animate-confetti`
-  - `animate-shimmer`
-  - `animate-scale-in`
-  - `animate-bounce-x`
-  - `animate-pulse-border`
-  - `animate-slide-up-fade`
-
-### 5. Style Theme (Home, Dashboard, Editor)
-
-All three routes share **Fraunces** (serif) and **DM Sans** (sans) fonts. Apply via:
-```tsx
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['700','800','900'], variable: '--font-fraunces', display: 'swap' });
-const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400','500','600','700'], variable: '--font-dm-sans', display: 'swap' });
-// Page: className={`${fraunces.variable} ${dmSans.variable} ...`}
-// Headings: style={{ fontFamily: 'var(--font-fraunces), serif' }}
-// Body: style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
-```
-
-**Warm palette** (Home, Editor, Dashboard onboarding):
-| Token | Hex | Usage |
-|-------|-----|-------|
-| Primary accent | `#c96442` | CTAs, buttons, highlights, underlines |
-| Primary green | `#2d5a3d` | Secondary accent, success, badges, icons |
-| Muted tan | `#8b7355` | Secondary text, labels, placeholders |
-| Dark text | `#2c1810` | Headings, body text |
-| Background | `#faf7f2` | Page background (cream) |
-| Card/panel | `#fffaf4`, `#fff8f1` | Cards, modals, sidebars |
-| Borders | `#eadfce`, `#e8e0d4`, `#e4d3be` | Borders, dividers |
-| Blur accents | `#f0e6d8`, `#e6efe7` | Decorative blobs |
-
-**Dashboard workspace** (cooler, app-like):
-| Token | Hex | Usage |
-|-------|-----|-------|
-| Background | `#f3f4f6` | Page background |
-| Main content | `#fafafa` | Content area |
-| Sidebar | `#f7f7f8` | Sidebar background |
-| Borders | `#e3e5e8`, `#dce0e5` | Borders |
-| Text | `#1b1d21`, `#2a2f3a` | Primary text |
-| Muted text | `#7a818d`, `#8a909b` | Secondary text |
-| Accent | `#ff8b2f`, `#ff9a38` | Buttons, highlights |
-
-**Rounded corners**: `rounded-2xl`, `rounded-3xl`, `rounded-full` for buttons and cards.
-
-### 6. Theme System (Tailwind CSS v4)
-- Dark mode is configured via `@custom-variant dark (&:where(.dark, .dark *));` in `globals.css`
-- Home, Dashboard, and Editor currently use **light-only** custom palettes (no dark mode)
-- For shared components needing theme: use `useTheme` hook, pass `theme` and `toggleTheme` props
-
-## Routes
-
-| Path | Purpose |
-|------|---------|
-| `/` | Redirects to `/home` |
-| `/home` | Landing page (marketing, auth) |
-| `/dashboard` | User workspace (onboarding + resumes, templates, AI features) |
-| `/editor` | Resume editor with live preview |
-
-## Key Files Reference
-
-| File | Purpose |
-|------|---------|
-| `src/app/page.tsx` | Root route - redirects `/` to `/home` |
-| `src/app/home/page.tsx` | Landing page - composes Hero, WhyResuMate, etc. |
-| `src/app/dashboard/page.tsx` | Dashboard - onboarding flow + workspace |
-| `src/app/editor/page.tsx` | Resume editor with live preview |
-| `src/app/layout.tsx` | Root layout, metadata, fonts |
-| `src/app/globals.css` | Global styles, CSS variables, animations |
-| `src/types/index.ts` | All TypeScript interfaces |
-| `src/hooks/useTheme.ts` | Dark mode toggle logic |
-| `src/app/home/_components/AuthModal.tsx` | Sign in/Sign up modal (home route) |
+**ResuMate** is an AI-powered resume builder with a Next.js frontend and FastAPI backend. Users sign up, optionally go through an onboarding flow (upload + AI analysis of existing resume), then use a live editor to build resumes.
 
 ## Development Commands
 
-**IMPORTANT: This project uses Bun, NOT npm. Always use `bun` commands.**
-
+**Frontend (Bun — NOT npm):**
 ```bash
 bun install          # Install dependencies
-bun run dev          # Start development server (port 3000)
+bun run dev          # Dev server on :3000
 bun run build        # Production build
-bun run start        # Start production server
-bun run lint         # Run ESLint
-bun run lint:fix     # Fix ESLint issues
-bun run type-check   # TypeScript type checking
+bun run lint         # ESLint (flat config, ESLint 9)
+bun run lint:fix     # Auto-fix lint issues
+bun run type-check   # TypeScript type checking (tsc --noEmit)
 ```
 
-## When Adding New Features
+**Backend (Python venv):**
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # Then fill in API keys
+uvicorn app.main:app --reload   # Dev server on :8000
+alembic upgrade head            # Run DB migrations
+```
 
-### Adding a New Route
-1. Create folder in `src/app/` (e.g., `src/app/dashboard/`)
-2. Add `page.tsx` for the route entry
-3. Add `_components/` folder for route-specific components
-4. Add `_hooks/` or `_utils/` if needed for that route
+**Docker (full stack):**
+```bash
+docker compose up --build   # Postgres :5432 + Backend :8000 + Frontend :3000
+```
 
-### Adding a Shared Component
-1. Create in `src/components/ui/` or appropriate subfolder
-2. Export from the folder's `index.ts`
-3. Add TypeScript interface in `src/types/index.ts`
+**NEVER run `bun run dev` unless explicitly requested by the user.**
 
-### Adding a New Hook
-1. Create in `src/hooks/`
-2. Export from `src/hooks/index.ts`
-3. Add `'use client'` directive at top
+## Architecture
 
-## State Management
+### Frontend (`src/`)
 
-Currently using React's built-in state (`useState`, `useEffect`). For future:
-- Consider Zustand for global state if needed
-- React Query/TanStack Query for server state when APIs are added
+Next.js 16 with App Router, React 19, TypeScript 5, Tailwind CSS 4.
 
-## Styling Guidelines
+```
+src/
+├── app/
+│   ├── page.tsx              # Redirects / → /home
+│   ├── layout.tsx            # Root layout (Geist fonts, metadata)
+│   ├── globals.css           # Global styles, custom animations, dark mode variant
+│   ├── home/
+│   │   ├── page.tsx          # Landing page
+│   │   └── _components/      # Navbar, Hero, AuthModal, CTA, Footer, etc.
+│   ├── dashboard/
+│   │   ├── page.tsx          # Onboarding wizard + workspace
+│   │   └── _components/      # OnboardingWizard, DashboardSidebar, constants, utils, types
+│   └── editor/
+│       ├── page.tsx          # Resume editor with live preview
+│       └── _components/      # InputGroup, InputField, TemplatePreview, 4 preview templates
+├── lib/
+│   └── api.ts                # API client (apiRequest, token management, ApiError)
+└── types/
+    └── index.ts              # Shared TypeScript interfaces
+```
 
-1. **Colors**: Use the brand palette above. Warm pages (Home, Editor, onboarding) use `#c96442`, `#2d5a3d`, `#8b7355`, `#2c1810`. Dashboard workspace uses cooler grays and `#ff8b2f` accent.
-2. **Fonts**: Fraunces for headings, DM Sans for body. Apply via CSS variables.
-3. **Spacing**: Follow Tailwind's spacing scale (`p-4`, `gap-4`, `mt-6`, etc.)
-4. **Responsive**: Mobile-first (`sm:`, `md:`, `lg:`, `xl:` breakpoints)
-5. **Transitions**: Use `transition-all` or `transition-colors` for hover states
+**Note:** `src/hooks/` and `src/components/` directories do **not** exist. All components are route-scoped under `_components/`. All types/utilities are either in `src/types/`, `src/lib/`, or co-located in route `_components/` folders.
 
-## Notes for AI Assistants
+### Backend (`backend/app/`)
 
-1. **Use Bun, NOT npm** - This project uses Bun as package manager. Never use `npm` commands.
-2. **Always check existing patterns** before adding new code
-3. **Use barrel exports** - don't import from deep paths
-4. **Mark client components** with `'use client'`
-5. **Keep components focused** - split large components
-6. **Type everything** - no `any` types unless absolutely necessary
-7. **Follow existing naming** - PascalCase for components, camelCase for hooks/utils
-8. **NEVER run `bun run dev`** - Do not start the dev server unless explicitly requested by the user
+FastAPI with SQLAlchemy 2.0 ORM, PostgreSQL, Alembic migrations.
+
+```
+backend/app/
+├── main.py                # App entry, CORS, lifespan
+├── core/config.py         # Pydantic settings (env-driven)
+├── api/
+│   ├── router.py          # Aggregates v1 routers
+│   ├── deps.py            # get_db, get_current_user dependencies
+│   └── v1/                # auth, onboarding, dashboard, resumes endpoints
+├── models/                # SQLAlchemy models (users, auth_sessions, onboarding_progress, resumes)
+├── schemas/               # Pydantic request/response schemas
+├── services/              # Business logic (resume analysis, data extraction, template fill via VLM providers)
+└── utils/security.py      # Password hashing (PBKDF2-SHA256), token utilities
+```
+
+### API Routes (prefix: `/api/v1`)
+
+- **Auth:** `POST /auth/signup`, `POST /auth/signin`, `GET /auth/me`, `POST /auth/signout`
+- **Onboarding:** `GET|POST /onboarding/*` (choose path, upload resume, analyze, step actions, skip)
+- **Dashboard:** `GET /dashboard`
+- **Resumes:** `POST /resumes/upload`, `GET /resumes/{id}/thumbnail`, `POST /resumes/{id}/analyze`, `GET /resumes/{id}/extracted-data`, `POST /resumes/{id}/fill-template`
+
+### Auth Flow
+
+Custom session tokens (not JWT). Raw token (`secrets.token_urlsafe(48)`) returned to client, SHA-256 hash stored in DB. Frontend stores token in localStorage (`resumate_access_token`) and sends as `Authorization: Bearer <token>`.
+
+### AI Resume Analysis
+
+Two VLM providers (configured via `RESUME_IMAGE_PROCESSING_PROVIDER` env):
+- **Nebius** (default): `google/gemma-3-27b-it-fast`
+- **Chutes**: `Qwen/Qwen3-VL-235B-A22B-Instruct`
+
+Both use the OpenAI-compatible SDK. PDFs → images (pypdfium2) → VLM analysis.
+
+### Resume Data Extraction & Template Fill
+
+When a resume is analyzed (onboarding or library), two VLM calls run **in parallel** via `ThreadPoolExecutor`:
+1. **ATS Analysis** — scores, strengths, gaps, improved bullets (stored in `analysis_payload`)
+2. **Data Extraction** — structured content: personal info, all experiences with bullet descriptions, education, skills by category, certifications, projects, etc. (stored in `extracted_data` JSON column)
+
+Extraction failure is non-fatal — analysis still succeeds. The `extracted_data` column on the `resumes` table stores the raw extracted JSON.
+
+**Template Fill** (`POST /resumes/{id}/fill-template`): A text-only LLM call maps `extracted_data` → the frontend `ResumeData` schema (personal, experience[], education[], skills[]). This enables auto-populating the editor.
+
+### Editor Auto-Fill
+
+The editor (`/editor?resume_id=<id>`) reads `resume_id` from query params. On mount, it calls `POST /api/v1/resumes/{id}/fill-template` to fetch structured data and populate the form. Falls back to an empty template on error or when no `resume_id` is provided.
+
+All 4 templates (Modern, Classic, Creative, Minimal) render complete data: full summary, ALL experience entries with descriptions, ALL education, ALL skills.
+
+## Frontend API Client
+
+`src/lib/api.ts` provides `apiRequest<T>(path, options)` — a typed fetch wrapper that:
+- Prepends `NEXT_PUBLIC_API_BASE_URL` (defaults to `http://localhost:8000`)
+- Handles JSON and FormData bodies
+- Attaches Bearer token from options
+- Throws `ApiError` with status and detail on non-OK responses
+
+Token helpers: `getStoredAccessToken()`, `setStoredAccessToken(token)`, `clearStoredAccessToken()`
+
+## Key Conventions
+
+### Code Organization
+- **`_components/`** (underscore prefix): Route-private, not exposed as URL paths
+- Each `_components/` folder has an `index.ts` barrel export — import from the barrel, not deep paths
+- Route-specific types/constants/utils live alongside components in `_components/`
+- Shared types go in `src/types/index.ts`
+
+### Component Patterns
+- `'use client'` directive on all interactive components
+- Named exports only (no default exports)
+- TypeScript interfaces for all props (no `any`)
+- PascalCase for components, camelCase for hooks/utils
+
+### Import Aliases
+```tsx
+import { apiRequest } from '@/lib/api';
+import type { SomeType } from '@/types';
+import { OnboardingWizard } from './_components';  // Route-local
+```
+
+## Styling
+
+### Fonts
+- **Root layout:** Geist Sans + Geist Mono (CSS variables)
+- **Page-level:** Fraunces (serif, headings) + DM Sans (sans, body) — loaded per-page via `next/font`
+
+### Color Palettes
+Brand colors are applied via **inline styles** (not Tailwind theme tokens).
+
+**Warm palette** (Home, Editor, onboarding): cream `#faf7f2` background, terracotta `#c96442` accent, forest green `#2d5a3d`, tan `#8b7355` muted text, dark `#2c1810` text.
+
+**Dashboard workspace** (cooler): gray `#f3f4f6` background, orange `#ff8b2f` accent, dark `#1b1d21` text, muted `#7a818d` secondary.
+
+### Custom Animations (defined in `globals.css`)
+`animate-fade-in-up`, `animate-fade-in`, `animate-bounce-subtle`, `animate-pulse-slow`, `animate-gradient`, `animate-float`, `animate-confetti`, `animate-shimmer`, `animate-scale-in`, `animate-bounce-x`, `animate-pulse-border`, `animate-slide-up-fade`
+
+Also: `.perspective-1000` utility, `prefers-reduced-motion` support.
+
+### Dark Mode
+Configured via `@custom-variant dark` in `globals.css` but all routes currently use **light-only** custom palettes.
+
+## Git & Branching
+
+- **Default remote branch:** `optimization` (not `main`)
+- PRs should typically target `optimization`
+- Local branches: `main`, `optimization`, `sso-optimized-ui`
+
+## Environment Variables
+
+**Frontend:** `NEXT_PUBLIC_API_BASE_URL` (defaults to `http://localhost:8000`)
+
+**Backend:** See `backend/.env.example` — requires at minimum `DATABASE_URL` and one VLM API key (`NEBIUS_API_KEY` or `CHUTES_API_TOKEN`).
+
+## No Tests
+
+No test framework is configured. No test files exist.
