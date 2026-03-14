@@ -386,3 +386,46 @@ canvas, video {
 .animate-bounce-subtle {
   contain: layout style paint;
 }
+
+/* Print styles — only show cover letter preview */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #cover-letter-print,
+  #cover-letter-print * {
+    visibility: visible;
+  }
+
+  #cover-letter-print {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 794px;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Remove zoom transform for print — render at full A4 size */
+  #cover-letter-print .cl-scale-wrapper {
+    width: 794px !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  #cover-letter-print .cl-preview {
+    transform: none !important;
+  }
+
+  /* Hide refine buttons in print */
+  #cover-letter-print button {
+    display: none !important;
+  }
+
+  @page {
+    margin: 0;
+    size: A4;
+  }
+}

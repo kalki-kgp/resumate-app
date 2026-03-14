@@ -66,7 +66,7 @@ function CoverLetterInner() {
   const [hasGenerated, setHasGenerated] = useState(false);
 
   // Layout state
-  const [zoom, setZoom] = useState(0.55);
+  const [zoom, setZoom] = useState(0.85);
   const [sidebarWidth, setSidebarWidth] = useState(380);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const resizeStateRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -335,7 +335,7 @@ function CoverLetterInner() {
             <span className="text-sm font-medium text-[#8b7355]">Crafting your cover letter...</span>
           </div>
         ) : coverLetter ? (
-          <div className="bg-white shadow-2xl rounded-sm overflow-hidden transition-all duration-200">
+          <div id="cover-letter-print" className="bg-white shadow-2xl rounded-sm overflow-hidden transition-all duration-200">
             <CoverLetterPreview
               data={coverLetter}
               scale={zoom}
