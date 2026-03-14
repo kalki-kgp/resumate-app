@@ -9,20 +9,19 @@ import { MinimalPreview } from './MinimalTemplate';
 interface TemplatePreviewProps {
   template: TemplateType;
   data: ResumeData;
-  scale?: number;
 }
 
-export const TemplatePreview = ({ template, data, scale = 0.15 }: TemplatePreviewProps) => {
+export const TemplatePreview = ({ template, data }: TemplatePreviewProps) => {
   switch (template) {
     case 'modern':
-      return <ModernPreview data={data} scale={scale} />;
+      return <ModernPreview data={data} />;
     case 'classic':
-      return <ClassicPreview data={data} scale={scale} />;
+      return <ClassicPreview data={data} />;
     case 'creative':
-      return <CreativePreview data={data} scale={scale} />;
+      return <CreativePreview data={data} />;
     case 'minimal':
-      return <MinimalPreview data={data} scale={scale} />;
+      return <MinimalPreview data={data} />;
     default:
-      return <ModernPreview data={data} scale={scale} />;
+      return <ModernPreview data={data} />;
   }
 };

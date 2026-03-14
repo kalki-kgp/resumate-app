@@ -3,26 +3,20 @@
 import { memo } from 'react';
 import type { ResumeData } from '@/types';
 
-export const ClassicPreview = memo(({ data, scale = 0.15 }: { data: ResumeData; scale?: number }) => (
+export const ClassicPreview = memo(({ data }: { data: ResumeData }) => (
   <div
     className="bg-white text-slate-900"
-    style={{
-      width: 210 * scale + 'mm',
-      minHeight: 297 * scale + 'mm',
-      fontSize: `${scale * 100}%`,
-      padding: `${scale * 40}px`,
-      fontFamily: 'Georgia, serif'
-    }}
+    style={{ width: '794px', minHeight: '1123px', padding: '48px', fontSize: '11px', fontFamily: 'Georgia, serif' }}
   >
     {/* Header - centered */}
-    <div className="text-center border-b-2 border-slate-900" style={{ paddingBottom: `${scale * 16}px`, marginBottom: `${scale * 20}px` }}>
-      <div className="font-bold uppercase tracking-widest" style={{ fontSize: `${scale * 120}%` }}>
+    <div className="text-center border-b-2 border-slate-900" style={{ paddingBottom: '16px', marginBottom: '24px' }}>
+      <div className="font-bold uppercase tracking-widest" style={{ fontSize: '22px' }}>
         {data.personal.fullName}
       </div>
-      <div className="text-slate-600 italic" style={{ fontSize: `${scale * 60}%`, marginTop: `${scale * 6}px` }}>
+      <div className="text-slate-600 italic" style={{ fontSize: '13px', marginTop: '6px' }}>
         {data.personal.role}
       </div>
-      <div className="text-slate-500 flex justify-center flex-wrap gap-1" style={{ fontSize: `${scale * 45}%`, marginTop: `${scale * 4}px` }}>
+      <div className="text-slate-500 flex justify-center flex-wrap gap-1" style={{ fontSize: '10px', marginTop: '4px' }}>
         <span>{data.personal.email}</span>
         {data.personal.phone && <><span>|</span><span>{data.personal.phone}</span></>}
         {data.personal.location && <><span>|</span><span>{data.personal.location}</span></>}
@@ -31,11 +25,11 @@ export const ClassicPreview = memo(({ data, scale = 0.15 }: { data: ResumeData; 
 
     {/* Summary */}
     {data.personal.summary && (
-      <div style={{ marginBottom: `${scale * 16}px` }}>
-        <div className="font-bold uppercase border-b border-slate-300" style={{ fontSize: `${scale * 50}%`, paddingBottom: `${scale * 4}px`, marginBottom: `${scale * 6}px` }}>
+      <div style={{ marginBottom: '20px' }}>
+        <div className="font-bold uppercase border-b border-slate-300" style={{ fontSize: '13px', paddingBottom: '4px', marginBottom: '8px' }}>
           Professional Summary
         </div>
-        <div className="text-slate-700 leading-relaxed" style={{ fontSize: `${scale * 40}%` }}>
+        <div className="text-slate-700 leading-relaxed" style={{ fontSize: '11px' }}>
           {data.personal.summary}
         </div>
       </div>
@@ -43,19 +37,19 @@ export const ClassicPreview = memo(({ data, scale = 0.15 }: { data: ResumeData; 
 
     {/* Experience */}
     {data.experience.length > 0 && (
-      <div style={{ marginBottom: `${scale * 16}px` }}>
-        <div className="font-bold uppercase border-b border-slate-300" style={{ fontSize: `${scale * 50}%`, paddingBottom: `${scale * 4}px`, marginBottom: `${scale * 8}px` }}>
+      <div style={{ marginBottom: '20px' }}>
+        <div className="font-bold uppercase border-b border-slate-300" style={{ fontSize: '13px', paddingBottom: '4px', marginBottom: '10px' }}>
           Work Experience
         </div>
         {data.experience.map((job) => (
-          <div key={job.id} style={{ marginBottom: `${scale * 12}px` }}>
-            <div className="flex justify-between font-bold" style={{ fontSize: `${scale * 45}%` }}>
+          <div key={job.id} style={{ marginBottom: '16px' }}>
+            <div className="flex justify-between font-bold" style={{ fontSize: '12px' }}>
               <span>{job.company}</span>
               <span>{job.date}</span>
             </div>
-            <div className="italic text-slate-600" style={{ fontSize: `${scale * 40}%` }}>{job.role}</div>
+            <div className="italic text-slate-600" style={{ fontSize: '11px' }}>{job.role}</div>
             {job.description && (
-              <div className="text-slate-700" style={{ fontSize: `${scale * 35}%`, marginTop: `${scale * 4}px`, lineHeight: 1.5 }}>
+              <div className="text-slate-700" style={{ fontSize: '11px', marginTop: '4px', lineHeight: 1.5 }}>
                 {job.description.split('\n').map((line, i) => (
                   <div key={i}>{line}</div>
                 ))}
@@ -68,18 +62,18 @@ export const ClassicPreview = memo(({ data, scale = 0.15 }: { data: ResumeData; 
 
     {/* Projects */}
     {data.projects.length > 0 && (
-      <div style={{ marginBottom: `${scale * 16}px` }}>
-        <div className="font-bold uppercase border-b border-slate-300" style={{ fontSize: `${scale * 50}%`, paddingBottom: `${scale * 4}px`, marginBottom: `${scale * 8}px` }}>
+      <div style={{ marginBottom: '20px' }}>
+        <div className="font-bold uppercase border-b border-slate-300" style={{ fontSize: '13px', paddingBottom: '4px', marginBottom: '10px' }}>
           Projects
         </div>
         {data.projects.map((proj) => (
-          <div key={proj.id} style={{ marginBottom: `${scale * 12}px` }}>
-            <div className="flex justify-between font-bold" style={{ fontSize: `${scale * 45}%` }}>
+          <div key={proj.id} style={{ marginBottom: '16px' }}>
+            <div className="flex justify-between font-bold" style={{ fontSize: '12px' }}>
               <span>{proj.name}</span>
               <span>{proj.date}</span>
             </div>
             {proj.description && (
-              <div className="text-slate-700" style={{ fontSize: `${scale * 35}%`, marginTop: `${scale * 4}px`, lineHeight: 1.5 }}>
+              <div className="text-slate-700" style={{ fontSize: '11px', marginTop: '4px', lineHeight: 1.5 }}>
                 {proj.description.split('\n').map((line, i) => (
                   <div key={i}>{line}</div>
                 ))}
@@ -92,17 +86,17 @@ export const ClassicPreview = memo(({ data, scale = 0.15 }: { data: ResumeData; 
 
     {/* Education */}
     {data.education.length > 0 && (
-      <div style={{ marginBottom: `${scale * 16}px` }}>
-        <div className="font-bold uppercase border-b border-slate-300" style={{ fontSize: `${scale * 50}%`, paddingBottom: `${scale * 4}px`, marginBottom: `${scale * 8}px` }}>
+      <div style={{ marginBottom: '20px' }}>
+        <div className="font-bold uppercase border-b border-slate-300" style={{ fontSize: '13px', paddingBottom: '4px', marginBottom: '10px' }}>
           Education
         </div>
         {data.education.map((edu) => (
-          <div key={edu.id} style={{ marginBottom: `${scale * 10}px` }}>
-            <div className="flex justify-between font-bold" style={{ fontSize: `${scale * 45}%` }}>
+          <div key={edu.id} style={{ marginBottom: '14px' }}>
+            <div className="flex justify-between font-bold" style={{ fontSize: '12px' }}>
               <span>{edu.degree}</span>
               {edu.date && <span>{edu.date}</span>}
             </div>
-            <div className="italic text-slate-600" style={{ fontSize: `${scale * 40}%` }}>{edu.school}</div>
+            <div className="italic text-slate-600" style={{ fontSize: '11px' }}>{edu.school}</div>
           </div>
         ))}
       </div>
@@ -111,10 +105,10 @@ export const ClassicPreview = memo(({ data, scale = 0.15 }: { data: ResumeData; 
     {/* Skills */}
     {data.skills.length > 0 && (
       <div>
-        <div className="font-bold uppercase border-b border-slate-300" style={{ fontSize: `${scale * 50}%`, paddingBottom: `${scale * 4}px`, marginBottom: `${scale * 8}px` }}>
+        <div className="font-bold uppercase border-b border-slate-300" style={{ fontSize: '13px', paddingBottom: '4px', marginBottom: '8px' }}>
           Skills
         </div>
-        <div className="text-slate-700" style={{ fontSize: `${scale * 40}%`, lineHeight: 1.6 }}>
+        <div className="text-slate-700" style={{ fontSize: '11px', lineHeight: 1.6 }}>
           {data.skills.join(' \u2022 ')}
         </div>
       </div>

@@ -8,6 +8,7 @@ export type DashboardSection =
   | 'overview'
   | 'resumes'
   | 'cover-letters'
+  | 'jobs'
   | 'templates'
   | 'analytics'
   | 'ai-insights'
@@ -124,4 +125,20 @@ export type ExampleJob = {
   match: number;
   type: string;
   reason?: string;
+};
+
+export type RemoteJob = {
+  id: string;
+  url: string;
+  title: string;
+  company_name: string;
+  company_logo: string | null;
+  category: string;
+  tags: string[];
+  job_type: string;
+  publication_date: string;
+  candidate_required_location: string;
+  salary: string;
+  description: string;
+  source: 'remotive' | 'arbeitnow';
 };

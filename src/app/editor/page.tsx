@@ -92,7 +92,7 @@ function EditorInner() {
   const [loading, setLoading] = useState(!!resumeId);
   const deferredData = useDeferredValue(data);
   const [activeSection, setActiveSection] = useState<string | null>('personal');
-  const [zoom, setZoom] = useState(0.85);
+  const [zoom, setZoom] = useState(0.75);
   const [template, setTemplate] = useState<TemplateType>('modern');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -687,26 +687,37 @@ function EditorInner() {
         )}
         <div className="absolute top-6 flex items-center gap-2 bg-[#fffaf4]/95 rounded-full px-4 py-2 shadow-lg z-30 border border-[#eadfce]">
           <button
-            onClick={() => setZoom(Math.max(0.35, zoom - 0.05))}
+            onClick={() => setZoom(Math.max(0.3, zoom - 0.05))}
             className="p-2 hover:bg-[#f4ecdf] rounded-full text-[#8b7355] hover:text-[#2c1810] transition-colors"
           >
             <ZoomOut size={16} />
           </button>
           <span className="text-xs font-mono font-bold w-12 text-center text-[#8b7355]">{Math.round(zoom * 100)}%</span>
           <button
-            onClick={() => setZoom(Math.min(0.85, zoom + 0.05))}
+            onClick={() => setZoom(Math.min(1.0, zoom + 0.05))}
             className="p-2 hover:bg-[#f4ecdf] rounded-full text-[#8b7355] hover:text-[#2c1810] transition-colors"
           >
             <ZoomIn size={16} />
           </button>
           <div className="w-px h-4 bg-[#eadfce] mx-2" />
-          <button className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#f4ecdf] rounded-lg text-xs font-bold text-[#8b7355] transition-colors">
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#f4ecdf] rounded-lg text-xs font-bold text-[#8b7355] transition-colors"
+          >
             <Download size={14} /> Export PDF
           </button>
         </div>
 
-        <div className="bg-white shadow-2xl rounded-sm overflow-hidden transition-all duration-200">
-          <PreviewComponent data={deferredData} scale={zoom} />
+        <div
+          className="shadow-2xl rounded-sm overflow-hidden transition-all duration-200"
+          style={{ width: `${794 * zoom}px`, height: `${1123 * zoom}px` }}
+        >
+          <div
+            className="bg-white"
+            style={{ width: '794px', minHeight: '1123px', transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+          >
+            <PreviewComponent data={deferredData} />
+          </div>
         </div>
       </main>
 
@@ -792,6 +803,11 @@ function EditorInner() {
           </div>
         )}
       </aside>
+
+      {/* Hidden full-scale preview for print */}
+      <div id="resume-print" className="hidden">
+        <PreviewComponent data={deferredData} />
+      </div>
     </div>
   );
 }

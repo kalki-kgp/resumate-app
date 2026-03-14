@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fraunces, DM_Sans } from 'next/font/google';
-import { ArrowRight, Check, LoaderCircle, Mail, Trash2, ExternalLink } from 'lucide-react';
+import { ArrowRight, Check, LoaderCircle, Mail, Trash2, ExternalLink, Search, MapPin, Clock, Building2, Briefcase, ChevronDown } from 'lucide-react';
 import { ApiError, apiRequest, clearStoredAccessToken, getStoredAccessToken } from '@/lib/api';
 import { TemplateThumbnail } from '@/app/editor/_components';
 import {
@@ -18,7 +18,6 @@ import {
   formatFileSize,
   formatRelativeTime,
   resumeThumbnailSrc,
-  getCategoryBadge,
   clamp,
   isPdfFile,
 } from '@/app/dashboard/_components';
@@ -29,6 +28,7 @@ import type {
   DashboardSection,
   DashboardResume,
   DashboardCoverLetter,
+  RemoteJob,
   ResumeAnalysisResult,
   OnboardingStateResponse,
   AnalyzeResumeResponse,
@@ -94,6 +94,15 @@ export default function DashboardTwoPage() {
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
   const [actionToast, setActionToast] = useState<{ message: string } | null>(null);
   const [isCoverLetterModalOpen, setIsCoverLetterModalOpen] = useState(false);
+  const [jobListings, setJobListings] = useState<RemoteJob[]>([]);
+  const [isJobsLoading, setIsJobsLoading] = useState(false);
+  const [jobSearchQuery, setJobSearchQuery] = useState('');
+  const [jobCategoryFilter, setJobCategoryFilter] = useState('all');
+  const [jobSourceFilter, setJobSourceFilter] = useState<'all' | 'remotive' | 'arbeitnow'>('all');
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [applyJobUrl, setApplyJobUrl] = useState<string | null>(null);
+  const [selectedApplyResumeId, setSelectedApplyResumeId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const workspaceUploadInputRef = useRef<HTMLInputElement | null>(null);
   const profilePopupRef = useRef<HTMLDivElement | null>(null);
@@ -302,6 +311,71 @@ export default function DashboardTwoPage() {
     if (stage !== 'workspace' || !token) return;
     void fetchDashboardData();
   }, [fetchDashboardData, stage, token]);
+
+  const fetchJobListings = useCallback(async () => {
+    setIsJobsLoading(true);
+    try {
+      const [remotiveRes, arbeitnowRes] = await Promise.allSettled([
+        fetch('https://remotive.com/api/remote-jobs?limit=50').then((r) => r.json()),
+        fetch('https://www.arbeitnow.com/api/job-board-api').then((r) => r.json()),
+      ]);
+
+      const jobs: RemoteJob[] = [];
+
+      if (remotiveRes.status === 'fulfilled' && Array.isArray(remotiveRes.value?.jobs)) {
+        for (const j of remotiveRes.value.jobs) {
+          jobs.push({
+            id: `remotive-${j.id}`,
+            url: j.url ?? '',
+            title: j.title ?? '',
+            company_name: j.company_name ?? '',
+            company_logo: j.company_logo_url || j.company_logo || null,
+            category: j.category ?? '',
+            tags: Array.isArray(j.tags) ? j.tags : [],
+            job_type: (j.job_type ?? '').replace(/_/g, ' '),
+            publication_date: j.publication_date ?? '',
+            candidate_required_location: j.candidate_required_location ?? 'Worldwide',
+            salary: j.salary ?? '',
+            description: j.description ?? '',
+            source: 'remotive',
+          });
+        }
+      }
+
+      if (arbeitnowRes.status === 'fulfilled' && Array.isArray(arbeitnowRes.value?.data)) {
+        for (const j of arbeitnowRes.value.data) {
+          jobs.push({
+            id: `arbeitnow-${j.slug}`,
+            url: j.url ?? '',
+            title: j.title ?? '',
+            company_name: j.company_name ?? '',
+            company_logo: null,
+            category: Array.isArray(j.tags) ? j.tags[0] ?? '' : '',
+            tags: Array.isArray(j.tags) ? j.tags : [],
+            job_type: Array.isArray(j.job_types) ? j.job_types.join(', ') : '',
+            publication_date: j.created_at ? new Date(j.created_at * 1000).toISOString() : '',
+            candidate_required_location: j.location ?? (j.remote ? 'Remote' : ''),
+            salary: '',
+            description: j.description ?? '',
+            source: 'arbeitnow',
+          });
+        }
+      }
+
+      setJobListings(jobs);
+    } catch {
+      // Silently fail — jobs are non-critical
+    } finally {
+      setIsJobsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (stage !== 'workspace') return;
+    if (activeSection === 'jobs' && jobListings.length === 0 && !isJobsLoading) {
+      void fetchJobListings();
+    }
+  }, [activeSection, fetchJobListings, isJobsLoading, jobListings.length, stage]);
 
   const selectedDashboardResume = useMemo(() => {
     if (dashboardResumes.length === 0) return null;
@@ -762,8 +836,11 @@ export default function DashboardTwoPage() {
               },
               {
                 title: 'Help me find the right job match',
-                subtitle: 'See how well your resume fits each role.',
-                onClick: undefined,
+                subtitle: 'Browse real remote jobs and apply with your resume.',
+                onClick: () => {
+                  setActiveSection('jobs');
+                  if (jobListings.length === 0 && !isJobsLoading) void fetchJobListings();
+                },
               },
             ].map((item) => (
               <button
@@ -1186,6 +1263,332 @@ export default function DashboardTwoPage() {
       );
     }
 
+    if (activeSection === 'jobs') {
+      const jobCategories = Array.from(new Set(jobListings.map((j) => j.category).filter(Boolean))).sort();
+
+      const filteredJobs = jobListings.filter((job) => {
+        const matchesSearch =
+          !jobSearchQuery ||
+          job.title.toLowerCase().includes(jobSearchQuery.toLowerCase()) ||
+          job.company_name.toLowerCase().includes(jobSearchQuery.toLowerCase()) ||
+          job.tags.some((t) => t.toLowerCase().includes(jobSearchQuery.toLowerCase()));
+        const matchesCategory = jobCategoryFilter === 'all' || job.category === jobCategoryFilter;
+        const matchesSource = jobSourceFilter === 'all' || job.source === jobSourceFilter;
+        return matchesSearch && matchesCategory && matchesSource;
+      });
+
+      const formatJobDate = (dateStr: string) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        const now = new Date();
+        const diff = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+        if (diff === 0) return 'Today';
+        if (diff === 1) return 'Yesterday';
+        if (diff < 7) return `${diff}d ago`;
+        if (diff < 30) return `${Math.floor(diff / 7)}w ago`;
+        return `${Math.floor(diff / 30)}mo ago`;
+      };
+
+      return (
+        <section>
+          {/* Search & Filters */}
+          <div className="mb-5 space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[240px]">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9298a3]" />
+                <input
+                  type="text"
+                  value={jobSearchQuery}
+                  onChange={(e) => setJobSearchQuery(e.target.value)}
+                  placeholder="Search jobs by title, company, or skill..."
+                  className="w-full rounded-xl border border-[#e1e4e8] bg-white py-2.5 pl-10 pr-4 text-sm text-[#2a2f3a] placeholder:text-[#b0b5be] outline-none focus:border-[#ff8b2f] focus:ring-2 focus:ring-[#ff8b2f]/10 transition-all"
+                />
+              </div>
+
+              <div className="relative">
+                <select
+                  value={jobSourceFilter}
+                  onChange={(e) => setJobSourceFilter(e.target.value as 'all' | 'remotive' | 'arbeitnow')}
+                  className="appearance-none rounded-xl border border-[#e1e4e8] bg-white px-4 py-2.5 pr-9 text-sm font-medium text-[#3a414f] outline-none focus:border-[#ff8b2f] cursor-pointer"
+                >
+                  <option value="all">All Sources</option>
+                  <option value="remotive">Remotive</option>
+                  <option value="arbeitnow">Arbeitnow</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9298a3]" />
+              </div>
+
+              <div className="relative">
+                <select
+                  value={jobCategoryFilter}
+                  onChange={(e) => setJobCategoryFilter(e.target.value)}
+                  className="appearance-none rounded-xl border border-[#e1e4e8] bg-white px-4 py-2.5 pr-9 text-sm font-medium text-[#3a414f] outline-none focus:border-[#ff8b2f] cursor-pointer"
+                >
+                  <option value="all">All Categories</option>
+                  {jobCategories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9298a3]" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void fetchJobListings()}
+                disabled={isJobsLoading}
+                className="rounded-xl border border-[#e1e4e8] bg-white px-4 py-2.5 text-sm font-semibold text-[#3a414f] hover:bg-[#f4f6f8] disabled:opacity-60 transition-colors"
+              >
+                {isJobsLoading ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-[#8a909b]">
+              <span>{filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''} found</span>
+              <span className="h-1 w-1 rounded-full bg-[#d0d4da]" />
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-[#6366f1]" /> Remotive
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-[#f59e0b]" /> Arbeitnow
+              </span>
+            </div>
+          </div>
+
+          {/* Loading state */}
+          {isJobsLoading && jobListings.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <LoaderCircle className="mb-3 h-8 w-8 animate-spin text-[#ff8b2f]" />
+              <p className="text-sm font-semibold text-[#2b313c]">Fetching jobs from Remotive & Arbeitnow...</p>
+              <p className="mt-1 text-xs text-[#8a909b]">This may take a few seconds</p>
+            </div>
+          ) : filteredJobs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f3f4f6]">
+                <Briefcase className="h-7 w-7 text-[#9298a3]" />
+              </div>
+              <h3 className="text-lg font-semibold text-[#2a2f3a]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+                No jobs match your search
+              </h3>
+              <p className="mt-1 text-sm text-[#8a909b] max-w-sm">
+                Try adjusting your filters or search query.
+              </p>
+              <button
+                type="button"
+                onClick={() => { setJobSearchQuery(''); setJobCategoryFilter('all'); setJobSourceFilter('all'); }}
+                className="mt-4 rounded-xl bg-[#ff8b2f] px-5 py-2.5 text-sm font-semibold text-white hover:brightness-110 transition-all"
+              >
+                Clear Filters
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredJobs.slice(0, 50).map((job) => {
+                const isExpanded = expandedJobId === job.id;
+                return (
+                  <article
+                    key={job.id}
+                    className={`group rounded-2xl border bg-white transition-all duration-200 ${
+                      isExpanded
+                        ? 'border-[#ff8b2f]/30 shadow-[0_8px_24px_rgba(255,139,47,0.1)]'
+                        : 'border-[#e5e8ec] shadow-[0_2px_8px_rgba(20,24,31,0.03)] hover:border-[#ccd0d5] hover:shadow-md'
+                    }`}
+                  >
+                    <div
+                      className="flex items-start gap-4 px-5 py-4 cursor-pointer"
+                      onClick={() => setExpandedJobId(isExpanded ? null : job.id)}
+                    >
+                      {/* Company logo */}
+                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#edf0f3] bg-[#f8f9fb]">
+                        {job.company_logo ? (
+                          <img
+                            src={job.company_logo}
+                            alt={job.company_name}
+                            className="h-full w-full object-contain p-1.5"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : (
+                          <Building2 className="h-5 w-5 text-[#b0b5be]" />
+                        )}
+                      </div>
+
+                      {/* Job details */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-base font-semibold text-[#1e232d] leading-tight">{job.title}</h3>
+                            <p className="mt-0.5 text-sm text-[#5a6271]">{job.company_name}</p>
+                          </div>
+                          <div className="flex flex-shrink-0 items-center gap-2">
+                            <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                              job.source === 'remotive'
+                                ? 'bg-[#eef0ff] text-[#6366f1]'
+                                : 'bg-[#fff8eb] text-[#d97706]'
+                            }`}>
+                              {job.source === 'remotive' ? 'Remotive' : 'Arbeitnow'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#8a909b]">
+                          {job.candidate_required_location && (
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin className="h-3 w-3" /> {job.candidate_required_location}
+                            </span>
+                          )}
+                          {job.job_type && (
+                            <span className="inline-flex items-center gap-1">
+                              <Briefcase className="h-3 w-3" /> {job.job_type}
+                            </span>
+                          )}
+                          {job.publication_date && (
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {formatJobDate(job.publication_date)}
+                            </span>
+                          )}
+                          {job.salary && (
+                            <span className="inline-flex items-center gap-1 font-semibold text-[#2d8b46]">
+                              {job.salary}
+                            </span>
+                          )}
+                        </div>
+
+                        {job.tags.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {job.tags.slice(0, 5).map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-md border border-[#e8ebf0] bg-[#f6f7f9] px-2 py-0.5 text-[10px] font-medium text-[#5a6271]"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            {job.tags.length > 5 && (
+                              <span className="text-[10px] text-[#9298a3]">+{job.tags.length - 5} more</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Expanded content */}
+                    {isExpanded && (
+                      <div className="border-t border-[#f0f1f3] px-5 pb-5 pt-4">
+                        <div
+                          className="prose prose-sm max-w-none text-sm text-[#4a5260] leading-relaxed max-h-64 overflow-y-auto pr-2 [&_a]:text-[#ff8b2f] [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-[#2a2f3a] [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-[#2a2f3a] [&_h3]:mt-2 [&_h3]:mb-1 [&_p]:mb-2 [&_strong]:text-[#2a2f3a]"
+                          dangerouslySetInnerHTML={{ __html: job.description.slice(0, 3000) }}
+                        />
+
+                        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-[#f0f1f3] pt-4">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setApplyJobUrl(job.url);
+                              setSelectedApplyResumeId(selectedDashboardResume?.id ?? null);
+                              setIsApplyModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#ff8b2f] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#f47f22] transition-colors"
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                            Apply with Resume
+                          </button>
+                          <a
+                            href={job.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-[#e1e4e8] bg-white px-4 py-2.5 text-sm font-semibold text-[#3a414f] hover:bg-[#f4f6f8] transition-colors"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            View Original
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+
+              {filteredJobs.length > 50 && (
+                <p className="py-4 text-center text-xs text-[#8a909b]">
+                  Showing first 50 of {filteredJobs.length} results. Use filters to narrow down.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Apply with Resume Modal */}
+          {isApplyModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <div className="mx-4 w-full max-w-md rounded-2xl border border-[#e5e8ec] bg-white p-6 shadow-2xl animate-scale-in">
+                <h3 className="text-xl font-bold text-[#1e232d]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+                  Apply with your Resume
+                </h3>
+                <p className="mt-1 text-sm text-[#8a909b]">
+                  Select a resume to take with you to the application page.
+                </p>
+
+                {dashboardResumes.length === 0 ? (
+                  <div className="mt-4 rounded-xl border border-dashed border-[#d8dde4] bg-[#fafbfd] px-4 py-6 text-center">
+                    <p className="text-sm text-[#7d8694]">No resumes uploaded yet.</p>
+                    <p className="mt-1 text-xs text-[#9298a3]">Upload a resume first to use it when applying.</p>
+                  </div>
+                ) : (
+                  <div className="mt-4 max-h-64 space-y-2 overflow-y-auto">
+                    {dashboardResumes.map((resume) => {
+                      const isSelected = selectedApplyResumeId === resume.id;
+                      return (
+                        <button
+                          key={resume.id}
+                          type="button"
+                          onClick={() => setSelectedApplyResumeId(resume.id)}
+                          className={`w-full rounded-xl border px-4 py-3 text-left transition-all ${
+                            isSelected
+                              ? 'border-[#ff9a38] bg-[#fff8f1] shadow-sm'
+                              : 'border-[#e6e9ed] bg-[#fbfcfd] hover:bg-white'
+                          }`}
+                        >
+                          <p className="truncate text-sm font-semibold text-[#2a303a]">{resume.title}</p>
+                          <div className="mt-1 flex items-center gap-3 text-[11px] text-[#8a909b]">
+                            <span>{formatRelativeTime(resume.uploaded_at)}</span>
+                            {resume.analysis?.ats_score_estimate != null && (
+                              <span className="rounded-full bg-[#edf8e5] px-2 py-0.5 font-semibold text-[#5da727]">
+                                ATS {resume.analysis.ats_score_estimate}%
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="mt-5 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsApplyModalOpen(false)}
+                    className="rounded-xl border border-[#e1e4e8] bg-white px-4 py-2 text-sm font-semibold text-[#3a414f] hover:bg-[#f4f6f8] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <a
+                    href={applyJobUrl ?? '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setIsApplyModalOpen(false)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#ff8b2f] px-5 py-2 text-sm font-semibold text-white hover:bg-[#f47f22] transition-colors"
+                  >
+                    Go to Application
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      );
+    }
+
     if (activeSection === 'templates') {
       return (
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1193,7 +1596,7 @@ export default function DashboardTwoPage() {
             <article key={tpl.id} className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
               <div className="mb-3 rounded-xl border border-[#eceff3] bg-gradient-to-b from-[#f8fafd] to-[#f0f3f7] p-3">
                 <div className="mx-auto flex items-center justify-center overflow-hidden rounded-lg border border-[#dfe4ea] bg-white shadow-[0_10px_18px_rgba(26,34,48,0.10)]">
-                  <TemplateThumbnail template={tpl.id} />
+                  <TemplateThumbnail template={tpl.id} shrink={0.385} />
                 </div>
               </div>
               <p className="text-lg font-semibold text-[#252b34]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
