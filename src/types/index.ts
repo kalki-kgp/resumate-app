@@ -219,6 +219,16 @@ export interface RefineParagraphResponse {
   paragraph_type: string;
 }
 
+export interface SavedResumeResponse {
+  id: string;
+  title: string;
+  template: TemplateType;
+  resume_data: ResumeData;
+  source_resume_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SavedCoverLetterResponse {
   id: string;
   resume_id: string | null;

@@ -9,7 +9,7 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import engine
-from app.models import auth_session, cover_letter, onboarding_progress, resume, user  # noqa: F401
+from app.models import auth_session, cover_letter, onboarding_progress, resume, saved_resume, user  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
