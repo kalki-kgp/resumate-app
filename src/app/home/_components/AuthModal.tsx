@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, Lock, Mail, User } from 'lucide-react';
+import { ArrowRight, Check, Lock, Mail, User } from 'lucide-react';
 
 export type AuthMode = 'signin' | 'signup';
 export type AuthField = 'fullName' | 'email' | 'password';
@@ -188,6 +188,31 @@ export const AuthModal = ({
                 }}
               />
             </div>
+            {mode === 'signup' && form.password.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {[
+                  { met: form.password.length >= 8, label: 'At least 8 characters' },
+                  { met: /[A-Z]/.test(form.password), label: 'One uppercase letter' },
+                  { met: /[a-z]/.test(form.password), label: 'One lowercase letter' },
+                  { met: /[0-9]/.test(form.password), label: 'One number' },
+                ].map((rule) => (
+                  <div key={rule.label} className="flex items-center gap-1.5">
+                    <div
+                      className="flex h-3.5 w-3.5 items-center justify-center rounded-full transition-colors"
+                      style={{ backgroundColor: rule.met ? '#2d5a3d' : '#e5ddd0' }}
+                    >
+                      {rule.met && <Check className="h-2.5 w-2.5 text-white" />}
+                    </div>
+                    <span
+                      className="text-xs transition-colors"
+                      style={{ color: rule.met ? '#2d5a3d' : '#b5a48e' }}
+                    >
+                      {rule.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </label>
 
           {authError && (

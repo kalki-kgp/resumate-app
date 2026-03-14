@@ -24,7 +24,7 @@ const testimonials = [
 ];
 
 export const Testimonials = () => (
-  <section className="py-20 md:py-28" style={{ backgroundColor: '#faf7f2' }}>
+  <section id="testimonials" className="py-20 md:py-28" style={{ backgroundColor: '#faf7f2' }}>
     <div className="mx-auto max-w-7xl px-6 lg:px-8">
       <div className="mx-auto mb-12 max-w-2xl text-center md:mb-16">
         <p

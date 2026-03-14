@@ -3,7 +3,7 @@
 import { Briefcase, CheckCircle, Sparkles } from 'lucide-react';
 
 export const WhyResuMate = () => (
-  <section className="relative py-20 md:py-28">
+  <section id="features" className="relative py-20 md:py-28">
     <div className="mx-auto max-w-7xl px-6 lg:px-8">
       <div className="mx-auto mb-12 max-w-2xl text-center md:mb-16">
         <p

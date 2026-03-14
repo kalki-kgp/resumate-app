@@ -3,7 +3,7 @@
 import { Download, Sparkles, User } from 'lucide-react';
 
 export const HowItWorks = () => (
-  <section className="py-20 md:py-28" style={{ backgroundColor: '#f0e6d8' }}>
+  <section id="how-it-works" className="py-20 md:py-28" style={{ backgroundColor: '#f0e6d8' }}>
     <div className="mx-auto max-w-7xl px-6 lg:px-8">
       <div className="mx-auto mb-12 max-w-2xl text-center md:mb-16">
         <p

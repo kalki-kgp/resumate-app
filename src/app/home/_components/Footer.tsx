@@ -41,19 +41,23 @@ export const Footer = () => (
             Product
           </h4>
           <ul className="space-y-2.5">
-            {['Resume Builder', 'Templates', 'AI Writer', 'ATS Checker', 'Cover Letters'].map(
-              (link) => (
-                <li key={link}>
-                  <a
-                    href="#"
-                    className="text-sm transition-colors duration-200 hover:opacity-70"
-                    style={{ color: '#8b7355' }}
-                  >
-                    {link}
-                  </a>
-                </li>
-              )
-            )}
+            {[
+              { label: 'Resume Builder', href: '/editor' },
+              { label: 'Templates', href: '/home#templates' },
+              { label: 'AI Writer', href: '/editor' },
+              { label: 'ATS Checker', href: '/dashboard' },
+              { label: 'Cover Letters', href: '/cover-letter' },
+            ].map((link) => (
+              <li key={link.label}>
+                <a
+                  href={link.href}
+                  className="text-sm transition-colors duration-200 hover:opacity-70"
+                  style={{ color: '#8b7355' }}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -65,19 +69,21 @@ export const Footer = () => (
             Resources
           </h4>
           <ul className="space-y-2.5">
-            {['Blog', 'Career Guide', 'Resume Examples', 'Help Center', 'API'].map(
-              (link) => (
-                <li key={link}>
-                  <a
-                    href="#"
-                    className="text-sm transition-colors duration-200 hover:opacity-70"
-                    style={{ color: '#8b7355' }}
-                  >
-                    {link}
-                  </a>
-                </li>
-              )
-            )}
+            {[
+              { label: 'How It Works', href: '/home#how-it-works' },
+              { label: 'Testimonials', href: '/home#testimonials' },
+              { label: 'Features', href: '/home#features' },
+            ].map((link) => (
+              <li key={link.label}>
+                <a
+                  href={link.href}
+                  className="text-sm transition-colors duration-200 hover:opacity-70"
+                  style={{ color: '#8b7355' }}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -89,19 +95,20 @@ export const Footer = () => (
             Company
           </h4>
           <ul className="space-y-2.5">
-            {['About', 'Careers', 'Privacy', 'Terms', 'Contact'].map(
-              (link) => (
-                <li key={link}>
-                  <a
-                    href="#"
-                    className="text-sm transition-colors duration-200 hover:opacity-70"
-                    style={{ color: '#8b7355' }}
-                  >
-                    {link}
-                  </a>
-                </li>
-              )
-            )}
+            {[
+              { label: 'Privacy Policy', href: '/privacy' },
+              { label: 'Terms of Service', href: '/terms' },
+            ].map((link) => (
+              <li key={link.label}>
+                <a
+                  href={link.href}
+                  className="text-sm transition-colors duration-200 hover:opacity-70"
+                  style={{ color: '#8b7355' }}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
           </ul>
         </div>
       </div>

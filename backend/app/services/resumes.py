@@ -246,3 +246,24 @@ def sync_user_resumes_from_disk(db: Session, user_id: UUID) -> None:
 
     if created_any:
         db.commit()
+
+
+def delete_user_resume(db: Session, user_id: UUID, resume_id: UUID) -> bool:
+    """Delete a resume and its files from disk. Returns True if deleted."""
+    resume = get_user_resume_by_id(db, user_id, resume_id)
+    if resume is None:
+        return False
+
+    # Delete files from disk
+    pdf_path = resolve_storage_path(resume.file_path)
+    if pdf_path.exists():
+        pdf_path.unlink()
+
+    if resume.thumbnail_path:
+        thumb_path = resolve_storage_path(resume.thumbnail_path)
+        if thumb_path.exists():
+            thumb_path.unlink()
+
+    db.delete(resume)
+    db.commit()
+    return True

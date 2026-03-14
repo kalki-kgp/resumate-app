@@ -49,6 +49,24 @@ Rules:
 - Match the existing tone of the letter."""
 
 
+def _get_llm_client() -> tuple[OpenAI, str] | None:
+    """Resolve LLM client and model based on RESUME_FILL_PROVIDER setting."""
+    provider = settings.RESUME_FILL_PROVIDER.strip().lower()
+    if provider == "nebius":
+        if not settings.NEBIUS_API_KEY:
+            logger.warning("NEBIUS_API_KEY not configured for cover letter")
+            return None
+        return OpenAI(base_url=settings.NEBIUS_BASE_URL, api_key=settings.NEBIUS_API_KEY), settings.NEBIUS_FILL_MODEL
+    elif provider == "chutes":
+        if not settings.CHUTES_API_TOKEN:
+            logger.warning("CHUTES_API_TOKEN not configured for cover letter")
+            return None
+        return OpenAI(base_url=settings.CHUTES_BASE_URL, api_key=settings.CHUTES_API_TOKEN), settings.CHUTES_FILL_MODEL
+    else:
+        logger.warning("Unknown provider '%s' for cover letter", provider)
+        return None
+
+
 def _extract_json_from_text(raw_text: str) -> dict[str, Any] | None:
     if not raw_text:
         return None
@@ -137,15 +155,10 @@ def generate_cover_letter(
     additional_instructions: str = "",
 ) -> dict[str, Any] | None:
     """Generate a cover letter using LLM based on resume data and job description."""
-    if not settings.NEBIUS_API_KEY:
-        logger.warning("NEBIUS_API_KEY not configured for cover letter generation")
+    result = _get_llm_client()
+    if result is None:
         return None
-
-    client = OpenAI(
-        base_url=settings.NEBIUS_BASE_URL,
-        api_key=settings.NEBIUS_API_KEY,
-    )
-    model = settings.NEBIUS_FILL_MODEL
+    client, model = result
 
     user_message = _build_user_message(
         extracted_data, job_description, tone, additional_instructions
@@ -226,15 +239,10 @@ def refine_paragraph(
     context: dict[str, Any] | None = None,
 ) -> str | None:
     """Refine a single cover letter paragraph using LLM."""
-    if not settings.NEBIUS_API_KEY:
-        logger.warning("NEBIUS_API_KEY not configured for paragraph refinement")
+    result = _get_llm_client()
+    if result is None:
         return None
-
-    client = OpenAI(
-        base_url=settings.NEBIUS_BASE_URL,
-        api_key=settings.NEBIUS_API_KEY,
-    )
-    model = settings.NEBIUS_FILL_MODEL
+    client, model = result
 
     parts: list[str] = []
     parts.append(f"Paragraph type: {paragraph_type}")

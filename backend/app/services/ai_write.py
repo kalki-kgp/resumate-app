@@ -8,6 +8,25 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+
+def _get_llm_client() -> tuple[OpenAI, str] | None:
+    """Resolve LLM client and model based on RESUME_FILL_PROVIDER setting."""
+    provider = settings.RESUME_FILL_PROVIDER.strip().lower()
+    if provider == "nebius":
+        if not settings.NEBIUS_API_KEY:
+            logger.warning("NEBIUS_API_KEY not configured for AI write")
+            return None
+        return OpenAI(base_url=settings.NEBIUS_BASE_URL, api_key=settings.NEBIUS_API_KEY), settings.NEBIUS_FILL_MODEL
+    elif provider == "chutes":
+        if not settings.CHUTES_API_TOKEN:
+            logger.warning("CHUTES_API_TOKEN not configured for AI write")
+            return None
+        return OpenAI(base_url=settings.CHUTES_BASE_URL, api_key=settings.CHUTES_API_TOKEN), settings.CHUTES_FILL_MODEL
+    else:
+        logger.warning("Unknown provider '%s' for AI write", provider)
+        return None
+
+
 MAX_RETRIES = 2
 RETRY_BACKOFF_SECONDS = [1, 3]
 
@@ -86,15 +105,10 @@ def generate_ai_text(
     context: dict[str, Any] | None = None,
 ) -> str | None:
     """Generate text for a resume section using LLM."""
-    if not settings.NEBIUS_API_KEY:
-        logger.warning("NEBIUS_API_KEY not configured for AI write")
+    result = _get_llm_client()
+    if result is None:
         return None
-
-    client = OpenAI(
-        base_url=settings.NEBIUS_BASE_URL,
-        api_key=settings.NEBIUS_API_KEY,
-    )
-    model = settings.NEBIUS_FILL_MODEL
+    client, model = result
 
     system_prompt = _SYSTEM_PROMPTS.get(section_type, _SYSTEM_PROMPTS["summary"])
     user_message = _build_user_message(
