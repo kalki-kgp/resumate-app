@@ -44,18 +44,29 @@ Next.js 16 with App Router, React 19, TypeScript 5, Tailwind CSS 4.
 ```
 src/
 ├── app/
-│   ├── page.tsx              # Redirects / → /home
-│   ├── layout.tsx            # Root layout (Geist fonts, metadata)
+│   ├── page.tsx              # Redirects / → /home (server-side redirect)
+│   ├── layout.tsx            # Root layout (Geist fonts, metadata, favicon)
 │   ├── globals.css           # Global styles, custom animations, dark mode variant
+│   ├── robots.ts             # SEO: robots.txt generation
+│   ├── sitemap.ts            # SEO: sitemap.xml generation
+│   ├── icon.svg              # App favicon (leaf in green circle)
+│   ├── not-found.tsx         # Custom 404 page
+│   ├── error.tsx             # Global error boundary
 │   ├── home/
 │   │   ├── page.tsx          # Landing page
 │   │   └── _components/      # Navbar, Hero, AuthModal, CTA, Footer, etc.
 │   ├── dashboard/
-│   │   ├── page.tsx          # Onboarding wizard + workspace
-│   │   └── _components/      # OnboardingWizard, DashboardSidebar, constants, utils, types
-│   └── editor/
-│       ├── page.tsx          # Resume editor with live preview
-│       └── _components/      # InputGroup, InputField, TemplatePreview, 4 preview templates
+│   │   ├── page.tsx          # Onboarding wizard + workspace (resumes, jobs, cover letters, templates, AI)
+│   │   ├── loading.tsx       # Route loading skeleton
+│   │   └── _components/      # OnboardingWizard, DashboardSidebar, ResumeSelectionModal, constants, utils, types
+│   ├── editor/
+│   │   ├── page.tsx          # Resume editor with live preview + auto-save
+│   │   ├── loading.tsx       # Route loading skeleton
+│   │   └── _components/      # InputGroup, InputField, AIWriteAssist, TemplatePreview, 4 preview templates
+│   └── cover-letter/
+│       ├── page.tsx          # Cover letter generator with live preview
+│       ├── loading.tsx       # Route loading skeleton
+│       └── _components/      # CoverLetterPreview, ParagraphRefineAssist
 ├── lib/
 │   └── api.ts                # API client (apiRequest, token management, ApiError)
 └── types/
@@ -76,18 +87,22 @@ backend/app/
 │   ├── router.py          # Aggregates v1 routers
 │   ├── deps.py            # get_db, get_current_user dependencies
 │   └── v1/                # auth, onboarding, dashboard, resumes endpoints
-├── models/                # SQLAlchemy models (users, auth_sessions, onboarding_progress, resumes)
+├── models/                # SQLAlchemy models (users, auth_sessions, onboarding_progress, resumes, saved_resumes, cover_letters)
 ├── schemas/               # Pydantic request/response schemas
-├── services/              # Business logic (resume analysis, data extraction, template fill via VLM providers)
-└── utils/security.py      # Password hashing (PBKDF2-SHA256), token utilities
+├── services/              # Business logic (resume analysis, data extraction, template fill, cover letter, AI write)
+└── utils/
+    ├── security.py        # Password hashing (PBKDF2-SHA256), token utilities
+    └── rate_limit.py      # In-memory IP-based rate limiter for auth endpoints
 ```
 
 ### API Routes (prefix: `/api/v1`)
 
-- **Auth:** `POST /auth/signup`, `POST /auth/signin`, `GET /auth/me`, `POST /auth/signout`
+- **Auth:** `POST /auth/signup`, `POST /auth/signin`, `GET /auth/me`, `POST /auth/signout` (rate-limited: 10 req/min per IP on signup/signin)
 - **Onboarding:** `GET|POST /onboarding/*` (choose path, upload resume, analyze, step actions, skip)
 - **Dashboard:** `GET /dashboard`
-- **Resumes:** `POST /resumes/upload`, `GET /resumes/{id}/thumbnail`, `POST /resumes/{id}/analyze`, `GET /resumes/{id}/extracted-data`, `POST /resumes/{id}/fill-template`
+- **Resumes:** `POST /resumes/upload`, `GET /resumes/{id}/thumbnail`, `POST /resumes/{id}/analyze`, `GET /resumes/{id}/extracted-data`, `POST /resumes/{id}/fill-template`, `POST /resumes/ai-write`, `DELETE /resumes/{id}`
+- **Saved Resumes:** `POST /saved-resumes/save`, `GET /saved-resumes/list`, `GET /saved-resumes/{id}`, `PUT /saved-resumes/{id}`, `DELETE /saved-resumes/{id}`
+- **Cover Letters:** `POST /cover-letter/{resume_id}/generate`, `POST /cover-letter/refine-paragraph`, `POST /cover-letter/save`, `GET /cover-letter/list`, `GET /cover-letter/{id}`, `DELETE /cover-letter/{id}`
 
 ### Auth Flow
 
@@ -111,11 +126,34 @@ Extraction failure is non-fatal — analysis still succeeds. The `extracted_data
 
 **Template Fill** (`POST /resumes/{id}/fill-template`): A text-only LLM call maps `extracted_data` → the frontend `ResumeData` schema (personal, experience[], education[], skills[]). This enables auto-populating the editor.
 
-### Editor Auto-Fill
+**Text-only LLM services** (template fill, AI write, cover letter generation/refinement) all use `RESUME_FILL_PROVIDER` to select provider:
+- **Nebius** (default): `NEBIUS_FILL_MODEL` (deepseek-ai/DeepSeek-V3-0324-fast)
+- **Chutes**: `CHUTES_FILL_MODEL` (zai-org/GLM-5-TEE)
 
-The editor (`/editor?resume_id=<id>`) reads `resume_id` from query params. On mount, it calls `POST /api/v1/resumes/{id}/fill-template` to fetch structured data and populate the form. Falls back to an empty template on error or when no `resume_id` is provided.
+### Editor Auto-Fill & Auto-Save
 
-All 4 templates (Modern, Classic, Creative, Minimal) render complete data: full summary, ALL experience entries with descriptions, ALL education, ALL skills.
+The editor (`/editor?resume_id=<id>`) reads `resume_id` from query params. On mount, it calls `POST /api/v1/resumes/{id}/fill-template` to fetch structured data and populate the form. Also supports `?saved_id=<id>` to load a previously saved resume, and `?template=<type>` to pre-select a template. Falls back to an empty template on error or when no params are provided.
+
+All 4 templates (Modern, Classic, Creative, Minimal) render at fixed A4 dimensions (794×1123px) with CSS transform zoom. Export PDF uses `window.print()` with a hidden full-scale `#resume-print` element.
+
+**Auto-save:** Debounced 30-second auto-save triggers when changes are detected and the resume has been saved at least once (`savedResumeId` exists). The `beforeunload` event warns users about unsaved changes.
+
+### Cover Letter Generator
+
+The cover letter page (`/cover-letter?resume_id=<id>`) generates tailored cover letters from resume data + job description. Features:
+- Tone selection (Professional, Conversational, Confident, Enthusiastic)
+- AI generation via `POST /cover-letter/{resume_id}/generate`
+- Paragraph-level refinement via hover AI assist (`ParagraphRefineAssist`)
+- Inline editing by clicking paragraphs
+- Save/print with same `@media print` pattern as resume editor
+
+### Dashboard Job Board
+
+The dashboard includes a job board that fetches listings from external APIs:
+- **Remotive API** (`remotive.com/api/remote-jobs`) — remote jobs
+- **Arbeitnow API** (`arbeitnow.com/api/job-board-api`) — general jobs
+
+Features: search filtering, category filtering, source filtering, expandable descriptions (sanitized with DOMPurify), and "Apply with Resume" modal that lets users select a resume before navigating to the job URL.
 
 ## Frontend API Client
 

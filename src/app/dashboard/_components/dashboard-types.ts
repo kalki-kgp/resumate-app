@@ -149,5 +149,5 @@ export type RemoteJob = {
   candidate_required_location: string;
   salary: string;
   description: string;
-  source: 'remotive' | 'arbeitnow';
+  source: 'remotive' | 'arbeitnow' | 'jobicy';
 };

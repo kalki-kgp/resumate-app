@@ -26,6 +26,7 @@ from app.services.resume_analysis import (
     save_latest_analysis_result,
 )
 from app.services.resumes import (
+    delete_user_resume,
     ensure_resume_thumbnail,
     get_user_resume_by_id,
     get_resume_by_id,
@@ -98,9 +99,10 @@ async def upload_resume_to_library(
 @router.get("/{resume_id}/thumbnail")
 def get_resume_thumbnail(
     resume_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    resume = get_resume_by_id(db, resume_id)
+    resume = get_user_resume_by_id(db, current_user.id, resume_id)
     if resume is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
 
@@ -114,6 +116,17 @@ def get_resume_thumbnail(
         filename=f"{resume_id}.png",
         headers={"Cache-Control": "private, max-age=300"},
     )
+
+
+@router.delete("/{resume_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_resume(
+    resume_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    deleted = delete_user_resume(db, current_user.id, resume_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
 
 
 @router.post("/{resume_id}/analyze", response_model=DashboardResume)

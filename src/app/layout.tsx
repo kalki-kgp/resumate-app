@@ -13,10 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://resumate.paperknife.app'),
   title: "ResuMates - AI-Powered Resume Builder",
   description: "Build ATS-friendly resumes in minutes with our AI-powered desktop app. Craft the resume that gets you hired.",
   keywords: ["resume builder", "AI resume", "ATS friendly", "job application", "career tools"],
   authors: [{ name: "ResuMates" }],
+  icons: {
+    icon: '/favicon.svg',
+  },
   openGraph: {
     title: "ResuMates - AI-Powered Resume Builder",
     description: "Build ATS-friendly resumes in minutes with our AI-powered desktop app.",

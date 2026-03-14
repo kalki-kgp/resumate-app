@@ -250,14 +250,14 @@ export const OnboardingWizard = ({
                   key={job.id}
                   type="button"
                   onClick={() => onSelectJob(job.id)}
-                  className={`rounded-2xl border px-4 py-4 text-left transition-all ${
+                  className={`rounded-2xl border px-4 py-4 text-left transition-all h-36 flex flex-col ${
                     isSelected ? 'border-[#2d5a3d] bg-[#edf6ef]' : 'border-[#eadfce] bg-white hover:border-[#cbb7a0]'
                   }`}
                 >
                   <p className="text-sm font-semibold text-[#2c1810]">{job.title}</p>
                   <p className="mt-1 text-xs text-[#8b7355]">{job.company} · {job.type}</p>
-                  {job.reason && <p className="mt-2 text-[11px] text-[#6d5a46]">{job.reason}</p>}
-                  <p className="mt-3 text-xs font-semibold text-[#2d5a3d]">{job.match}% match</p>
+                  {job.reason && <p className="mt-2 text-[11px] text-[#6d5a46] line-clamp-2">{job.reason}</p>}
+                  <p className="mt-auto text-xs font-semibold text-[#2d5a3d]">{job.match}% match</p>
                 </button>
               );
             })}

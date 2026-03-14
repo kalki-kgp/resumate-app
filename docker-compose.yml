@@ -7,8 +7,8 @@ services:
       POSTGRES_USER: resumate
       POSTGRES_PASSWORD: resumate
       POSTGRES_DB: resumate
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"  # Only expose for local dev; backend connects via Docker network
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

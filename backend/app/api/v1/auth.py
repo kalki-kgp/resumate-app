@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.models.auth_session import AuthSession
 from app.models.user import User
 from app.schemas.auth import AuthResponse, MessageResponse, SignInRequest, SignUpRequest, UserPublic
+from app.utils.rate_limit import auth_rate_limiter
 from app.utils.security import generate_session_token, hash_password, hash_session_token, verify_password
 
 router = APIRouter()
@@ -32,7 +33,8 @@ def _normalize_email(email: str) -> str:
 
 
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-def signup(payload: SignUpRequest, db: Session = Depends(get_db)):
+def signup(request: Request, payload: SignUpRequest, db: Session = Depends(get_db)):
+    auth_rate_limiter.check(request)
     normalized_email = _normalize_email(str(payload.email))
     existing_user = db.scalar(select(User).where(User.email == normalized_email))
     if existing_user is not None:
@@ -53,7 +55,8 @@ def signup(payload: SignUpRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/signin", response_model=AuthResponse)
-def signin(payload: SignInRequest, db: Session = Depends(get_db)):
+def signin(request: Request, payload: SignInRequest, db: Session = Depends(get_db)):
+    auth_rate_limiter.check(request)
     normalized_email = _normalize_email(str(payload.email))
     user = db.scalar(select(User).where(User.email == normalized_email))
 

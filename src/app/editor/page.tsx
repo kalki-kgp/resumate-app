@@ -105,6 +105,14 @@ function EditorInner() {
   const [sidebarWidth, setSidebarWidth] = useState(380);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const resizeStateRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const lastSavedDataRef = useRef<string>(JSON.stringify(EMPTY_RESUME_DATA));
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Track dirty state
+  useEffect(() => {
+    const currentJson = JSON.stringify(data);
+    setIsDirty(currentJson !== lastSavedDataRef.current);
+  }, [data]);
 
   // Load from uploaded resume (fill-template)
   useEffect(() => {
@@ -121,6 +129,7 @@ function EditorInner() {
       .then((res) => {
         if (!cancelled && res.data) {
           setData(res.data);
+          lastSavedDataRef.current = JSON.stringify(res.data);
         }
       })
       .catch(() => {})
@@ -145,6 +154,7 @@ function EditorInner() {
       .then((res) => {
         if (!cancelled) {
           setData(res.resume_data);
+          lastSavedDataRef.current = JSON.stringify(res.resume_data);
           setTemplate(res.template);
           setSavedResumeId(res.id);
         }
@@ -304,6 +314,8 @@ function EditorInner() {
         setSavedResumeId(res.id);
       }
       setSaveStatus('saved');
+      lastSavedDataRef.current = JSON.stringify(data);
+      setIsDirty(false);
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch {
       setSaveStatus('idle');
@@ -311,6 +323,32 @@ function EditorInner() {
       setSaving(false);
     }
   };
+
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+
+  // Auto-save every 30s after changes (only if previously saved)
+  useEffect(() => {
+    if (!isDirty || !savedResumeId || saving) return;
+
+    const timer = setTimeout(() => {
+      handleSaveRef.current();
+    }, 30000);
+
+    return () => clearTimeout(timer);
+  }, [isDirty, savedResumeId, saving]);
+
+  // Warn before navigating away with unsaved changes
+  useEffect(() => {
+    if (!isDirty) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   const PreviewComponent = useMemo(
     () =>
@@ -417,7 +455,7 @@ function EditorInner() {
               }`}
             >
               {saveStatus === 'saved' ? <Check size={14} /> : <Save size={14} />}
-              {saving ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Save'}
+              {saving ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : isDirty ? 'Save*' : 'Save'}
             </button>
           </div>
         </div>

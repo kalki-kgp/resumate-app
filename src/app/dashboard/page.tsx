@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fraunces, DM_Sans } from 'next/font/google';
+import DOMPurify from 'isomorphic-dompurify';
 import { ArrowRight, Check, LoaderCircle, Mail, Trash2, ExternalLink, Search, MapPin, Clock, Building2, Briefcase, ChevronDown, Save } from 'lucide-react';
 import { ApiError, apiRequest, clearStoredAccessToken, getStoredAccessToken } from '@/lib/api';
 import { TemplateThumbnail } from '@/app/editor/_components';
@@ -100,8 +101,8 @@ export default function DashboardTwoPage() {
   const [isJobsLoading, setIsJobsLoading] = useState(false);
   const [jobSearchQuery, setJobSearchQuery] = useState('');
   const [jobCategoryFilter, setJobCategoryFilter] = useState('all');
-  const [jobSourceFilter, setJobSourceFilter] = useState<'all' | 'remotive' | 'arbeitnow'>('all');
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [jobPage, setJobPage] = useState(0);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [applyJobUrl, setApplyJobUrl] = useState<string | null>(null);
   const [selectedApplyResumeId, setSelectedApplyResumeId] = useState<string | null>(null);
@@ -262,7 +263,7 @@ export default function DashboardTwoPage() {
     const aiRoles = analysisResult?.recommended_roles ?? [];
     if (aiRoles.length === 0) return exampleJobs;
 
-    return aiRoles.slice(0, 5).map((role, index) => ({
+    return aiRoles.slice(0, 6).map((role, index) => ({
       id: `ai-${index}`,
       title: role.title,
       company: 'AI Recommendation',
@@ -318,9 +319,10 @@ export default function DashboardTwoPage() {
   const fetchJobListings = useCallback(async () => {
     setIsJobsLoading(true);
     try {
-      const [remotiveRes, arbeitnowRes] = await Promise.allSettled([
+      const [remotiveRes, arbeitnowRes, jobicyRes] = await Promise.allSettled([
         fetch('https://remotive.com/api/remote-jobs?limit=50').then((r) => r.json()),
         fetch('https://www.arbeitnow.com/api/job-board-api').then((r) => r.json()),
+        fetch('https://jobicy.com/api/v2/remote-jobs?count=50').then((r) => r.json()),
       ]);
 
       const jobs: RemoteJob[] = [];
@@ -361,6 +363,31 @@ export default function DashboardTwoPage() {
             salary: '',
             description: j.description ?? '',
             source: 'arbeitnow',
+          });
+        }
+      }
+
+      if (jobicyRes.status === 'fulfilled' && Array.isArray(jobicyRes.value?.jobs)) {
+        for (const j of jobicyRes.value.jobs) {
+          const salaryParts: string[] = [];
+          if (j.salaryMin && j.salaryMax) {
+            salaryParts.push(`${j.salaryCurrency ?? 'USD'} ${j.salaryMin.toLocaleString()}–${j.salaryMax.toLocaleString()}`);
+            if (j.salaryPeriod) salaryParts.push(`/ ${j.salaryPeriod}`);
+          }
+          jobs.push({
+            id: `jobicy-${j.id}`,
+            url: j.url ?? '',
+            title: j.jobTitle ?? '',
+            company_name: j.companyName ?? '',
+            company_logo: j.companyLogo || null,
+            category: Array.isArray(j.jobIndustry) ? j.jobIndustry[0]?.replace(/&amp;/g, '&') ?? '' : '',
+            tags: Array.isArray(j.jobIndustry) ? j.jobIndustry.map((t: string) => t.replace(/&amp;/g, '&')) : [],
+            job_type: Array.isArray(j.jobType) ? j.jobType.join(', ') : '',
+            publication_date: j.pubDate ?? '',
+            candidate_required_location: j.jobGeo ?? 'Anywhere',
+            salary: salaryParts.join(' '),
+            description: j.jobDescription ?? j.jobExcerpt ?? '',
+            source: 'jobicy',
           });
         }
       }
@@ -863,11 +890,11 @@ export default function DashboardTwoPage() {
 
           <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-[#ece5d5] bg-[#fff8ea] px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-[#443727]">Have doubts? Start with our free trial now!</p>
-              <p className="text-xs text-[#8d7861]">No payment today. Unlock all AI features and workflow tools.</p>
+              <p className="text-sm font-semibold text-[#443727]">Ready to build your resume?</p>
+              <p className="text-xs text-[#8d7861]">Jump into the editor and craft your perfect resume with AI assistance.</p>
             </div>
-            <button type="button" className="rounded-full bg-[#ff9a38] px-4 py-2 text-xs font-semibold text-white">
-              Start Free Trial
+            <button type="button" onClick={() => router.push('/editor')} className="rounded-full bg-[#ff9a38] px-4 py-2 text-xs font-semibold text-white hover:bg-[#f47f22] transition-colors">
+              Create Resume
             </button>
           </div>
 
@@ -1364,8 +1391,7 @@ export default function DashboardTwoPage() {
           job.company_name.toLowerCase().includes(jobSearchQuery.toLowerCase()) ||
           job.tags.some((t) => t.toLowerCase().includes(jobSearchQuery.toLowerCase()));
         const matchesCategory = jobCategoryFilter === 'all' || job.category === jobCategoryFilter;
-        const matchesSource = jobSourceFilter === 'all' || job.source === jobSourceFilter;
-        return matchesSearch && matchesCategory && matchesSource;
+        return matchesSearch && matchesCategory;
       });
 
       const formatJobDate = (dateStr: string) => {
@@ -1390,7 +1416,7 @@ export default function DashboardTwoPage() {
                 <input
                   type="text"
                   value={jobSearchQuery}
-                  onChange={(e) => setJobSearchQuery(e.target.value)}
+                  onChange={(e) => { setJobSearchQuery(e.target.value); setJobPage(0); }}
                   placeholder="Search jobs by title, company, or skill..."
                   className="w-full rounded-xl border border-[#e1e4e8] bg-white py-2.5 pl-10 pr-4 text-sm text-[#2a2f3a] placeholder:text-[#b0b5be] outline-none focus:border-[#ff8b2f] focus:ring-2 focus:ring-[#ff8b2f]/10 transition-all"
                 />
@@ -1398,21 +1424,8 @@ export default function DashboardTwoPage() {
 
               <div className="relative">
                 <select
-                  value={jobSourceFilter}
-                  onChange={(e) => setJobSourceFilter(e.target.value as 'all' | 'remotive' | 'arbeitnow')}
-                  className="appearance-none rounded-xl border border-[#e1e4e8] bg-white px-4 py-2.5 pr-9 text-sm font-medium text-[#3a414f] outline-none focus:border-[#ff8b2f] cursor-pointer"
-                >
-                  <option value="all">All Sources</option>
-                  <option value="remotive">Remotive</option>
-                  <option value="arbeitnow">Arbeitnow</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9298a3]" />
-              </div>
-
-              <div className="relative">
-                <select
                   value={jobCategoryFilter}
-                  onChange={(e) => setJobCategoryFilter(e.target.value)}
+                  onChange={(e) => { setJobCategoryFilter(e.target.value); setJobPage(0); }}
                   className="appearance-none rounded-xl border border-[#e1e4e8] bg-white px-4 py-2.5 pr-9 text-sm font-medium text-[#3a414f] outline-none focus:border-[#ff8b2f] cursor-pointer"
                 >
                   <option value="all">All Categories</option>
@@ -1435,13 +1448,6 @@ export default function DashboardTwoPage() {
 
             <div className="flex items-center gap-3 text-xs text-[#8a909b]">
               <span>{filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''} found</span>
-              <span className="h-1 w-1 rounded-full bg-[#d0d4da]" />
-              <span className="inline-flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-[#6366f1]" /> Remotive
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-[#f59e0b]" /> Arbeitnow
-              </span>
             </div>
           </div>
 
@@ -1449,7 +1455,7 @@ export default function DashboardTwoPage() {
           {isJobsLoading && jobListings.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <LoaderCircle className="mb-3 h-8 w-8 animate-spin text-[#ff8b2f]" />
-              <p className="text-sm font-semibold text-[#2b313c]">Fetching jobs from Remotive & Arbeitnow...</p>
+              <p className="text-sm font-semibold text-[#2b313c]">Fetching latest job listings...</p>
               <p className="mt-1 text-xs text-[#8a909b]">This may take a few seconds</p>
             </div>
           ) : filteredJobs.length === 0 ? (
@@ -1465,7 +1471,7 @@ export default function DashboardTwoPage() {
               </p>
               <button
                 type="button"
-                onClick={() => { setJobSearchQuery(''); setJobCategoryFilter('all'); setJobSourceFilter('all'); }}
+                onClick={() => { setJobSearchQuery(''); setJobCategoryFilter('all'); setJobPage(0); }}
                 className="mt-4 rounded-xl bg-[#ff8b2f] px-5 py-2.5 text-sm font-semibold text-white hover:brightness-110 transition-all"
               >
                 Clear Filters
@@ -1473,7 +1479,7 @@ export default function DashboardTwoPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredJobs.slice(0, 50).map((job) => {
+              {filteredJobs.slice(jobPage * 50, (jobPage + 1) * 50).map((job) => {
                 const isExpanded = expandedJobId === job.id;
                 return (
                   <article
@@ -1508,15 +1514,11 @@ export default function DashboardTwoPage() {
                             <h3 className="text-base font-semibold text-[#1e232d] leading-tight">{job.title}</h3>
                             <p className="mt-0.5 text-sm text-[#5a6271]">{job.company_name}</p>
                           </div>
-                          <div className="flex flex-shrink-0 items-center gap-2">
-                            <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                              job.source === 'remotive'
-                                ? 'bg-[#eef0ff] text-[#6366f1]'
-                                : 'bg-[#fff8eb] text-[#d97706]'
-                            }`}>
-                              {job.source === 'remotive' ? 'Remotive' : 'Arbeitnow'}
+                          {job.job_type && (
+                            <span className="flex-shrink-0 rounded-full bg-[#f0f1f3] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#6b7280]">
+                              {job.job_type}
                             </span>
-                          </div>
+                          )}
                         </div>
 
                         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#8a909b]">
@@ -1566,14 +1568,10 @@ export default function DashboardTwoPage() {
                         <div
                           className="prose prose-sm max-w-none text-sm text-[#4a5260] leading-relaxed max-h-64 overflow-y-auto pr-2 [&_a]:text-[#ff8b2f] [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-[#2a2f3a] [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-[#2a2f3a] [&_h3]:mt-2 [&_h3]:mb-1 [&_p]:mb-2 [&_strong]:text-[#2a2f3a]"
                           dangerouslySetInnerHTML={{
-                            __html: job.description
-                              .slice(0, 3000)
-                              .replace(/<script[\s\S]*?<\/script>/gi, '')
-                              .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-                              .replace(/javascript\s*:/gi, '')
-                              .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-                              .replace(/<object[\s\S]*?<\/object>/gi, '')
-                              .replace(/<embed[\s\S]*?>/gi, '')
+                            __html: DOMPurify.sanitize(job.description.slice(0, 3000), {
+                              ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'h2', 'h3', 'h4', 'span', 'div'],
+                              ALLOWED_ATTR: ['href', 'target', 'rel'],
+                            })
                           }}
                         />
 
@@ -1608,10 +1606,34 @@ export default function DashboardTwoPage() {
                 );
               })}
 
+              {/* Pagination */}
               {filteredJobs.length > 50 && (
-                <p className="py-4 text-center text-xs text-[#8a909b]">
-                  Showing first 50 of {filteredJobs.length} results. Use filters to narrow down.
-                </p>
+                <div className="flex items-center justify-between rounded-2xl border border-[#e5e8ec] bg-white px-5 py-3.5 mt-1">
+                  <p className="text-xs text-[#8a909b]">
+                    Showing {jobPage * 50 + 1}–{Math.min((jobPage + 1) * 50, filteredJobs.length)} of {filteredJobs.length} jobs
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={jobPage === 0}
+                      onClick={() => { setJobPage((p) => p - 1); setExpandedJobId(null); }}
+                      className="rounded-lg border border-[#e1e4e8] bg-white px-3.5 py-1.5 text-xs font-semibold text-[#3a414f] hover:bg-[#f4f6f8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs font-medium text-[#5a6271]">
+                      Page {jobPage + 1} of {Math.ceil(filteredJobs.length / 50)}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={(jobPage + 1) * 50 >= filteredJobs.length}
+                      onClick={() => { setJobPage((p) => p + 1); setExpandedJobId(null); }}
+                      className="rounded-lg border border-[#e1e4e8] bg-white px-3.5 py-1.5 text-xs font-semibold text-[#3a414f] hover:bg-[#f4f6f8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -1890,7 +1912,16 @@ export default function DashboardTwoPage() {
                 'Generate a short recruiter outreach message',
                 'Optimize my resume for ATS keyword density',
               ].map((prompt) => (
-                <button key={prompt} type="button" className="w-full rounded-xl border border-[#e6e9ed] bg-[#fbfcfd] px-3 py-2 text-left text-sm text-[#4d5664] hover:bg-white">
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (selectedDashboardResume?.id) params.set('resume_id', selectedDashboardResume.id);
+                    router.push(`/editor${params.toString() ? `?${params.toString()}` : ''}`);
+                  }}
+                  className="w-full rounded-xl border border-[#e6e9ed] bg-[#fbfcfd] px-3 py-2 text-left text-sm text-[#4d5664] hover:bg-white hover:border-[#ff8b2f] transition-colors"
+                >
                   {prompt}
                 </button>
               ))}

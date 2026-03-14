@@ -41,14 +41,19 @@ export const Navbar = ({ scrolled, mobileMenuOpen, onToggleMobileMenu, onOpenAut
         </div>
 
         <div className="hidden items-center gap-8 md:flex">
-          {['Features', 'Templates', 'Pricing', 'Blog'].map((link) => (
+          {[
+            { label: 'Features', href: '#features' },
+            { label: 'Templates', href: '#templates' },
+            { label: 'How It Works', href: '#how-it-works' },
+            { label: 'Testimonials', href: '#testimonials' },
+          ].map((link) => (
             <a
-              key={link}
-              href="#"
+              key={link.label}
+              href={link.href}
               className="text-sm font-medium transition-colors duration-200 hover:opacity-80"
               style={{ color: '#8b7355' }}
             >
-              {link}
+              {link.label}
             </a>
           ))}
         </div>
@@ -88,14 +93,19 @@ export const Navbar = ({ scrolled, mobileMenuOpen, onToggleMobileMenu, onOpenAut
       {mobileMenuOpen && (
         <div className="border-t pb-6 md:hidden" style={{ borderColor: '#e8e0d4' }}>
           <div className="flex flex-col gap-4 pt-4">
-            {['Features', 'Templates', 'Pricing', 'Blog'].map((link) => (
+            {[
+              { label: 'Features', href: '#features' },
+              { label: 'Templates', href: '#templates' },
+              { label: 'How It Works', href: '#how-it-works' },
+              { label: 'Testimonials', href: '#testimonials' },
+            ].map((link) => (
               <a
-                key={link}
-                href="#"
+                key={link.label}
+                href={link.href}
                 className="text-base font-medium"
                 style={{ color: '#8b7355' }}
               >
-                {link}
+                {link.label}
               </a>
             ))}
             <div className="flex flex-col gap-3 pt-4">
