@@ -9,81 +9,92 @@ import { MinimalPreview } from './MinimalTemplate';
 import { SAMPLE_DATA } from './sampleData';
 
 /**
- * Render the template at a proper scale so text proportions look correct,
- * then CSS-transform the whole thing down to thumbnail size.
+ * Templates render at fixed A4 size (794×1123 px).
+ * CSS transform scales the whole thing down to thumbnail size.
  *
- * RENDER_SCALE  – the scale fed to the preview (controls text/spacing ratio)
- * SHRINK        – CSS transform applied on top to fit the sidebar card
- * Container dims = rendered dims × SHRINK  (clips overflow)
+ * SHRINK – CSS transform scale factor
+ * Container dims = 794 × shrink  by  1123 × shrink  (clips overflow)
  */
-const RENDER_SCALE = 0.55;
-const SHRINK = 0.42;
+const DEFAULT_SHRINK = 0.23;
 
-const CONTAINER_W = `${210 * RENDER_SCALE * SHRINK}mm`;
-const CONTAINER_H = `${297 * RENDER_SCALE * SHRINK}mm`;
+function getStyles(shrink: number) {
+  return {
+    wrap: {
+      width: `${794 * shrink}px`,
+      height: `${1123 * shrink}px`,
+      overflow: 'hidden' as const,
+    },
+    inner: {
+      transform: `scale(${shrink})`,
+      transformOrigin: 'top left' as const,
+    },
+  };
+}
 
-const thumbWrapStyle: React.CSSProperties = {
-  width: CONTAINER_W,
-  height: CONTAINER_H,
-  overflow: 'hidden',
-};
-
-const innerStyle: React.CSSProperties = {
-  transform: `scale(${SHRINK})`,
-  transformOrigin: 'top left',
-};
-
-export const ModernThumbnail = memo(() => (
-  <div style={thumbWrapStyle}>
-    <div style={innerStyle}>
-      <ModernPreview data={SAMPLE_DATA} scale={RENDER_SCALE} />
+export const ModernThumbnail = memo(({ shrink = DEFAULT_SHRINK }: { shrink?: number }) => {
+  const s = getStyles(shrink);
+  return (
+    <div style={s.wrap}>
+      <div style={s.inner}>
+        <ModernPreview data={SAMPLE_DATA} />
+      </div>
     </div>
-  </div>
-));
+  );
+});
 ModernThumbnail.displayName = 'ModernThumbnail';
 
-export const ClassicThumbnail = memo(() => (
-  <div style={thumbWrapStyle}>
-    <div style={innerStyle}>
-      <ClassicPreview data={SAMPLE_DATA} scale={RENDER_SCALE} />
+export const ClassicThumbnail = memo(({ shrink = DEFAULT_SHRINK }: { shrink?: number }) => {
+  const s = getStyles(shrink);
+  return (
+    <div style={s.wrap}>
+      <div style={s.inner}>
+        <ClassicPreview data={SAMPLE_DATA} />
+      </div>
     </div>
-  </div>
-));
+  );
+});
 ClassicThumbnail.displayName = 'ClassicThumbnail';
 
-export const CreativeThumbnail = memo(() => (
-  <div style={thumbWrapStyle}>
-    <div style={innerStyle}>
-      <CreativePreview data={SAMPLE_DATA} scale={RENDER_SCALE} />
+export const CreativeThumbnail = memo(({ shrink = DEFAULT_SHRINK }: { shrink?: number }) => {
+  const s = getStyles(shrink);
+  return (
+    <div style={s.wrap}>
+      <div style={s.inner}>
+        <CreativePreview data={SAMPLE_DATA} />
+      </div>
     </div>
-  </div>
-));
+  );
+});
 CreativeThumbnail.displayName = 'CreativeThumbnail';
 
-export const MinimalThumbnail = memo(() => (
-  <div style={thumbWrapStyle}>
-    <div style={innerStyle}>
-      <MinimalPreview data={SAMPLE_DATA} scale={RENDER_SCALE} />
+export const MinimalThumbnail = memo(({ shrink = DEFAULT_SHRINK }: { shrink?: number }) => {
+  const s = getStyles(shrink);
+  return (
+    <div style={s.wrap}>
+      <div style={s.inner}>
+        <MinimalPreview data={SAMPLE_DATA} />
+      </div>
     </div>
-  </div>
-));
+  );
+});
 MinimalThumbnail.displayName = 'MinimalThumbnail';
 
 interface TemplateThumbnailProps {
   template: TemplateType;
+  shrink?: number;
 }
 
-export const TemplateThumbnail = ({ template }: TemplateThumbnailProps) => {
+export const TemplateThumbnail = ({ template, shrink }: TemplateThumbnailProps) => {
   switch (template) {
     case 'modern':
-      return <ModernThumbnail />;
+      return <ModernThumbnail shrink={shrink} />;
     case 'classic':
-      return <ClassicThumbnail />;
+      return <ClassicThumbnail shrink={shrink} />;
     case 'creative':
-      return <CreativeThumbnail />;
+      return <CreativeThumbnail shrink={shrink} />;
     case 'minimal':
-      return <MinimalThumbnail />;
+      return <MinimalThumbnail shrink={shrink} />;
     default:
-      return <ModernThumbnail />;
+      return <ModernThumbnail shrink={shrink} />;
   }
 };

@@ -3,6 +3,7 @@ import {
   FolderOpen,
   FileText,
   Mail,
+  Briefcase,
   Target,
   Sparkles,
   Compass,
@@ -93,6 +94,7 @@ export const sidebarPrimaryItems = [
   { key: 'overview' as const, label: 'Overview', icon: LayoutGrid },
   { key: 'resumes' as const, label: 'My Resumes', icon: FolderOpen },
   { key: 'cover-letters' as const, label: 'Cover Letters', icon: Mail },
+  { key: 'jobs' as const, label: 'Job Board', icon: Briefcase },
   { key: 'templates' as const, label: 'Templates Library', icon: FileText },
   { key: 'analytics' as const, label: 'Analytics', icon: Target },
 ];
@@ -120,6 +122,10 @@ export const getSectionHeading = (
     'cover-letters': {
       title: 'Cover Letters',
       subtitle: 'View and manage your saved cover letters.',
+    },
+    jobs: {
+      title: 'Job Board',
+      subtitle: 'Browse real remote jobs from Remotive & Arbeitnow. Apply with your resume.',
     },
     templates: {
       title: 'Templates Library',

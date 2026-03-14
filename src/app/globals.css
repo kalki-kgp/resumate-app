@@ -387,12 +387,13 @@ canvas, video {
   contain: layout style paint;
 }
 
-/* Print styles — only show cover letter preview */
+/* Print styles — only show the target print element */
 @media print {
   body * {
     visibility: hidden;
   }
 
+  /* Cover letter print */
   #cover-letter-print,
   #cover-letter-print * {
     visibility: visible;
@@ -408,7 +409,6 @@ canvas, video {
     overflow: visible !important;
   }
 
-  /* Remove zoom transform for print — render at full A4 size */
   #cover-letter-print .cl-scale-wrapper {
     width: 794px !important;
     height: auto !important;
@@ -419,9 +419,25 @@ canvas, video {
     transform: none !important;
   }
 
-  /* Hide refine buttons in print */
   #cover-letter-print button {
     display: none !important;
+  }
+
+  /* Resume editor print */
+  #resume-print {
+    display: block !important;
+    visibility: visible !important;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 9999;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: white;
+  }
+
+  #resume-print * {
+    visibility: visible !important;
   }
 
   @page {
