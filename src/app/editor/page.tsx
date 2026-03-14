@@ -89,12 +89,15 @@ function EditorInner() {
   const searchParams = useSearchParams();
   const resumeId = searchParams.get('resume_id');
   const savedId = searchParams.get('saved_id');
+  const templateParam = searchParams.get('template') as TemplateType | null;
   const [data, setData] = useState<ResumeData>(EMPTY_RESUME_DATA);
   const [loading, setLoading] = useState(!!resumeId || !!savedId);
   const deferredData = useDeferredValue(data);
   const [activeSection, setActiveSection] = useState<string | null>('personal');
   const [zoom, setZoom] = useState(0.75);
-  const [template, setTemplate] = useState<TemplateType>('modern');
+  const validTemplates: TemplateType[] = ['modern', 'classic', 'creative', 'minimal'];
+  const initialTemplate = templateParam && validTemplates.includes(templateParam) ? templateParam : 'modern';
+  const [template, setTemplate] = useState<TemplateType>(initialTemplate);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedResumeId, setSavedResumeId] = useState<string | null>(savedId);

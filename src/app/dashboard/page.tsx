@@ -1565,7 +1565,16 @@ export default function DashboardTwoPage() {
                       <div className="border-t border-[#f0f1f3] px-5 pb-5 pt-4">
                         <div
                           className="prose prose-sm max-w-none text-sm text-[#4a5260] leading-relaxed max-h-64 overflow-y-auto pr-2 [&_a]:text-[#ff8b2f] [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-[#2a2f3a] [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-[#2a2f3a] [&_h3]:mt-2 [&_h3]:mb-1 [&_p]:mb-2 [&_strong]:text-[#2a2f3a]"
-                          dangerouslySetInnerHTML={{ __html: job.description.slice(0, 3000) }}
+                          dangerouslySetInnerHTML={{
+                            __html: job.description
+                              .slice(0, 3000)
+                              .replace(/<script[\s\S]*?<\/script>/gi, '')
+                              .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+                              .replace(/javascript\s*:/gi, '')
+                              .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+                              .replace(/<object[\s\S]*?<\/object>/gi, '')
+                              .replace(/<embed[\s\S]*?>/gi, '')
+                          }}
                         />
 
                         <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-[#f0f1f3] pt-4">
