@@ -4,29 +4,37 @@
 
 import { useState } from 'react';
 import { X, Check, FileText, AlertCircle } from 'lucide-react';
-import type { DashboardResume } from './dashboard-types';
+import type { DashboardResume, DashboardSavedResume } from './dashboard-types';
 import { resumeThumbnailSrc, formatRelativeTime } from './utils';
 
 export interface ResumeSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (resumeId: string) => void;
+  onSelectSaved?: (savedResumeId: string) => void;
   resumes: DashboardResume[];
+  savedResumes?: DashboardSavedResume[];
 }
 
 export const ResumeSelectionModal = ({
   isOpen,
   onClose,
   onSelect,
+  onSelectSaved,
   resumes,
+  savedResumes = [],
 }: ResumeSelectionModalProps) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<'uploaded' | 'saved' | null>(null);
 
   if (!isOpen) return null;
 
   const handleContinue = () => {
-    if (selectedId) {
+    if (selectedId && selectedType === 'uploaded') {
       onSelect(selectedId);
+      onClose();
+    } else if (selectedId && selectedType === 'saved' && onSelectSaved) {
+      onSelectSaved(selectedId);
       onClose();
     }
   };
@@ -74,7 +82,10 @@ export const ResumeSelectionModal = ({
                     key={resume.id}
                     type="button"
                     onClick={() => {
-                      if (hasAnalysis) setSelectedId(resume.id);
+                      if (hasAnalysis) {
+                        setSelectedId(resume.id);
+                        setSelectedType('uploaded');
+                      }
                     }}
                     disabled={!hasAnalysis}
                     className={`relative flex gap-3 rounded-xl border p-3 text-left transition-all ${
@@ -127,6 +138,49 @@ export const ResumeSelectionModal = ({
               })}
             </div>
           )}
+
+          {savedResumes && savedResumes.length > 0 && (
+            <>
+              <div className="mt-4 mb-2 flex items-center gap-2">
+                <div className="h-px flex-1 bg-[#e4e7eb]" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8a909b]">Saved Resumes</span>
+                <div className="h-px flex-1 bg-[#e4e7eb]" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {savedResumes.map((sr) => {
+                  const isSelected = selectedId === sr.id && selectedType === 'saved';
+                  return (
+                    <button
+                      key={sr.id}
+                      type="button"
+                      onClick={() => { setSelectedId(sr.id); setSelectedType('saved'); }}
+                      className={`relative flex gap-3 rounded-xl border p-3 text-left transition-all ${
+                        isSelected
+                          ? 'border-[#ff8b2f] bg-[#fff8f1] shadow-sm'
+                          : 'border-[#e4e7eb] bg-white hover:border-[#ccd0d5] hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="flex-shrink-0 w-14 h-18 rounded-md overflow-hidden bg-[#f3f4f6] border border-[#e4e7eb] flex items-center justify-center">
+                        <FileText size={20} className="text-[#ff8b2f]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#282c36] truncate">{sr.title}</p>
+                        <p className="text-[11px] text-[#8a909b] mt-0.5">{formatRelativeTime(sr.updated_at)}</p>
+                        <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#fff1e8] px-2 py-0.5 text-[10px] font-semibold text-[#c96442]">
+                          {sr.template} template
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#ff8b2f] text-white">
+                          <Check size={12} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}
@@ -141,7 +195,7 @@ export const ResumeSelectionModal = ({
           <button
             type="button"
             onClick={handleContinue}
-            disabled={!selectedId}
+            disabled={!selectedId || !selectedType}
             className="rounded-full bg-[#ff8b2f] px-5 py-2 text-sm font-semibold text-white hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continue

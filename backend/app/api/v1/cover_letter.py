@@ -2,10 +2,12 @@ import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.models.cover_letter import CoverLetter
+from app.models.saved_resume import SavedResume
 from app.models.user import User
 from app.schemas.cover_letter import (
     CoverLetterData,
@@ -26,6 +28,66 @@ router = APIRouter()
 
 VALID_TONES = {"professional", "conversational", "confident", "enthusiastic"}
 VALID_PARAGRAPH_TYPES = {"opening", "body", "closing"}
+
+
+@router.post("/from-saved/{saved_resume_id}/generate", response_model=GenerateCoverLetterResponse)
+def generate_from_saved(
+    saved_resume_id: UUID,
+    payload: GenerateCoverLetterRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    saved = db.scalar(
+        select(SavedResume).where(
+            SavedResume.id == saved_resume_id,
+            SavedResume.user_id == current_user.id,
+        )
+    )
+    if saved is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved resume not found")
+
+    resume_data = saved.resume_data
+    if not resume_data:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Saved resume has no data.",
+        )
+
+    tone = payload.tone.strip().lower()
+    if tone not in VALID_TONES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid tone. Must be one of: {', '.join(sorted(VALID_TONES))}",
+        )
+
+    result = generate_cover_letter(
+        extracted_data=resume_data,
+        job_description=payload.job_description,
+        tone=tone,
+        additional_instructions=payload.additional_instructions,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cover letter generation service unavailable. Please try again.",
+        )
+
+    result["senderName"] = current_user.full_name
+
+    try:
+        letter = CoverLetterData.model_validate(result)
+    except Exception:
+        logger.exception("Failed to validate generated cover letter data")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Generated cover letter data did not match expected schema.",
+        )
+
+    return GenerateCoverLetterResponse(
+        resume_id=str(saved_resume_id),
+        cover_letter=letter,
+    )
 
 
 @router.post("/{resume_id}/generate", response_model=GenerateCoverLetterResponse)

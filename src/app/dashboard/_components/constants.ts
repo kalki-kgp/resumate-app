@@ -44,6 +44,9 @@ export const exampleJobs: ExampleJob[] = [
   { id: 'j1', title: 'Senior Product Designer', company: 'Notion', match: 93, type: 'Remote' },
   { id: 'j2', title: 'Design Systems Lead', company: 'Airbnb', match: 89, type: 'Hybrid' },
   { id: 'j3', title: 'Principal UX Designer', company: 'Stripe', match: 86, type: 'Remote' },
+  { id: 'j4', title: 'UX Research Lead', company: 'Spotify', match: 82, type: 'Remote' },
+  { id: 'j5', title: 'Product Design Manager', company: 'Figma', match: 78, type: 'Hybrid' },
+  { id: 'j6', title: 'Creative Director', company: 'Canva', match: 75, type: 'Remote' },
 ];
 
 export const templateCards: { id: TemplateType; name: string; tone: string }[] = [

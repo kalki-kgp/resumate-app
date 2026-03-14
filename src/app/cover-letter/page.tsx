@@ -51,13 +51,14 @@ function CoverLetterInner() {
   const searchParams = useSearchParams();
   const resumeId = searchParams.get('resume_id') || null;
   const savedId = searchParams.get('saved_id') || null;
+  const savedResumeId = searchParams.get('saved_resume_id') || null;
 
-  // Redirect if neither resume_id nor saved_id
+  // Redirect if no resume reference provided
   useEffect(() => {
-    if (!resumeId && !savedId) {
+    if (!resumeId && !savedId && !savedResumeId) {
       router.push('/dashboard');
     }
-  }, [resumeId, savedId, router]);
+  }, [resumeId, savedId, savedResumeId, router]);
 
   // Form state
   const [jobDescription, setJobDescription] = useState('');
@@ -165,7 +166,7 @@ function CoverLetterInner() {
     return () => window.removeEventListener('resize', handleWindowResize);
   }, []);
 
-  const activeResumeId = resumeId || loadedResumeId;
+  const activeResumeId = resumeId || loadedResumeId || savedResumeId;
 
   const handleGenerate = async () => {
     if (!jobDescription.trim() || !activeResumeId) return;
@@ -177,8 +178,11 @@ function CoverLetterInner() {
     setError(null);
 
     try {
+      const generateUrl = savedResumeId && !resumeId
+        ? `/api/v1/cover-letter/from-saved/${savedResumeId}/generate`
+        : `/api/v1/cover-letter/${activeResumeId}/generate`;
       const res = await apiRequest<GenerateCoverLetterResponse>(
-        `/api/v1/cover-letter/${activeResumeId}/generate`,
+        generateUrl,
         {
           method: 'POST',
           token,
@@ -243,7 +247,7 @@ function CoverLetterInner() {
     }
   };
 
-  if (!resumeId && !savedId) return null;
+  if (!resumeId && !savedId && !savedResumeId) return null;
 
   return (
     <div

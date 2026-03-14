@@ -217,24 +217,16 @@ export const OnboardingWizard = ({
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => void onAnalyzeStep()}
-            disabled={isOnboardingBusy}
-            className="inline-flex items-center gap-2 rounded-full bg-[#2d5a3d] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-65"
-          >
-            {isOnboardingBusy ? (
-              <>
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-                Running AI analysis...
-              </>
-            ) : (
-              <>
-                Run Deep AI Analysis
-                <Sparkles className="h-4 w-4" />
-              </>
-            )}
-          </button>
+          {!isOnboardingBusy && analysisResult && (
+            <button
+              type="button"
+              onClick={() => void onAnalyzeStep()}
+              className="inline-flex items-center gap-2 rounded-full bg-[#2d5a3d] px-5 py-2.5 text-sm font-semibold text-white"
+            >
+              Re-run Analysis
+              <Sparkles className="h-4 w-4" />
+            </button>
+          )}
         </div>
       );
     }

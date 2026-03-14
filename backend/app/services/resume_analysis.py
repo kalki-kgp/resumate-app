@@ -88,7 +88,7 @@ QUALITY TARGETS:
 - gaps: 3-6
 - priority_fixes: 5-8
 - keywords_to_add: 8-15
-- recommended_roles: 3-5
+- recommended_roles: 6-8
 - improved_bullets: 4-8
 - category_scores fields: integer 0-100
 - section_scores fields: integer 0-10
@@ -110,7 +110,7 @@ IMPORTANT RETRY MODE:
   gaps: 4
   priority_fixes: 6
   keywords_to_add: 10
-  recommended_roles: 3
+  recommended_roles: 6
   improved_bullets: 4
 """.strip()
 

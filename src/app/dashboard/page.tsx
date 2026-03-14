@@ -586,8 +586,11 @@ export default function DashboardTwoPage() {
       }
 
       setAnalysisProgress(100);
-      setAnalysisStatusText('Analysis complete. Moving to role targeting...');
+      setAnalysisStatusText('Analysis complete! Moving to role suggestions...');
       setAnalysisResult(response.analysis);
+
+      // Brief pause so user sees the 100% completion before advancing
+      await new Promise((resolve) => setTimeout(resolve, 1200));
       applyOnboardingState(response.onboarding);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -657,11 +660,11 @@ export default function DashboardTwoPage() {
         body: formData,
       });
 
-      stopAnalysisAnimation();
-      setAnalysisProgress(0);
-      setAnalysisStatusText('Ready to run resume analysis.');
       applyOnboardingState(nextState);
       setSelectedResumeFile(null);
+
+      // Auto-trigger analysis immediately after upload
+      await handleAnalyzeStep();
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.status === 401) {
@@ -673,7 +676,6 @@ export default function DashboardTwoPage() {
       } else {
         setApiError('Resume upload failed. Please try again.');
       }
-    } finally {
       setIsOnboardingBusy(false);
     }
   };
@@ -1649,38 +1651,82 @@ export default function DashboardTwoPage() {
                   Select a resume to take with you to the application page.
                 </p>
 
-                {dashboardResumes.length === 0 ? (
+                {dashboardResumes.length === 0 && dashboardSavedResumes.length === 0 ? (
                   <div className="mt-4 rounded-xl border border-dashed border-[#d8dde4] bg-[#fafbfd] px-4 py-6 text-center">
-                    <p className="text-sm text-[#7d8694]">No resumes uploaded yet.</p>
-                    <p className="mt-1 text-xs text-[#9298a3]">Upload a resume first to use it when applying.</p>
+                    <p className="text-sm text-[#7d8694]">No resumes yet.</p>
+                    <p className="mt-1 text-xs text-[#9298a3]">Upload or create a resume first to use it when applying.</p>
                   </div>
                 ) : (
-                  <div className="mt-4 max-h-64 space-y-2 overflow-y-auto">
-                    {dashboardResumes.map((resume) => {
-                      const isSelected = selectedApplyResumeId === resume.id;
-                      return (
-                        <button
-                          key={resume.id}
-                          type="button"
-                          onClick={() => setSelectedApplyResumeId(resume.id)}
-                          className={`w-full rounded-xl border px-4 py-3 text-left transition-all ${
-                            isSelected
-                              ? 'border-[#ff9a38] bg-[#fff8f1] shadow-sm'
-                              : 'border-[#e6e9ed] bg-[#fbfcfd] hover:bg-white'
-                          }`}
-                        >
-                          <p className="truncate text-sm font-semibold text-[#2a303a]">{resume.title}</p>
-                          <div className="mt-1 flex items-center gap-3 text-[11px] text-[#8a909b]">
-                            <span>{formatRelativeTime(resume.uploaded_at)}</span>
-                            {resume.analysis?.ats_score_estimate != null && (
-                              <span className="rounded-full bg-[#edf8e5] px-2 py-0.5 font-semibold text-[#5da727]">
-                                ATS {resume.analysis.ats_score_estimate}%
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
+                  <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
+                    {/* Uploaded resumes */}
+                    {dashboardResumes.length > 0 && (
+                      <div>
+                        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#8a909b]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#6366f1]" /> Uploaded
+                        </p>
+                        <div className="space-y-1.5">
+                          {dashboardResumes.map((resume) => {
+                            const isSelected = selectedApplyResumeId === `uploaded-${resume.id}`;
+                            return (
+                              <button
+                                key={resume.id}
+                                type="button"
+                                onClick={() => setSelectedApplyResumeId(`uploaded-${resume.id}`)}
+                                className={`w-full rounded-xl border px-4 py-3 text-left transition-all ${
+                                  isSelected
+                                    ? 'border-[#ff9a38] bg-[#fff8f1] shadow-sm'
+                                    : 'border-[#e6e9ed] bg-[#fbfcfd] hover:bg-white'
+                                }`}
+                              >
+                                <p className="truncate text-sm font-semibold text-[#2a303a]">{resume.title}</p>
+                                <div className="mt-1 flex items-center gap-3 text-[11px] text-[#8a909b]">
+                                  <span>{formatRelativeTime(resume.uploaded_at)}</span>
+                                  {resume.analysis?.ats_score_estimate != null && (
+                                    <span className="rounded-full bg-[#edf8e5] px-2 py-0.5 font-semibold text-[#5da727]">
+                                      ATS {resume.analysis.ats_score_estimate}%
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Saved / created resumes */}
+                    {dashboardSavedResumes.length > 0 && (
+                      <div>
+                        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#8a909b]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#2d8b46]" /> Created
+                        </p>
+                        <div className="space-y-1.5">
+                          {dashboardSavedResumes.map((sr) => {
+                            const isSelected = selectedApplyResumeId === `saved-${sr.id}`;
+                            return (
+                              <button
+                                key={sr.id}
+                                type="button"
+                                onClick={() => setSelectedApplyResumeId(`saved-${sr.id}`)}
+                                className={`w-full rounded-xl border px-4 py-3 text-left transition-all ${
+                                  isSelected
+                                    ? 'border-[#ff9a38] bg-[#fff8f1] shadow-sm'
+                                    : 'border-[#e6e9ed] bg-[#fbfcfd] hover:bg-white'
+                                }`}
+                              >
+                                <p className="truncate text-sm font-semibold text-[#2a303a]">{sr.title}</p>
+                                <div className="mt-1 flex items-center gap-3 text-[11px] text-[#8a909b]">
+                                  <span>{formatRelativeTime(sr.updated_at)}</span>
+                                  <span className="rounded-full bg-[#f0f1f3] px-2 py-0.5 font-semibold text-[#6b7280]">
+                                    {sr.template}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -2175,7 +2221,9 @@ export default function DashboardTwoPage() {
           isOpen={isCoverLetterModalOpen}
           onClose={() => setIsCoverLetterModalOpen(false)}
           onSelect={(id) => router.push(`/cover-letter?resume_id=${id}`)}
+          onSelectSaved={(id) => router.push(`/cover-letter?saved_resume_id=${id}`)}
           resumes={dashboardResumes}
+          savedResumes={dashboardSavedResumes}
         />
       </div>
     </div>
