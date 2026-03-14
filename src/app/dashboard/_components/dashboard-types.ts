@@ -7,6 +7,7 @@ export type OnboardingPath = 'upload' | 'create';
 export type DashboardSection =
   | 'overview'
   | 'resumes'
+  | 'cover-letters'
   | 'templates'
   | 'analytics'
   | 'ai-insights'
@@ -93,11 +94,20 @@ export type DashboardResume = {
 export type UploadResumeResponse = DashboardResume;
 export type AnalyzeDashboardResumeResponse = DashboardResume;
 
+export type DashboardCoverLetter = {
+  id: string;
+  company_name: string;
+  tone: string;
+  sender_name: string;
+  created_at: string;
+};
+
 export type DashboardResponse = {
   display_name: string;
   target_role: string | null;
   selected_resume_id: string | null;
   resumes: DashboardResume[];
+  cover_letters: DashboardCoverLetter[];
 };
 
 export type MeResponse = {

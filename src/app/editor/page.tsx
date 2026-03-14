@@ -92,7 +92,7 @@ function EditorInner() {
   const [loading, setLoading] = useState(!!resumeId);
   const deferredData = useDeferredValue(data);
   const [activeSection, setActiveSection] = useState<string | null>('personal');
-  const [zoom, setZoom] = useState(0.75);
+  const [zoom, setZoom] = useState(0.85);
   const [template, setTemplate] = useState<TemplateType>('modern');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);

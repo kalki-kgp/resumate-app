@@ -218,3 +218,13 @@ export interface RefineParagraphResponse {
   refined_text: string;
   paragraph_type: string;
 }
+
+export interface SavedCoverLetterResponse {
+  id: string;
+  resume_id: string | null;
+  company_name: string;
+  tone: string;
+  cover_letter: CoverLetterData;
+  created_at: string;
+  updated_at: string;
+}

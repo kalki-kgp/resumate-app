@@ -10,12 +10,14 @@ import {
   ZoomIn,
   ZoomOut,
   Download,
+  Save,
+  Check,
   Loader2,
   FileText,
   AlertCircle,
 } from 'lucide-react';
 import { apiRequest, getStoredAccessToken } from '@/lib/api';
-import type { CoverLetterData, GenerateCoverLetterResponse } from '@/types';
+import type { CoverLetterData, GenerateCoverLetterResponse, SavedCoverLetterResponse } from '@/types';
 import { CoverLetterPreview, ToneSelector } from './_components';
 
 const fraunces = Fraunces({
@@ -47,23 +49,58 @@ export default function CoverLetterPage() {
 function CoverLetterInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const resumeId = searchParams.get('resume_id');
+  const resumeId = searchParams.get('resume_id') || null;
+  const savedId = searchParams.get('saved_id') || null;
 
-  // Redirect if no resume_id
+  // Redirect if neither resume_id nor saved_id
   useEffect(() => {
-    if (!resumeId) {
+    if (!resumeId && !savedId) {
       router.push('/dashboard');
     }
-  }, [resumeId, router]);
+  }, [resumeId, savedId, router]);
 
   // Form state
   const [jobDescription, setJobDescription] = useState('');
   const [tone, setTone] = useState('professional');
   const [additionalInstructions, setAdditionalInstructions] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoadingSaved, setIsLoadingSaved] = useState(!!savedId);
   const [error, setError] = useState<string | null>(null);
   const [coverLetter, setCoverLetter] = useState<CoverLetterData | null>(null);
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [loadedResumeId, setLoadedResumeId] = useState<string | null>(resumeId);
+
+  // Load saved cover letter
+  useEffect(() => {
+    if (!savedId) return;
+
+    const token = getStoredAccessToken();
+    if (!token) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await apiRequest<SavedCoverLetterResponse>(
+          `/api/v1/cover-letter/${savedId}`,
+          { token }
+        );
+        if (cancelled) return;
+        setCoverLetter(res.cover_letter);
+        setTone(res.tone || 'professional');
+        setHasGenerated(true);
+        setLoadedResumeId(res.resume_id);
+      } catch {
+        if (!cancelled) setError('Failed to load saved cover letter.');
+      } finally {
+        if (!cancelled) setIsLoadingSaved(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [savedId]);
 
   // Layout state
   const [zoom, setZoom] = useState(0.85);
@@ -128,8 +165,10 @@ function CoverLetterInner() {
     return () => window.removeEventListener('resize', handleWindowResize);
   }, []);
 
+  const activeResumeId = resumeId || loadedResumeId;
+
   const handleGenerate = async () => {
-    if (!jobDescription.trim() || !resumeId) return;
+    if (!jobDescription.trim() || !activeResumeId) return;
 
     const token = getStoredAccessToken();
     if (!token) return;
@@ -139,7 +178,7 @@ function CoverLetterInner() {
 
     try {
       const res = await apiRequest<GenerateCoverLetterResponse>(
-        `/api/v1/cover-letter/${resumeId}/generate`,
+        `/api/v1/cover-letter/${activeResumeId}/generate`,
         {
           method: 'POST',
           token,
@@ -177,7 +216,34 @@ function CoverLetterInner() {
     window.print();
   };
 
-  if (!resumeId) return null;
+  const handleSave = async () => {
+    if (!coverLetter) return;
+
+    const token = getStoredAccessToken();
+    if (!token) return;
+
+    setIsSaving(true);
+    try {
+      await apiRequest<SavedCoverLetterResponse>('/api/v1/cover-letter/save', {
+        method: 'POST',
+        token,
+        body: {
+          resume_id: activeResumeId || '',
+          job_description: jobDescription.trim(),
+          tone,
+          cover_letter: coverLetter,
+        },
+      });
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2500);
+    } catch {
+      setError('Failed to save cover letter.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!resumeId && !savedId) return null;
 
   return (
     <div
@@ -257,7 +323,7 @@ function CoverLetterInner() {
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={!jobDescription.trim() || isGenerating}
+            disabled={!jobDescription.trim() || !activeResumeId || isGenerating}
             className="w-full py-3 rounded-2xl bg-[#c96442] text-white font-bold text-sm hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isGenerating ? (
@@ -326,13 +392,33 @@ function CoverLetterInner() {
           >
             <Download size={14} /> Export PDF
           </button>
+          {coverLetter && (
+            <>
+              <div className="w-px h-4 bg-[#eadfce]" />
+              <button
+                onClick={handleSave}
+                disabled={isSaving || isSaved}
+                className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#f4ecdf] rounded-lg text-xs font-bold text-[#8b7355] transition-colors disabled:opacity-60"
+              >
+                {isSaved ? (
+                  <><Check size={14} className="text-[#2d5a3d]" /> Saved</>
+                ) : isSaving ? (
+                  <><Loader2 size={14} className="animate-spin" /> Saving...</>
+                ) : (
+                  <><Save size={14} /> Save</>
+                )}
+              </button>
+            </>
+          )}
         </div>
 
         {/* Content area */}
-        {isGenerating ? (
+        {isGenerating || isLoadingSaved ? (
           <div className="flex flex-col items-center justify-center flex-1 gap-3">
             <div className="w-10 h-10 border-3 border-[#c96442] border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-medium text-[#8b7355]">Crafting your cover letter...</span>
+            <span className="text-sm font-medium text-[#8b7355]">
+              {isLoadingSaved ? 'Loading cover letter...' : 'Crafting your cover letter...'}
+            </span>
           </div>
         ) : coverLetter ? (
           <div id="cover-letter-print" className="bg-white shadow-2xl rounded-sm overflow-hidden transition-all duration-200">

@@ -53,3 +53,28 @@ class RefineParagraphRequest(BaseModel):
 class RefineParagraphResponse(BaseModel):
     refined_text: str
     paragraph_type: str
+
+
+class SaveCoverLetterRequest(BaseModel):
+    resume_id: str = ""
+    job_description: str = ""
+    tone: str = "professional"
+    cover_letter: CoverLetterData
+
+
+class SavedCoverLetterResponse(BaseModel):
+    id: str
+    resume_id: str | None
+    company_name: str
+    tone: str
+    cover_letter: CoverLetterData
+    created_at: str
+    updated_at: str
+
+
+class SavedCoverLetterListItem(BaseModel):
+    id: str
+    company_name: str
+    tone: str
+    sender_name: str
+    created_at: str

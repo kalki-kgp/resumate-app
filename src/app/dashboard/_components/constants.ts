@@ -2,6 +2,7 @@ import {
   LayoutGrid,
   FolderOpen,
   FileText,
+  Mail,
   Target,
   Sparkles,
   Compass,
@@ -91,6 +92,7 @@ export const templatePreviewData: ResumeData = {
 export const sidebarPrimaryItems = [
   { key: 'overview' as const, label: 'Overview', icon: LayoutGrid },
   { key: 'resumes' as const, label: 'My Resumes', icon: FolderOpen },
+  { key: 'cover-letters' as const, label: 'Cover Letters', icon: Mail },
   { key: 'templates' as const, label: 'Templates Library', icon: FileText },
   { key: 'analytics' as const, label: 'Analytics', icon: Target },
 ];
@@ -114,6 +116,10 @@ export const getSectionHeading = (
     resumes: {
       title: 'My Resumes',
       subtitle: 'Browse uploaded resumes, analysis status, and select one to inspect.',
+    },
+    'cover-letters': {
+      title: 'Cover Letters',
+      subtitle: 'View and manage your saved cover letters.',
     },
     templates: {
       title: 'Templates Library',
