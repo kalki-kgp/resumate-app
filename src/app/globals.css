@@ -386,3 +386,29 @@ canvas, video {
 .animate-bounce-subtle {
   contain: layout style paint;
 }
+
+/* Print styles — only show cover letter preview */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #cover-letter-print,
+  #cover-letter-print * {
+    visibility: visible;
+  }
+
+  #cover-letter-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  @page {
+    margin: 0;
+    size: A4;
+  }
+}

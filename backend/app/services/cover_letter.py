@@ -21,6 +21,7 @@ CRITICAL RULES:
 3) Match the requested tone exactly.
 4) If the company name or hiring manager name cannot be determined from the job description, use "Hiring Manager" and "[Company Name]" as placeholders.
 5) The date should be today's date in a professional format (e.g., "March 2, 2026").
+8) For senderName, ALWAYS use the candidate's full name from their resume data. NEVER use placeholders like "[Your Name]".
 6) Body paragraphs should each focus on a distinct theme: relevant experience, key skills/achievements, cultural fit, etc.
 7) Keep the letter concise — 3-4 paragraphs total across opening, body, and closing.
 
@@ -190,6 +191,12 @@ def generate_cover_letter(
 
             result = _extract_json_from_text(raw_text)
             if result is not None:
+                # Ensure senderName uses real name from resume, not a placeholder
+                sender = result.get("senderName", "")
+                if not sender or "[" in sender:
+                    personal = extracted_data.get("personal", {})
+                    if isinstance(personal, dict) and personal.get("fullName"):
+                        result["senderName"] = personal["fullName"]
                 return result
 
             logger.warning(

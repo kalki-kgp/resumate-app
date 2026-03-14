@@ -335,10 +335,11 @@ function CoverLetterInner() {
             <span className="text-sm font-medium text-[#8b7355]">Crafting your cover letter...</span>
           </div>
         ) : coverLetter ? (
-          <div className="bg-white shadow-2xl rounded-sm overflow-hidden transition-all duration-200">
+          <div id="cover-letter-print" className="bg-white shadow-2xl rounded-sm overflow-hidden transition-all duration-200 print:shadow-none print:rounded-none">
             <CoverLetterPreview
               data={coverLetter}
               scale={zoom}
+              printScale={1}
               editable={true}
               onFieldChange={handleFieldChange}
               onBodyChange={handleBodyChange}
