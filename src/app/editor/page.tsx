@@ -3,7 +3,7 @@
 import { useMemo, useState, useDeferredValue, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Fraunces, DM_Sans } from 'next/font/google';
-import type { ResumeData, TemplateType, FillTemplateResponse } from '@/types';
+import type { ResumeData, TemplateType, FillTemplateResponse, SavedResumeResponse } from '@/types';
 import { apiRequest, getStoredAccessToken } from '@/lib/api';
 import {
   ArrowLeft,
@@ -88,18 +88,22 @@ function EditorInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resumeId = searchParams.get('resume_id');
+  const savedId = searchParams.get('saved_id');
   const [data, setData] = useState<ResumeData>(EMPTY_RESUME_DATA);
-  const [loading, setLoading] = useState(!!resumeId);
+  const [loading, setLoading] = useState(!!resumeId || !!savedId);
   const deferredData = useDeferredValue(data);
   const [activeSection, setActiveSection] = useState<string | null>('personal');
   const [zoom, setZoom] = useState(0.75);
   const [template, setTemplate] = useState<TemplateType>('modern');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedResumeId, setSavedResumeId] = useState<string | null>(savedId);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [sidebarWidth, setSidebarWidth] = useState(380);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const resizeStateRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
+  // Load from uploaded resume (fill-template)
   useEffect(() => {
     if (!resumeId) return;
     const token = getStoredAccessToken();
@@ -125,6 +129,32 @@ function EditorInner() {
       cancelled = true;
     };
   }, [resumeId]);
+
+  // Load from saved resume
+  useEffect(() => {
+    if (!savedId) return;
+    const token = getStoredAccessToken();
+    if (!token) return;
+
+    let cancelled = false;
+
+    apiRequest<SavedResumeResponse>(`/api/v1/saved-resumes/${savedId}`, { token })
+      .then((res) => {
+        if (!cancelled) {
+          setData(res.resume_data);
+          setTemplate(res.template);
+          setSavedResumeId(res.id);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [savedId]);
 
   const updatePersonal = (field: keyof typeof data.personal, value: string) => {
     setData((prev) => ({
@@ -238,9 +268,45 @@ function EditorInner() {
   };
 
   const handleSave = async () => {
+    const token = getStoredAccessToken();
+    if (!token) return;
+
     setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    setSaving(false);
+    setSaveStatus('saving');
+
+    try {
+      const title = data.personal.fullName
+        ? `${data.personal.fullName}${data.personal.role ? ' — ' + data.personal.role : ''}`
+        : 'Untitled Resume';
+
+      if (savedResumeId) {
+        // Update existing saved resume
+        await apiRequest<SavedResumeResponse>(`/api/v1/saved-resumes/${savedResumeId}`, {
+          method: 'PUT',
+          token,
+          body: { title, template, resume_data: data },
+        });
+      } else {
+        // Create new saved resume
+        const res = await apiRequest<SavedResumeResponse>('/api/v1/saved-resumes/save', {
+          method: 'POST',
+          token,
+          body: {
+            title,
+            template,
+            resume_data: data,
+            source_resume_id: resumeId || null,
+          },
+        });
+        setSavedResumeId(res.id);
+      }
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch {
+      setSaveStatus('idle');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const PreviewComponent = useMemo(
@@ -341,10 +407,14 @@ function EditorInner() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2 px-3 py-1.5 bg-[#c96442] text-white rounded-full text-xs font-bold hover:brightness-110 transition-all disabled:opacity-50"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all disabled:opacity-50 ${
+                saveStatus === 'saved'
+                  ? 'bg-[#2d5a3d] text-white'
+                  : 'bg-[#c96442] text-white hover:brightness-110'
+              }`}
             >
-              <Save size={14} />
-              {saving ? 'Saving...' : 'Save'}
+              {saveStatus === 'saved' ? <Check size={14} /> : <Save size={14} />}
+              {saving ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Save'}
             </button>
           </div>
         </div>

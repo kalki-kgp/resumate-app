@@ -15,6 +15,14 @@ class DashboardResume(BaseModel):
     thumbnail_url: str | None = None
 
 
+class DashboardSavedResume(BaseModel):
+    id: str
+    title: str
+    template: str
+    created_at: str
+    updated_at: str
+
+
 class DashboardCoverLetter(BaseModel):
     id: str
     company_name: str
@@ -28,4 +36,5 @@ class DashboardResponse(BaseModel):
     target_role: str | None
     selected_resume_id: str | None
     resumes: list[DashboardResume] = Field(default_factory=list)
+    saved_resumes: list[DashboardSavedResume] = Field(default_factory=list)
     cover_letters: list[DashboardCoverLetter] = Field(default_factory=list)

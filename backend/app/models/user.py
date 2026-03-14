@@ -31,4 +31,5 @@ class User(Base):
         uselist=False,
     )
     resumes = relationship("Resume", back_populates="user", cascade="all, delete-orphan")
+    saved_resumes = relationship("SavedResume", back_populates="user", cascade="all, delete-orphan")
     cover_letters = relationship("CoverLetter", back_populates="user", cascade="all, delete-orphan")

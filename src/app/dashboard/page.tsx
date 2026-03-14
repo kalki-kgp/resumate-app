@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fraunces, DM_Sans } from 'next/font/google';
-import { ArrowRight, Check, LoaderCircle, Mail, Trash2, ExternalLink, Search, MapPin, Clock, Building2, Briefcase, ChevronDown } from 'lucide-react';
+import { ArrowRight, Check, LoaderCircle, Mail, Trash2, ExternalLink, Search, MapPin, Clock, Building2, Briefcase, ChevronDown, Save } from 'lucide-react';
 import { ApiError, apiRequest, clearStoredAccessToken, getStoredAccessToken } from '@/lib/api';
 import { TemplateThumbnail } from '@/app/editor/_components';
 import {
@@ -28,6 +28,7 @@ import type {
   DashboardSection,
   DashboardResume,
   DashboardCoverLetter,
+  DashboardSavedResume,
   RemoteJob,
   ResumeAnalysisResult,
   OnboardingStateResponse,
@@ -69,6 +70,7 @@ export default function DashboardTwoPage() {
   const [activeSection, setActiveSection] = useState<DashboardSection>('overview');
   const [dashboardResumes, setDashboardResumes] = useState<DashboardResume[]>([]);
   const [dashboardCoverLetters, setDashboardCoverLetters] = useState<DashboardCoverLetter[]>([]);
+  const [dashboardSavedResumes, setDashboardSavedResumes] = useState<DashboardSavedResume[]>([]);
   const [selectedDashboardResumeId, setSelectedDashboardResumeId] = useState<string | null>(null);
   const [isDashboardLoading, setIsDashboardLoading] = useState(false);
 
@@ -292,6 +294,7 @@ export default function DashboardTwoPage() {
       setTargetRole(data.target_role ?? '');
       setDashboardResumes(data.resumes ?? []);
       setDashboardCoverLetters(data.cover_letters ?? []);
+      setDashboardSavedResumes(data.saved_resumes ?? []);
       setSelectedDashboardResumeId((current) => {
         const hasCurrent = current ? (data.resumes ?? []).some((resume) => resume.id === current) : false;
         if (hasCurrent) return current;
@@ -1054,125 +1057,213 @@ export default function DashboardTwoPage() {
 
     if (activeSection === 'resumes') {
       return (
-        <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-          <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
-            <h2 className="text-xl font-semibold text-[#2a2f3a]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
-              Resume Library
-            </h2>
-            <p className="mt-1 text-xs text-[#8a909b]">Select any uploaded resume to inspect details.</p>
-            <div className="mt-4 space-y-3">
-              {dashboardResumes.map((resume) => {
-                const selected = resume.id === selectedDashboardResume?.id;
-                return (
-                  <button
-                    key={resume.id}
-                    type="button"
-                    onClick={() => setSelectedDashboardResumeId(resume.id)}
-                    className={`w-full rounded-2xl border px-4 py-3 text-left ${
-                      selected ? 'border-[#ff9a38] bg-[#fff8f1]' : 'border-[#e6e9ed] bg-[#fbfcfd] hover:bg-white'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="h-16 w-12 flex-shrink-0 overflow-hidden rounded-md border border-[#e7ebf0] bg-[#f4f6f9]">
-                        {resumeThumbnailSrc(resume) ? (
-                          <img
-                            src={resumeThumbnailSrc(resume) ?? undefined}
-                            alt={`${resume.title} preview`}
-                            className="h-full w-full object-cover object-top"
-                            loading="lazy"
-                          />
-                        ) : null}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-[#2a303a]">{resume.title}</p>
-                        <p className="mt-1 truncate text-xs text-[#808792]">{resume.filename}</p>
-                        <div className="mt-2 flex items-center justify-between text-[11px]">
-                          <span className="text-[#8a909b]">{formatRelativeTime(resume.uploaded_at)}</span>
-                          <span className="text-[#8a909b]">{formatFileSize(resume.file_size_bytes)}</span>
+        <section className="space-y-6">
+          {/* Uploaded Resumes */}
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="rounded-full bg-[#eef0ff] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#6366f1]">Uploaded</span>
+              <h2 className="text-lg font-semibold text-[#2a2f3a]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+                Uploaded Resumes
+              </h2>
+            </div>
+            <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+              <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
+                <p className="text-xs text-[#8a909b]">PDFs uploaded from your device. Select one to inspect or analyze.</p>
+                <div className="mt-4 space-y-3">
+                  {dashboardResumes.map((resume) => {
+                    const selected = resume.id === selectedDashboardResume?.id;
+                    return (
+                      <button
+                        key={resume.id}
+                        type="button"
+                        onClick={() => setSelectedDashboardResumeId(resume.id)}
+                        className={`w-full rounded-2xl border px-4 py-3 text-left ${
+                          selected ? 'border-[#ff9a38] bg-[#fff8f1]' : 'border-[#e6e9ed] bg-[#fbfcfd] hover:bg-white'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="h-16 w-12 flex-shrink-0 overflow-hidden rounded-md border border-[#e7ebf0] bg-[#f4f6f9]">
+                            {resumeThumbnailSrc(resume) ? (
+                              <img
+                                src={resumeThumbnailSrc(resume) ?? undefined}
+                                alt={`${resume.title} preview`}
+                                className="h-full w-full object-cover object-top"
+                                loading="lazy"
+                              />
+                            ) : null}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-[#2a303a]">{resume.title}</p>
+                            <p className="mt-1 truncate text-xs text-[#808792]">{resume.filename}</p>
+                            <div className="mt-2 flex items-center justify-between text-[11px]">
+                              <span className="text-[#8a909b]">{formatRelativeTime(resume.uploaded_at)}</span>
+                              <span className="text-[#8a909b]">{formatFileSize(resume.file_size_bytes)}</span>
+                            </div>
+                          </div>
                         </div>
+                      </button>
+                    );
+                  })}
+                  {dashboardResumes.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-[#d8dde4] bg-[#fafbfd] px-4 py-6 text-center text-sm text-[#7d8694]">
+                      No uploaded resumes found.
+                    </div>
+                  )}
+                </div>
+              </article>
+
+              <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
+                <h3 className="text-base font-semibold text-[#2a2f3a]">Resume Details</h3>
+                {selectedDashboardResume ? (
+                  <div className="mt-4 space-y-3">
+                    {resumeThumbnailSrc(selectedDashboardResume) && (
+                      <div className="overflow-hidden rounded-xl border border-[#e7ebf0] bg-[#f6f8fb]">
+                        <img
+                          src={resumeThumbnailSrc(selectedDashboardResume) ?? undefined}
+                          alt={`${selectedDashboardResume.title} preview`}
+                          className="h-48 w-full object-cover object-top"
+                        />
+                      </div>
+                    )}
+                    <div className="rounded-xl bg-[#f6f8fb] px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.12em] text-[#8a909b]">Selected Resume</p>
+                      <p className="mt-1 text-lg font-semibold text-[#222832]">{selectedDashboardResume.title}</p>
+                      <p className="text-xs text-[#7f8793]">{selectedDashboardResume.filename}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-[#e6e9ed] bg-[#fbfcfd] px-3 py-2">
+                        <p className="text-xs text-[#8a909b]">ATS Score</p>
+                        {hasSelectedAnalysis ? (
+                          <p className="text-2xl font-black text-[#2d8b46]">{selectedDashboardResume.analysis?.ats_score_estimate}%</p>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void analyzeSelectedResume();
+                            }}
+                            disabled={isResumeAnalysisBusy}
+                            className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#ff8b2f] px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60"
+                          >
+                            {isResumeAnalysisBusy ? (
+                              <>
+                                <LoaderCircle className="h-3 w-3 animate-spin" />
+                                {dashboardAnalysisProgress > 0 ? `Analyzing ${dashboardAnalysisProgress}%` : 'Analyzing...'}
+                              </>
+                            ) : (
+                              'Analyze Resume'
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      <div className="rounded-xl border border-[#e6e9ed] bg-[#fbfcfd] px-3 py-2">
+                        <p className="text-xs text-[#8a909b]">Target Role</p>
+                        <p className="text-sm font-semibold text-[#2a303a]">{targetRole || 'Not set'}</p>
                       </div>
                     </div>
-                  </button>
-                );
-              })}
-              {dashboardResumes.length === 0 && (
-                <div className="rounded-xl border border-dashed border-[#d8dde4] bg-[#fafbfd] px-4 py-6 text-center text-sm text-[#7d8694]">
-                  No uploaded resumes found.
-                </div>
-              )}
-            </div>
-          </article>
-
-          <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
-            <h2 className="text-xl font-semibold text-[#2a2f3a]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
-              Resume Details
-            </h2>
-            {selectedDashboardResume ? (
-              <div className="mt-4 space-y-3">
-                {resumeThumbnailSrc(selectedDashboardResume) && (
-                  <div className="overflow-hidden rounded-xl border border-[#e7ebf0] bg-[#f6f8fb]">
-                    <img
-                      src={resumeThumbnailSrc(selectedDashboardResume) ?? undefined}
-                      alt={`${selectedDashboardResume.title} preview`}
-                      className="h-48 w-full object-cover object-top"
-                    />
+                    <div className="rounded-xl border border-[#e6e9ed] bg-white px-3 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#8a909b]">Summary</p>
+                      <p className="mt-2 text-sm text-[#4a5260]">
+                        {selectedDashboardResume.analysis?.summary || 'No AI summary available for this resume yet.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/editor?resume_id=${selectedDashboardResume.id}`)}
+                      className="rounded-full bg-[#ff8b2f] px-4 py-2 text-sm font-semibold text-white"
+                    >
+                      Open in Editor
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-xl border border-dashed border-[#d8dde4] bg-[#fafbfd] px-4 py-6 text-center text-sm text-[#7d8694]">
+                    Select a resume from the library.
                   </div>
                 )}
-                <div className="rounded-xl bg-[#f6f8fb] px-4 py-3">
-                  <p className="text-xs uppercase tracking-[0.12em] text-[#8a909b]">Selected Resume</p>
-                  <p className="mt-1 text-lg font-semibold text-[#222832]">{selectedDashboardResume.title}</p>
-                  <p className="text-xs text-[#7f8793]">{selectedDashboardResume.filename}</p>
+              </article>
+            </div>
+          </div>
+
+          {/* Saved / Created Resumes */}
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="rounded-full bg-[#eaf8e2] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#2d8b46]">Created</span>
+              <h2 className="text-lg font-semibold text-[#2a2f3a]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+                Saved Resumes
+              </h2>
+            </div>
+            {dashboardSavedResumes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#d8dde4] bg-white py-12 text-center">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eaf8e2]">
+                  <Save className="h-6 w-6 text-[#2d8b46]" />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-xl border border-[#e6e9ed] bg-[#fbfcfd] px-3 py-2">
-                    <p className="text-xs text-[#8a909b]">ATS Score</p>
-                    {hasSelectedAnalysis ? (
-                      <p className="text-2xl font-black text-[#2d8b46]">{selectedDashboardResume.analysis?.ats_score_estimate}%</p>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void analyzeSelectedResume();
-                        }}
-                        disabled={isResumeAnalysisBusy}
-                        className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#ff8b2f] px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60"
-                      >
-                        {isResumeAnalysisBusy ? (
-                          <>
-                            <LoaderCircle className="h-3 w-3 animate-spin" />
-                            {dashboardAnalysisProgress > 0 ? `Analyzing ${dashboardAnalysisProgress}%` : 'Analyzing...'}
-                          </>
-                        ) : (
-                          'Analyze Resume'
-                        )}
-                      </button>
-                    )}
-                  </div>
-                  <div className="rounded-xl border border-[#e6e9ed] bg-[#fbfcfd] px-3 py-2">
-                    <p className="text-xs text-[#8a909b]">Target Role</p>
-                    <p className="text-sm font-semibold text-[#2a303a]">{targetRole || 'Not set'}</p>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-[#e6e9ed] bg-white px-3 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#8a909b]">Summary</p>
-                  <p className="mt-2 text-sm text-[#4a5260]">
-                    {selectedDashboardResume.analysis?.summary || 'No AI summary available for this resume yet.'}
-                  </p>
-                </div>
+                <h3 className="text-base font-semibold text-[#2a2f3a]">No saved resumes yet</h3>
+                <p className="mt-1 max-w-sm text-sm text-[#8a909b]">
+                  Build a resume in the editor and hit Save to see it here.
+                </p>
                 <button
                   type="button"
-                  onClick={() => router.push(`/editor?resume_id=${selectedDashboardResume.id}`)}
-                  className="rounded-full bg-[#ff8b2f] px-4 py-2 text-sm font-semibold text-white"
+                  onClick={() => router.push('/editor')}
+                  className="mt-4 rounded-xl bg-[#ff8b2f] px-5 py-2.5 text-sm font-semibold text-white hover:brightness-110 transition-all"
                 >
-                  Open in Editor
+                  Open Editor
                 </button>
               </div>
             ) : (
-              <div className="mt-4 rounded-xl border border-dashed border-[#d8dde4] bg-[#fafbfd] px-4 py-6 text-center text-sm text-[#7d8694]">
-                Select a resume from the library.
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {dashboardSavedResumes.map((sr) => (
+                  <article
+                    key={sr.id}
+                    className="group relative rounded-2xl border border-[#e5e8ec] bg-white p-5 shadow-[0_4px_12px_rgba(20,24,31,0.04)] transition-all hover:border-[#ccd0d5] hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-base font-semibold text-[#2a2f3a]">{sr.title}</h3>
+                        <p className="mt-0.5 text-xs text-[#8a909b]">
+                          Last edited {formatRelativeTime(sr.updated_at)}
+                        </p>
+                      </div>
+                      <span className="flex-shrink-0 rounded-full bg-[#f0f1f3] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                        {sr.template}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/editor?saved_id=${sr.id}`)}
+                        className="flex items-center gap-1.5 rounded-lg bg-[#f7f8f9] px-3 py-1.5 text-xs font-semibold text-[#535a66] hover:bg-[#eceff3] transition-colors"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const tk = getStoredAccessToken();
+                          if (!tk) return;
+                          try {
+                            await apiRequest(`/api/v1/saved-resumes/${sr.id}`, { method: 'DELETE', token: tk });
+                            setDashboardSavedResumes((prev) => prev.filter((s) => s.id !== sr.id));
+                          } catch { /* ignore */ }
+                        }}
+                        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#9298a3] hover:bg-[#fef2f2] hover:text-[#c94242] transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                      </button>
+                    </div>
+                  </article>
+                ))}
+
+                {/* New resume card */}
+                <button
+                  type="button"
+                  onClick={() => router.push('/editor')}
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#dfe2e6] bg-[#fafbfc] p-8 text-[#9298a3] transition-all hover:border-[#ff8b2f] hover:text-[#ff8b2f]"
+                >
+                  <Save className="h-6 w-6" />
+                  <span className="text-sm font-semibold">Create New Resume</span>
+                </button>
               </div>
             )}
-          </article>
+          </div>
         </section>
       );
     }
@@ -1398,16 +1489,15 @@ export default function DashboardTwoPage() {
                       onClick={() => setExpandedJobId(isExpanded ? null : job.id)}
                     >
                       {/* Company logo */}
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#edf0f3] bg-[#f8f9fb]">
-                        {job.company_logo ? (
+                      <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#edf0f3] bg-[#f8f9fb]">
+                        <Building2 className="h-5 w-5 text-[#9298a3]" />
+                        {job.company_logo && (
                           <img
                             src={job.company_logo}
                             alt={job.company_name}
-                            className="h-full w-full object-contain p-1.5"
+                            className="absolute inset-0 h-full w-full object-contain bg-[#f8f9fb] p-1.5"
                             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                           />
-                        ) : (
-                          <Building2 className="h-5 w-5 text-[#b0b5be]" />
                         )}
                       </div>
 

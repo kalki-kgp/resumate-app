@@ -95,6 +95,14 @@ export type DashboardResume = {
 export type UploadResumeResponse = DashboardResume;
 export type AnalyzeDashboardResumeResponse = DashboardResume;
 
+export type DashboardSavedResume = {
+  id: string;
+  title: string;
+  template: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type DashboardCoverLetter = {
   id: string;
   company_name: string;
@@ -108,6 +116,7 @@ export type DashboardResponse = {
   target_role: string | null;
   selected_resume_id: string | null;
   resumes: DashboardResume[];
+  saved_resumes: DashboardSavedResume[];
   cover_letters: DashboardCoverLetter[];
 };
 

@@ -3,8 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.models.cover_letter import CoverLetter
+from app.models.saved_resume import SavedResume
 from app.models.user import User
-from app.schemas.dashboard import DashboardCoverLetter, DashboardResponse
+from app.schemas.dashboard import DashboardCoverLetter, DashboardResponse, DashboardSavedResume
 from app.services.dashboard import list_user_dashboard_resumes
 
 router = APIRouter()
@@ -19,6 +20,23 @@ def get_dashboard_data(
     selected_resume_id = resumes[0].id if resumes else None
     target_role = current_user.onboarding_progress.target_role if current_user.onboarding_progress else None
     first_name = current_user.full_name.strip().split(" ")[0] if current_user.full_name else "there"
+
+    sr_rows = (
+        db.query(SavedResume)
+        .filter(SavedResume.user_id == current_user.id)
+        .order_by(SavedResume.updated_at.desc())
+        .all()
+    )
+    saved_resumes = [
+        DashboardSavedResume(
+            id=str(sr.id),
+            title=sr.title,
+            template=sr.template,
+            created_at=sr.created_at.isoformat(),
+            updated_at=sr.updated_at.isoformat(),
+        )
+        for sr in sr_rows
+    ]
 
     cl_rows = (
         db.query(CoverLetter)
@@ -42,5 +60,6 @@ def get_dashboard_data(
         target_role=target_role,
         selected_resume_id=selected_resume_id,
         resumes=resumes,
+        saved_resumes=saved_resumes,
         cover_letters=cover_letters,
     )
