@@ -191,12 +191,6 @@ def generate_cover_letter(
 
             result = _extract_json_from_text(raw_text)
             if result is not None:
-                # Ensure senderName uses real name from resume, not a placeholder
-                sender = result.get("senderName", "")
-                if not sender or "[" in sender:
-                    personal = extracted_data.get("personal", {})
-                    if isinstance(personal, dict) and personal.get("fullName"):
-                        result["senderName"] = personal["fullName"]
                 return result
 
             logger.warning(

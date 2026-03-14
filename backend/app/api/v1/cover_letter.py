@@ -61,6 +61,9 @@ def generate(
             detail="Cover letter generation service unavailable. Please try again.",
         )
 
+    # Always use the authenticated user's name — never trust LLM output for this
+    result["senderName"] = current_user.full_name
+
     try:
         cover_letter = CoverLetterData.model_validate(result)
     except Exception:

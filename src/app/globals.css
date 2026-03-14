@@ -399,12 +399,29 @@ canvas, video {
   }
 
   #cover-letter-print {
-    position: absolute;
+    position: fixed;
     left: 0;
     top: 0;
-    width: 100%;
+    width: 794px;
     box-shadow: none !important;
     border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Remove zoom transform for print — render at full A4 size */
+  #cover-letter-print .cl-scale-wrapper {
+    width: 794px !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  #cover-letter-print .cl-preview {
+    transform: none !important;
+  }
+
+  /* Hide refine buttons in print */
+  #cover-letter-print button {
+    display: none !important;
   }
 
   @page {
