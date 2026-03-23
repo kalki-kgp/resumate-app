@@ -6,4 +6,5 @@ export { ResumeSelectionModal } from './ResumeSelectionModal';
 export type { ResumeSelectionModalProps } from './ResumeSelectionModal';
 export { defaultOnboardingSteps, exampleJobs, templateCards, templatePreviewData, sidebarPrimaryItems, sidebarAiItems, getSectionHeading } from './constants';
 export { formatFileSize, formatRelativeTime, formatJoinDate, resumeThumbnailSrc, getCategoryBadge, clamp, isPdfFile } from './utils';
+export { AuthImage } from './AuthImage';
 export * from './dashboard-types';

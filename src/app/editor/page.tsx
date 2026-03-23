@@ -35,6 +35,8 @@ import {
   MinimalPreview,
   TemplateThumbnail,
 } from './_components';
+import { ProductTour } from '@/components/ProductTour';
+import type { TourStep } from '@/components/ProductTour';
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -70,6 +72,45 @@ const TEMPLATES: { id: TemplateType; name: string; color: string }[] = [
   { id: 'classic', name: 'Classic', color: 'bg-[#2d5a3d]' },
   { id: 'creative', name: 'Creative', color: 'bg-[#8b7355]' },
   { id: 'minimal', name: 'Minimal', color: 'bg-[#cbb8a1]' },
+];
+
+const EDITOR_TOUR_STEPS: TourStep[] = [
+  {
+    target: 'editor-sidebar',
+    title: 'Fill In Your Details',
+    description: 'Enter your personal info, work experience, projects, education, and skills in these collapsible sections.',
+    placement: 'right',
+  },
+  {
+    target: 'editor-ai-assist',
+    title: 'AI Writing Assistant',
+    description: 'Look for the sparkle icon on description fields — click it to get AI-powered bullet points and summaries.',
+    placement: 'right',
+  },
+  {
+    target: 'editor-preview',
+    title: 'Live Preview',
+    description: 'Your resume updates in real-time as you type. Use zoom controls to get a closer look.',
+    placement: 'left',
+  },
+  {
+    target: 'editor-export',
+    title: 'Export as PDF',
+    description: 'Happy with your resume? Export it as a PDF ready to send to employers.',
+    placement: 'bottom',
+  },
+  {
+    target: 'editor-templates',
+    title: 'Switch Templates',
+    description: 'Click this palette icon to open the template drawer and try different resume designs instantly.',
+    placement: 'left',
+  },
+  {
+    target: 'editor-save',
+    title: 'Save Your Work',
+    description: 'Save your resume to come back and edit it later. Auto-save kicks in after your first manual save.',
+    placement: 'bottom',
+  },
 ];
 
 const MIN_SIDEBAR_WIDTH = 320;
@@ -428,6 +469,7 @@ function EditorInner() {
       <div className="pointer-events-none fixed right-0 top-0 -z-10 h-72 w-72 rounded-full bg-[#c96442] opacity-20 blur-3xl" />
 
       <aside
+        data-tour="editor-sidebar"
         className="flex-shrink-0 flex flex-col h-full bg-[#fffaf4]/95 backdrop-blur-xl border-r border-[#eadfce] z-20"
         style={{ width: `${sidebarWidth}px` }}
       >
@@ -446,6 +488,7 @@ function EditorInner() {
           </div>
           <div className="ml-auto flex gap-2">
             <button
+              data-tour="editor-save"
               onClick={handleSave}
               disabled={saving}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all disabled:opacity-50 ${
@@ -763,7 +806,7 @@ function EditorInner() {
         </div>
 
         <div className="p-4 border-t border-[#eadfce]">
-          <div className="p-4 rounded-2xl bg-[#fff1e8] border border-[#f1d7c7]">
+          <div data-tour="editor-ai-assist" className="p-4 rounded-2xl bg-[#fff1e8] border border-[#f1d7c7]">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-5 h-5 text-[#c96442]" />
               <span className="font-semibold text-[#c96442]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
@@ -787,7 +830,7 @@ function EditorInner() {
         }`}
       />
 
-      <main className="flex-1 h-full relative flex flex-col items-center bg-[#f3ece2]/50 overflow-auto pt-20 pb-8">
+      <main data-tour="editor-preview" className="flex-1 h-full relative flex flex-col items-center bg-[#f3ece2]/50 overflow-auto pt-20 pb-8">
         {loading && (
           <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#faf7f2]/80 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3">
@@ -796,7 +839,7 @@ function EditorInner() {
             </div>
           </div>
         )}
-        <div className="absolute top-6 flex items-center gap-2 bg-[#fffaf4]/95 rounded-full px-4 py-2 shadow-lg z-30 border border-[#eadfce]">
+        <div data-tour="editor-export" className="absolute top-6 flex items-center gap-2 bg-[#fffaf4]/95 rounded-full px-4 py-2 shadow-lg z-30 border border-[#eadfce]">
           <button
             onClick={() => setZoom(Math.max(0.3, zoom - 0.05))}
             className="p-2 hover:bg-[#f4ecdf] rounded-full text-[#8b7355] hover:text-[#2c1810] transition-colors"
@@ -839,6 +882,7 @@ function EditorInner() {
       >
         <div className="flex-shrink-0 w-16 h-full absolute left-0 top-0 flex flex-col items-center py-6 bg-[#2d5a3d] border-r border-[#244a33] z-20">
           <button
+            data-tour="editor-templates"
             onClick={() => setDrawerOpen(!drawerOpen)}
             className={`w-10 h-10 rounded-xl flex items-center justify-center mb-6 transition-all ${
               drawerOpen ? 'bg-[#c96442] text-white' : 'bg-[#244a33] text-[#d0dfd2] hover:text-white'
@@ -919,6 +963,15 @@ function EditorInner() {
       <div id="resume-print" className="hidden">
         <PreviewComponent data={deferredData} />
       </div>
+
+      {!loading && (
+        <ProductTour
+          tourId="editor"
+          steps={EDITOR_TOUR_STEPS}
+          accentColor="#c96442"
+          mutedColor="#8b7355"
+        />
+      )}
     </div>
   );
 }

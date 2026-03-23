@@ -8,17 +8,19 @@ import DOMPurify from 'isomorphic-dompurify';
 import { ArrowRight, Check, LoaderCircle, Mail, Trash2, ExternalLink, Search, MapPin, Clock, Building2, Briefcase, ChevronDown, Save } from 'lucide-react';
 import { ApiError, apiRequest, clearStoredAccessToken, getStoredAccessToken } from '@/lib/api';
 import { TemplateThumbnail } from '@/app/editor/_components';
+import { ProductTour } from '@/components/ProductTour';
+import type { TourStep } from '@/components/ProductTour';
 import {
   OnboardingWizard,
   DashboardSidebar,
   ResumeSelectionModal,
+  AuthImage,
   defaultOnboardingSteps,
   exampleJobs,
   templateCards,
   getSectionHeading,
   formatFileSize,
   formatRelativeTime,
-  resumeThumbnailSrc,
   clamp,
   isPdfFile,
 } from '@/app/dashboard/_components';
@@ -54,6 +56,39 @@ const dmSans = DM_Sans({
   variable: '--font-dm-sans',
   display: 'swap',
 });
+
+const DASHBOARD_TOUR_STEPS: TourStep[] = [
+  {
+    target: 'dashboard-sidebar',
+    title: 'Your Command Center',
+    description: 'Navigate between your resumes, cover letters, job board, templates, and AI features — all from this sidebar.',
+    placement: 'right',
+  },
+  {
+    target: 'dashboard-actions',
+    title: 'Quick Actions',
+    description: 'Start building a resume, craft a cover letter, or find job matches — pick your next move.',
+    placement: 'bottom',
+  },
+  {
+    target: 'dashboard-resumes',
+    title: 'Your Resume Library',
+    description: 'Upload and manage your resumes here. Click any resume to select it for analysis or editing.',
+    placement: 'top',
+  },
+  {
+    target: 'dashboard-ats',
+    title: 'ATS Score Overview',
+    description: 'See how your resume performs against ATS systems. Get category breakdowns and section-level scores.',
+    placement: 'left',
+  },
+  {
+    target: 'dashboard-editor-btn',
+    title: 'Jump to Editor',
+    description: 'Ready to build? Hit this button to open the resume editor and start crafting your perfect resume.',
+    placement: 'bottom',
+  },
+];
 
 export default function DashboardTwoPage() {
   const router = useRouter();
@@ -854,7 +889,7 @@ export default function DashboardTwoPage() {
     if (activeSection === 'overview') {
       return (
         <>
-          <div className="mb-4 grid gap-3 md:grid-cols-3">
+          <div data-tour="dashboard-actions" className="mb-4 grid gap-3 md:grid-cols-3">
             {[
               {
                 title: 'Help me build my resume',
@@ -901,7 +936,7 @@ export default function DashboardTwoPage() {
           </div>
 
           <section className="grid gap-4 xl:grid-cols-[1.3fr_0.8fr]">
-            <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
+            <article data-tour="dashboard-resumes" className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-[#2a2f3a]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
@@ -962,9 +997,9 @@ export default function DashboardTwoPage() {
                         }`}
                       >
                         <div className="mb-3 overflow-hidden rounded-xl border border-[#eceff3] bg-[#f6f8fb]">
-                          {resumeThumbnailSrc(resume) ? (
-                            <img
-                              src={resumeThumbnailSrc(resume) ?? undefined}
+                          {resume.thumbnail_url ? (
+                            <AuthImage
+                              apiPath={resume.thumbnail_url}
                               alt={`${resume.title} preview`}
                               className="h-32 w-full object-cover object-top"
                               loading="lazy"
@@ -1000,7 +1035,7 @@ export default function DashboardTwoPage() {
               )}
             </article>
 
-            <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
+            <article data-tour="dashboard-ats" className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
               <h2 className="text-4xl font-bold text-[#181d16]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
                 Overview
               </h2>
@@ -1112,9 +1147,9 @@ export default function DashboardTwoPage() {
                       >
                         <div className="flex items-start gap-3">
                           <div className="h-16 w-12 flex-shrink-0 overflow-hidden rounded-md border border-[#e7ebf0] bg-[#f4f6f9]">
-                            {resumeThumbnailSrc(resume) ? (
-                              <img
-                                src={resumeThumbnailSrc(resume) ?? undefined}
+                            {resume.thumbnail_url ? (
+                              <AuthImage
+                                apiPath={resume.thumbnail_url}
                                 alt={`${resume.title} preview`}
                                 className="h-full w-full object-cover object-top"
                                 loading="lazy"
@@ -1145,10 +1180,10 @@ export default function DashboardTwoPage() {
                 <h3 className="text-base font-semibold text-[#2a2f3a]">Resume Details</h3>
                 {selectedDashboardResume ? (
                   <div className="mt-4 space-y-3">
-                    {resumeThumbnailSrc(selectedDashboardResume) && (
+                    {selectedDashboardResume.thumbnail_url && (
                       <div className="overflow-hidden rounded-xl border border-[#e7ebf0] bg-[#f6f8fb]">
-                        <img
-                          src={resumeThumbnailSrc(selectedDashboardResume) ?? undefined}
+                        <AuthImage
+                          apiPath={selectedDashboardResume.thumbnail_url}
                           alt={`${selectedDashboardResume.title} preview`}
                           className="h-48 w-full object-cover object-top"
                         />
@@ -2191,6 +2226,7 @@ export default function DashboardTwoPage() {
               </button>
               <button
                 type="button"
+                data-tour="dashboard-editor-btn"
                 onClick={() => router.push('/editor')}
                 className="rounded-full bg-[#ff8b2f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#f47f22]"
               >
@@ -2225,6 +2261,15 @@ export default function DashboardTwoPage() {
           resumes={dashboardResumes}
           savedResumes={dashboardSavedResumes}
         />
+
+        {activeSection === 'overview' && (
+          <ProductTour
+            tourId="dashboard"
+            steps={DASHBOARD_TOUR_STEPS}
+            accentColor="#ff8b2f"
+            mutedColor="#7a818d"
+          />
+        )}
       </div>
     </div>
   );

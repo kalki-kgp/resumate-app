@@ -1,11 +1,10 @@
 'use client';
 
-/* eslint-disable @next/next/no-img-element */
-
 import { useState } from 'react';
 import { X, Check, FileText, AlertCircle } from 'lucide-react';
 import type { DashboardResume, DashboardSavedResume } from './dashboard-types';
-import { resumeThumbnailSrc, formatRelativeTime } from './utils';
+import { formatRelativeTime } from './utils';
+import { AuthImage } from './AuthImage';
 
 export interface ResumeSelectionModalProps {
   isOpen: boolean;
@@ -74,7 +73,6 @@ export const ResumeSelectionModal = ({
               {resumes.map((resume) => {
                 const isSelected = selectedId === resume.id;
                 const hasAnalysis = !!resume.analysis;
-                const thumbnailSrc = resumeThumbnailSrc(resume);
                 const atsScore = resume.analysis?.ats_score_estimate;
 
                 return (
@@ -98,9 +96,9 @@ export const ResumeSelectionModal = ({
                   >
                     {/* Thumbnail */}
                     <div className="flex-shrink-0 w-14 h-18 rounded-md overflow-hidden bg-[#f3f4f6] border border-[#e4e7eb]">
-                      {thumbnailSrc ? (
-                        <img
-                          src={thumbnailSrc}
+                      {resume.thumbnail_url ? (
+                        <AuthImage
+                          apiPath={resume.thumbnail_url}
                           alt={resume.title}
                           className="w-full h-full object-cover object-top"
                         />

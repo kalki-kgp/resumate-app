@@ -9,7 +9,7 @@ export type CTAProps = {
 
 export const CTA = ({ onOpenAuth }: CTAProps) => (
   <section
-    className="relative overflow-hidden py-20 md:py-28"
+    className="relative overflow-hidden py-16 md:py-24"
     style={{ backgroundColor: '#c96442' }}
   >
     <div

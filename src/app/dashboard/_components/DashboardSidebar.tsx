@@ -37,7 +37,7 @@ export const DashboardSidebar = ({
   onSignOut,
   profilePopupRef,
 }: DashboardSidebarProps) => (
-  <aside className="flex h-full w-full max-w-[270px] flex-col rounded-[28px] border border-[#e3e5e8] bg-[#f7f7f8] p-4 shadow-[0_10px_30px_rgba(26,31,44,0.06)]">
+  <aside data-tour="dashboard-sidebar" className="flex h-full w-full max-w-[270px] flex-col rounded-[28px] border border-[#e3e5e8] bg-[#f7f7f8] p-4 shadow-[0_10px_30px_rgba(26,31,44,0.06)]">
     <div className="relative mb-4" ref={profilePopupRef}>
       <button
         type="button"
