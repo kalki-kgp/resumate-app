@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fraunces, DM_Sans } from 'next/font/google';
 import DOMPurify from 'isomorphic-dompurify';
-import { ArrowRight, Check, LoaderCircle, Mail, Trash2, ExternalLink, Search, MapPin, Clock, Building2, Briefcase, ChevronDown, Save } from 'lucide-react';
+import { ArrowRight, Check, LoaderCircle, Mail, Trash2, ExternalLink, Search, MapPin, Clock, Building2, Briefcase, ChevronDown, Save, Crown, Lock } from 'lucide-react';
 import { ApiError, apiRequest, clearStoredAccessToken, getStoredAccessToken } from '@/lib/api';
 import { TemplateThumbnail } from '@/app/editor/_components';
 import { ProductTour } from '@/components/ProductTour';
@@ -100,6 +100,8 @@ export default function DashboardTwoPage() {
   const [displayName, setDisplayName] = useState('friend');
   const [profileFullName, setProfileFullName] = useState('ResuMate User');
   const [profileEmail, setProfileEmail] = useState('user@resumate.app');
+  const [profileCredits, setProfileCredits] = useState(0);
+  const [purchasedTemplates, setPurchasedTemplates] = useState<string[]>([]);
   const [profileCreatedAt, setProfileCreatedAt] = useState<string | null>(null);
   const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
   const [targetRole, setTargetRole] = useState('');
@@ -218,6 +220,8 @@ export default function DashboardTwoPage() {
         setDisplayName(firstName || 'friend');
         setProfileFullName(me.full_name?.trim() || firstName || 'ResuMate User');
         setProfileEmail(me.email?.trim() || 'user@resumate.app');
+        setProfileCredits(me.credits ?? 0);
+        setPurchasedTemplates(me.purchased_templates ?? []);
         setProfileCreatedAt(me.created_at ?? null);
 
         const onboardingState = await apiRequest<OnboardingStateResponse>('/api/v1/onboarding', {
@@ -1792,28 +1796,70 @@ export default function DashboardTwoPage() {
     }
 
     if (activeSection === 'templates') {
+      const handlePurchaseTemplate = async (templateId: string) => {
+        const storedToken = getStoredAccessToken();
+        if (!storedToken) return;
+        try {
+          const res = await apiRequest<{ template_id: string; credits_remaining: number; purchased_templates: string[] }>(
+            '/api/v1/templates/purchase',
+            { method: 'POST', token: storedToken, body: { template_id: templateId } }
+          );
+          setPurchasedTemplates(res.purchased_templates);
+          setProfileCredits(res.credits_remaining);
+        } catch (err) {
+          if (err instanceof ApiError) {
+            alert(err.detail);
+          }
+        }
+      };
+
       return (
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {templateCards.map((tpl) => (
-            <article key={tpl.id} className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
-              <div className="mb-3 rounded-xl border border-[#eceff3] bg-gradient-to-b from-[#f8fafd] to-[#f0f3f7] p-3">
-                <div className="mx-auto flex items-center justify-center overflow-hidden rounded-lg border border-[#dfe4ea] bg-white shadow-[0_10px_18px_rgba(26,34,48,0.10)]">
-                  <TemplateThumbnail template={tpl.id} shrink={0.385} />
+          {templateCards.map((tpl) => {
+            const isOwned = !tpl.premium || purchasedTemplates.includes(tpl.id);
+
+            return (
+              <article key={tpl.id} className={`relative rounded-2xl border p-4 ${tpl.premium ? 'border-[#daa520]/30 bg-gradient-to-b from-white to-[#fffbf0]' : 'border-[#e5e8ec] bg-white'}`}>
+                {tpl.premium && (
+                  <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-[#b8860b] px-2 py-0.5 text-[10px] font-semibold text-white">
+                    <Crown size={10} />
+                    Premium
+                  </div>
+                )}
+                <div className="mb-3 rounded-xl border border-[#eceff3] bg-gradient-to-b from-[#f8fafd] to-[#f0f3f7] p-3">
+                  <div className="relative mx-auto flex items-center justify-center overflow-hidden rounded-lg border border-[#dfe4ea] bg-white shadow-[0_10px_18px_rgba(26,34,48,0.10)]">
+                    <TemplateThumbnail template={tpl.id} shrink={0.385} />
+                    {tpl.premium && !isOwned && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a2e]/40 backdrop-blur-[1px]">
+                        <Lock size={24} className="text-white/80" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <p className="text-lg font-semibold text-[#252b34]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
-                {tpl.name}
-              </p>
-              <p className="mt-1 text-sm text-[#7d8694]">{tpl.tone}</p>
-              <button
-                type="button"
-                onClick={() => router.push(`/editor?template=${tpl.id}`)}
-                className="mt-4 rounded-full border border-[#dfe4eb] bg-[#f8fafc] px-3 py-1.5 text-xs font-semibold text-[#3b4352]"
-              >
-                Use Template
-              </button>
-            </article>
-          ))}
+                <p className="text-lg font-semibold text-[#252b34]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+                  {tpl.name}
+                </p>
+                <p className="mt-1 text-sm text-[#7d8694]">{tpl.tone}</p>
+                {isOwned ? (
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/editor?template=${tpl.id}`)}
+                    className="mt-4 rounded-full border border-[#dfe4eb] bg-[#f8fafc] px-3 py-1.5 text-xs font-semibold text-[#3b4352]"
+                  >
+                    Use Template
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handlePurchaseTemplate(tpl.id)}
+                    className="mt-4 rounded-full bg-[#b8860b] px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110 transition-all"
+                  >
+                    Buy for {tpl.price} Credits
+                  </button>
+                )}
+              </article>
+            );
+          })}
         </section>
       );
     }
@@ -2194,6 +2240,7 @@ export default function DashboardTwoPage() {
           activeSection={activeSection}
           profileFullName={profileFullName}
           profileEmail={profileEmail}
+          profileCredits={profileCredits}
           profileCreatedAt={profileCreatedAt}
           isProfilePopupOpen={isProfilePopupOpen}
           onSetActiveSection={setActiveSection}

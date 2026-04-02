@@ -38,7 +38,7 @@ export interface ResumeData {
   skills: string[];
 }
 
-export type TemplateType = 'modern' | 'classic' | 'creative' | 'minimal';
+export type TemplateType = 'modern' | 'classic' | 'creative' | 'minimal' | 'executive';
 
 export interface FillTemplateResponse {
   resume_id: string;

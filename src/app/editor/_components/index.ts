@@ -7,10 +7,12 @@ export {
   ClassicPreview,
   CreativePreview,
   MinimalPreview,
+  ExecutivePreview,
   TemplateThumbnail,
   ModernThumbnail,
   ClassicThumbnail,
   CreativeThumbnail,
   MinimalThumbnail,
+  ExecutiveThumbnail,
   SAMPLE_DATA,
 } from './templates';

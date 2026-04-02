@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Building2,
   Check,
@@ -10,6 +10,7 @@ import {
   Smartphone,
   X,
 } from 'lucide-react';
+import { apiRequest, getStoredAccessToken } from '@/lib/api';
 import type { CreditPack, PaymentMethod, PaymentStep } from './types';
 
 type RazorpayCheckoutProps = {
@@ -18,6 +19,15 @@ type RazorpayCheckoutProps = {
 };
 
 export function RazorpayCheckout({ pack, onClose }: RazorpayCheckoutProps) {
+  const addCreditsToAccount = useCallback(() => {
+    const token = getStoredAccessToken();
+    if (!token) return;
+    apiRequest('/api/v1/templates/add-credits', {
+      method: 'POST',
+      token,
+      body: { credits: pack.credits },
+    }).catch(() => {});
+  }, [pack.credits]);
   const [method, setMethod] = useState<PaymentMethod>('upi');
   const [step, setStep] = useState<PaymentStep>('method');
   const [upiId, setUpiId] = useState('');
@@ -63,7 +73,7 @@ export function RazorpayCheckout({ pack, onClose }: RazorpayCheckoutProps) {
       setUpiError('');
       setStep('upi_waiting');
       window.setTimeout(() => setStep('processing'), 2500);
-      window.setTimeout(() => setStep('success'), 4200);
+      window.setTimeout(() => { setStep('success'); addCreditsToAccount(); }, 4200);
       return;
     }
 
@@ -74,13 +84,13 @@ export function RazorpayCheckout({ pack, onClose }: RazorpayCheckoutProps) {
 
     setStep('netbank_redirect');
     window.setTimeout(() => setStep('processing'), 2000);
-    window.setTimeout(() => setStep('success'), 3800);
+    window.setTimeout(() => { setStep('success'); addCreditsToAccount(); }, 3800);
   };
 
   const handleOtp = () => {
     if (otp.length !== 6) return;
     setStep('processing');
-    window.setTimeout(() => setStep('success'), 1800);
+    window.setTimeout(() => { setStep('success'); addCreditsToAccount(); }, 1800);
   };
 
   const banks = [

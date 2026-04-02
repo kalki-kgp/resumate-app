@@ -6,6 +6,7 @@ import { ModernPreview } from './ModernTemplate';
 import { ClassicPreview } from './ClassicTemplate';
 import { CreativePreview } from './CreativeTemplate';
 import { MinimalPreview } from './MinimalTemplate';
+import { ExecutivePreview } from './ExecutiveTemplate';
 import { SAMPLE_DATA } from './sampleData';
 
 /**
@@ -79,6 +80,18 @@ export const MinimalThumbnail = memo(({ shrink = DEFAULT_SHRINK }: { shrink?: nu
 });
 MinimalThumbnail.displayName = 'MinimalThumbnail';
 
+export const ExecutiveThumbnail = memo(({ shrink = DEFAULT_SHRINK }: { shrink?: number }) => {
+  const s = getStyles(shrink);
+  return (
+    <div style={s.wrap}>
+      <div style={s.inner}>
+        <ExecutivePreview data={SAMPLE_DATA} />
+      </div>
+    </div>
+  );
+});
+ExecutiveThumbnail.displayName = 'ExecutiveThumbnail';
+
 interface TemplateThumbnailProps {
   template: TemplateType;
   shrink?: number;
@@ -94,6 +107,8 @@ export const TemplateThumbnail = ({ template, shrink }: TemplateThumbnailProps) 
       return <CreativeThumbnail shrink={shrink} />;
     case 'minimal':
       return <MinimalThumbnail shrink={shrink} />;
+    case 'executive':
+      return <ExecutiveThumbnail shrink={shrink} />;
     default:
       return <ModernThumbnail shrink={shrink} />;
   }

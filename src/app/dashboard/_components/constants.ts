@@ -49,11 +49,12 @@ export const exampleJobs: ExampleJob[] = [
   { id: 'j6', title: 'Creative Director', company: 'Canva', match: 75, type: 'Remote' },
 ];
 
-export const templateCards: { id: TemplateType; name: string; tone: string }[] = [
+export const templateCards: { id: TemplateType; name: string; tone: string; premium?: boolean; price?: number }[] = [
   { id: 'modern', name: 'Modern', tone: 'Balanced hierarchy for product and tech roles.' },
   { id: 'classic', name: 'Classic', tone: 'Sharper structure for leadership and consulting applications.' },
   { id: 'creative', name: 'Creative', tone: 'Expressive style for design and brand-facing positions.' },
   { id: 'minimal', name: 'Minimal', tone: 'Compact high-signal format for recruiter scans.' },
+  { id: 'executive', name: 'Executive', tone: 'Sophisticated gold-accented design for senior leadership roles.', premium: true, price: 50 },
 ];
 
 export const templatePreviewData: ResumeData = {

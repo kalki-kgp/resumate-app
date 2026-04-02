@@ -5,6 +5,7 @@ import { ModernPreview } from './ModernTemplate';
 import { ClassicPreview } from './ClassicTemplate';
 import { CreativePreview } from './CreativeTemplate';
 import { MinimalPreview } from './MinimalTemplate';
+import { ExecutivePreview } from './ExecutiveTemplate';
 
 interface TemplatePreviewProps {
   template: TemplateType;
@@ -21,6 +22,8 @@ export const TemplatePreview = ({ template, data }: TemplatePreviewProps) => {
       return <CreativePreview data={data} />;
     case 'minimal':
       return <MinimalPreview data={data} />;
+    case 'executive':
+      return <ExecutivePreview data={data} />;
     default:
       return <ModernPreview data={data} />;
   }

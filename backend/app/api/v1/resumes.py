@@ -223,11 +223,21 @@ def fill_template(
     )
 
 
+AI_CREDIT_COST = 5
+
+
 @router.post("/ai-write", response_model=AIWriteResponse)
 def ai_write(
     payload: AIWriteRequest,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
+    if current_user.credits < AI_CREDIT_COST:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Insufficient credits. You need {AI_CREDIT_COST} credits but have {current_user.credits}.",
+        )
+
     valid_sections = {"summary", "experience", "project", "skills"}
     if payload.section_type not in valid_sections:
         raise HTTPException(
@@ -247,6 +257,10 @@ def ai_write(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI writing service unavailable. Please try again.",
         )
+
+    current_user.credits -= AI_CREDIT_COST
+    db.add(current_user)
+    db.commit()
 
     return AIWriteResponse(
         generated_text=generated,
