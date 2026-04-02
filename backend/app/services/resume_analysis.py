@@ -691,6 +691,25 @@ def analyze_resume_with_chutes(base64_png_images: list[str]) -> ResumeAnalysisRe
     )
 
 
+def analyze_resume_with_nvidia(base64_png_images: list[str]) -> ResumeAnalysisResult:
+    if not base64_png_images:
+        raise ResumeAnalysisError("No resume pages were available for analysis")
+
+    if not settings.NVIDIA_API_KEY:
+        raise ResumeAnalysisError("NVIDIA_API_KEY is not configured on the backend")
+
+    client = OpenAI(
+        base_url=settings.NVIDIA_BASE_URL,
+        api_key=settings.NVIDIA_API_KEY,
+    )
+    return _analyze_with_openai_compatible_provider(
+        client=client,
+        provider_name="Nvidia",
+        model=settings.NVIDIA_MODEL,
+        base64_png_images=base64_png_images,
+    )
+
+
 def analyze_resume(base64_png_images: list[str]) -> ResumeAnalysisResult:
     provider = settings.RESUME_IMAGE_PROCESSING_PROVIDER.strip().lower()
 
@@ -700,8 +719,11 @@ def analyze_resume(base64_png_images: list[str]) -> ResumeAnalysisResult:
     if provider == "chutes":
         return analyze_resume_with_chutes(base64_png_images)
 
+    if provider == "nvidia":
+        return analyze_resume_with_nvidia(base64_png_images)
+
     raise ResumeAnalysisError(
-        "RESUME_IMAGE_PROCESSING_PROVIDER must be either 'nebius' or 'chutes'"
+        "RESUME_IMAGE_PROCESSING_PROVIDER must be 'nebius', 'chutes', or 'nvidia'"
     )
 
 
@@ -876,6 +898,18 @@ def extract_resume_data(base64_png_images: list[str]) -> dict[str, Any] | None:
             client=client,
             provider_name="Chutes",
             model=settings.CHUTES_MODEL,
+            base64_png_images=base64_png_images,
+        )
+
+    if provider == "nvidia":
+        if not settings.NVIDIA_API_KEY:
+            logger.warning("NVIDIA_API_KEY not configured, skipping extraction")
+            return None
+        client = OpenAI(base_url=settings.NVIDIA_BASE_URL, api_key=settings.NVIDIA_API_KEY)
+        return _extract_with_openai_compatible_provider(
+            client=client,
+            provider_name="Nvidia",
+            model=settings.NVIDIA_MODEL,
             base64_png_images=base64_png_images,
         )
 

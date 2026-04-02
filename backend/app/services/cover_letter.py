@@ -62,6 +62,11 @@ def _get_llm_client() -> tuple[OpenAI, str] | None:
             logger.warning("CHUTES_API_TOKEN not configured for cover letter")
             return None
         return OpenAI(base_url=settings.CHUTES_BASE_URL, api_key=settings.CHUTES_API_TOKEN), settings.CHUTES_FILL_MODEL
+    elif provider == "nvidia":
+        if not settings.NVIDIA_API_KEY:
+            logger.warning("NVIDIA_API_KEY not configured for cover letter")
+            return None
+        return OpenAI(base_url=settings.NVIDIA_BASE_URL, api_key=settings.NVIDIA_API_KEY), settings.NVIDIA_FILL_MODEL
     else:
         logger.warning("Unknown provider '%s' for cover letter", provider)
         return None

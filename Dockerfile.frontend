@@ -8,7 +8,9 @@ RUN bun install --frozen-lockfile
 
 # Build the application
 COPY . .
+ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 RUN bun run build
 
 # Production stage
@@ -16,8 +18,7 @@ FROM oven/bun:1-alpine AS runner
 
 WORKDIR /app
 
-ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production     NEXT_TELEMETRY_DISABLED=1
 
 # Copy only what's needed for production
 COPY --from=base /app/.next/standalone ./

@@ -29,7 +29,7 @@ services:
       PROJECT_NAME: ResuMate API
       VERSION: 0.1.0
       DATABASE_URL: postgresql+psycopg://resumate:resumate@db:5432/resumate
-      BACKEND_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      BACKEND_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,https://resumate.kalkikgp.tech,https://resumate.paperknife.app
       AUTH_SESSION_TTL_HOURS: 720
       UPLOAD_DIR: uploads
       MAX_RESUME_UPLOAD_SIZE_MB: 8
@@ -53,11 +53,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: https://resumate-api.kalkikgp.tech
     container_name: resumate-frontend
     restart: unless-stopped
     environment:
       NEXT_TELEMETRY_DISABLED: "1"
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      NEXT_PUBLIC_API_BASE_URL: https://resumate-api.kalkikgp.tech
     depends_on:
       backend:
         condition: service_started
