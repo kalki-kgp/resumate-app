@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
+
 from app.api.deps import get_current_user, get_db
 from app.core.config import settings
 from app.models.user import User
@@ -32,6 +33,17 @@ from app.services.onboarding import (
 
 router = APIRouter()
 
+ONBOARDING_CREDIT_REWARD = 100
+
+
+def _grant_onboarding_credits(db: Session, user: User) -> None:
+    """Grant credits to user when they complete onboarding (only once)."""
+    if user.credits == 0:
+        user.credits = ONBOARDING_CREDIT_REWARD
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
 
 @router.get("", response_model=OnboardingStateResponse)
 def get_onboarding_state(
@@ -51,6 +63,8 @@ def choose_onboarding_path(
 ):
     progress = get_or_create_onboarding_progress(db, current_user)
     progress = choose_path(db, progress, payload.path)
+    if progress.stage == "workspace":
+        _grant_onboarding_credits(db, current_user)
     analysis = load_latest_analysis_result(current_user.id)
     return progress_to_response(progress, analysis)
 
@@ -63,6 +77,8 @@ def onboarding_step_action(
 ):
     progress = get_or_create_onboarding_progress(db, current_user)
     progress = advance_step(db, progress, payload.step_index, payload.target_role)
+    if progress.stage == "workspace":
+        _grant_onboarding_credits(db, current_user)
     analysis = load_latest_analysis_result(current_user.id)
     return progress_to_response(progress, analysis)
 
@@ -85,6 +101,7 @@ def onboarding_skip(
 ):
     progress = get_or_create_onboarding_progress(db, current_user)
     progress = skip_onboarding(db, progress)
+    _grant_onboarding_credits(db, current_user)
     analysis = load_latest_analysis_result(current_user.id)
     return progress_to_response(progress, analysis)
 

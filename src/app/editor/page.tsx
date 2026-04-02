@@ -24,6 +24,8 @@ import {
   Plus,
   Trash2,
   Leaf,
+  Lock,
+  Crown,
 } from 'lucide-react';
 import {
   AIWriteAssist,
@@ -33,6 +35,7 @@ import {
   ClassicPreview,
   CreativePreview,
   MinimalPreview,
+  ExecutivePreview,
   TemplateThumbnail,
 } from './_components';
 import { ProductTour } from '@/components/ProductTour';
@@ -67,11 +70,12 @@ const EMPTY_RESUME_DATA: ResumeData = {
   skills: [],
 };
 
-const TEMPLATES: { id: TemplateType; name: string; color: string }[] = [
+const TEMPLATES: { id: TemplateType; name: string; color: string; premium?: boolean }[] = [
   { id: 'modern', name: 'Modern', color: 'bg-[#c96442]' },
   { id: 'classic', name: 'Classic', color: 'bg-[#2d5a3d]' },
   { id: 'creative', name: 'Creative', color: 'bg-[#8b7355]' },
   { id: 'minimal', name: 'Minimal', color: 'bg-[#cbb8a1]' },
+  { id: 'executive', name: 'Executive', color: 'bg-[#b8860b]', premium: true },
 ];
 
 const EDITOR_TOUR_STEPS: TourStep[] = [
@@ -136,9 +140,10 @@ function EditorInner() {
   const deferredData = useDeferredValue(data);
   const [activeSection, setActiveSection] = useState<string | null>('personal');
   const [zoom, setZoom] = useState(0.75);
-  const validTemplates: TemplateType[] = ['modern', 'classic', 'creative', 'minimal'];
+  const validTemplates: TemplateType[] = ['modern', 'classic', 'creative', 'minimal', 'executive'];
   const initialTemplate = templateParam && validTemplates.includes(templateParam) ? templateParam : 'modern';
   const [template, setTemplate] = useState<TemplateType>(initialTemplate);
+  const [purchasedTemplates, setPurchasedTemplates] = useState<string[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedResumeId, setSavedResumeId] = useState<string | null>(savedId);
@@ -154,6 +159,15 @@ function EditorInner() {
     const currentJson = JSON.stringify(data);
     setIsDirty(currentJson !== lastSavedDataRef.current);
   }, [data]);
+
+  // Fetch purchased templates
+  useEffect(() => {
+    const token = getStoredAccessToken();
+    if (!token) return;
+    apiRequest<{ purchased_templates: string[] }>('/api/v1/auth/me', { token })
+      .then((me) => setPurchasedTemplates(me.purchased_templates ?? []))
+      .catch(() => {});
+  }, []);
 
   // Load from uploaded resume (fill-template)
   useEffect(() => {
@@ -398,6 +412,7 @@ function EditorInner() {
         classic: ClassicPreview,
         creative: CreativePreview,
         minimal: MinimalPreview,
+        executive: ExecutivePreview,
       })[template],
     [template]
   );
@@ -911,14 +926,17 @@ function EditorInner() {
             <div className="space-y-6">
               {TEMPLATES.map((templateOption) => {
                 const isSelected = template === templateOption.id;
+                const isLocked = templateOption.premium && !purchasedTemplates.includes(templateOption.id);
 
                 return (
                   <div
                     key={templateOption.id}
-                    onClick={() => setTemplate(templateOption.id)}
-                    className={`relative cursor-pointer transition-all duration-500 ${
-                      isSelected ? 'scale-100 z-10' : 'scale-90 opacity-45 hover:opacity-75'
-                    }`}
+                    onClick={() => {
+                      if (!isLocked) setTemplate(templateOption.id);
+                    }}
+                    className={`relative transition-all duration-500 ${
+                      isLocked ? 'scale-90 opacity-60' : 'cursor-pointer'
+                    } ${!isLocked && (isSelected ? 'scale-100 z-10' : 'scale-90 opacity-45 hover:opacity-75')}`}
                   >
                     <div
                       className={`relative rounded-xl overflow-hidden shadow-lg transition-all duration-300 ${
@@ -929,11 +947,26 @@ function EditorInner() {
                         <TemplateThumbnail template={templateOption.id} />
                       </div>
 
-                      {!isSelected && <div className="absolute inset-0 bg-gradient-to-t from-[#2d5a3d]/80 via-[#2d5a3d]/20 to-transparent" />}
+                      {isLocked && (
+                        <div className="absolute inset-0 bg-[#1a1a2e]/60 backdrop-blur-[2px] flex items-center justify-center">
+                          <div className="bg-[#b8860b] text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-lg">
+                            <Lock size={12} />
+                            <span className="text-xs font-semibold">50 Credits</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {!isSelected && !isLocked && <div className="absolute inset-0 bg-gradient-to-t from-[#2d5a3d]/80 via-[#2d5a3d]/20 to-transparent" />}
 
                       {isSelected && (
                         <div className="absolute top-2 right-2 bg-[#c96442] text-white p-1.5 rounded-full shadow-lg animate-scale-in">
                           <Check size={12} />
+                        </div>
+                      )}
+
+                      {templateOption.premium && !isLocked && (
+                        <div className="absolute top-2 left-2 bg-[#b8860b] text-white p-1.5 rounded-full shadow-lg">
+                          <Crown size={10} />
                         </div>
                       )}
                     </div>
@@ -942,18 +975,12 @@ function EditorInner() {
                       <span className={`text-sm font-medium transition-colors ${isSelected ? 'text-white' : 'text-[#d0dfd2]'}`}>
                         {templateOption.name}
                       </span>
+                      {templateOption.premium && <span className="ml-1.5 text-[10px] text-[#daa520] font-semibold">PREMIUM</span>}
                       {isSelected && <span className="ml-2 text-xs text-[#ffd7c8]">Selected</span>}
                     </div>
                   </div>
                 );
               })}
-            </div>
-
-            <div className="mt-8 p-4 rounded-xl bg-[#244a33] border border-[#1f3f2c] text-center">
-              <p className="text-[#d0dfd2] text-sm mb-3">Need custom branded templates?</p>
-              <button className="px-4 py-2 bg-[#c96442] text-white text-sm font-semibold rounded-lg hover:brightness-110 transition-all">
-                Upgrade
-              </button>
             </div>
           </div>
         )}

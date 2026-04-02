@@ -28,6 +28,8 @@ router = APIRouter()
 
 VALID_TONES = {"professional", "conversational", "confident", "enthusiastic"}
 VALID_PARAGRAPH_TYPES = {"opening", "body", "closing"}
+AI_CREDIT_COST = 5
+COVER_LETTER_CREDIT_COST = 20
 
 
 @router.post("/from-saved/{saved_resume_id}/generate", response_model=GenerateCoverLetterResponse)
@@ -37,6 +39,12 @@ def generate_from_saved(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if current_user.credits < COVER_LETTER_CREDIT_COST:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Insufficient credits. You need {COVER_LETTER_CREDIT_COST} credits but have {current_user.credits}.",
+        )
+
     saved = db.scalar(
         select(SavedResume).where(
             SavedResume.id == saved_resume_id,
@@ -84,6 +92,10 @@ def generate_from_saved(
             detail="Generated cover letter data did not match expected schema.",
         )
 
+    current_user.credits -= COVER_LETTER_CREDIT_COST
+    db.add(current_user)
+    db.commit()
+
     return GenerateCoverLetterResponse(
         resume_id=str(saved_resume_id),
         cover_letter=letter,
@@ -97,6 +109,12 @@ def generate(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if current_user.credits < COVER_LETTER_CREDIT_COST:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Insufficient credits. You need {COVER_LETTER_CREDIT_COST} credits but have {current_user.credits}.",
+        )
+
     resume = get_user_resume_by_id(db, current_user.id, resume_id)
     if resume is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
@@ -139,6 +157,10 @@ def generate(
             detail="Generated data did not match expected schema.",
         )
 
+    current_user.credits -= COVER_LETTER_CREDIT_COST
+    db.add(current_user)
+    db.commit()
+
     return GenerateCoverLetterResponse(
         resume_id=str(resume.id),
         cover_letter=cover_letter,
@@ -149,7 +171,14 @@ def generate(
 def refine(
     payload: RefineParagraphRequest,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
+    if current_user.credits < AI_CREDIT_COST:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Insufficient credits. You need {AI_CREDIT_COST} credits but have {current_user.credits}.",
+        )
+
     if payload.paragraph_type not in VALID_PARAGRAPH_TYPES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -168,6 +197,10 @@ def refine(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Paragraph refinement service unavailable. Please try again.",
         )
+
+    current_user.credits -= AI_CREDIT_COST
+    db.add(current_user)
+    db.commit()
 
     return RefineParagraphResponse(
         refined_text=refined,

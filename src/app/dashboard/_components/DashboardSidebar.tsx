@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   BadgeCheck,
   CalendarDays,
@@ -7,6 +8,7 @@ import {
   CircleHelp,
   LogOut,
   Mail,
+  Plus,
   Search,
   Settings,
 } from 'lucide-react';
@@ -18,6 +20,7 @@ export type DashboardSidebarProps = {
   activeSection: DashboardSection;
   profileFullName: string;
   profileEmail: string;
+  profileCredits: number;
   profileCreatedAt: string | null;
   isProfilePopupOpen: boolean;
   onSetActiveSection: (section: DashboardSection) => void;
@@ -30,6 +33,7 @@ export const DashboardSidebar = ({
   activeSection,
   profileFullName,
   profileEmail,
+  profileCredits,
   profileCreatedAt,
   isProfilePopupOpen,
   onSetActiveSection,
@@ -49,7 +53,7 @@ export const DashboardSidebar = ({
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-[#1d2026]">{profileFullName}</p>
-          <p className="text-xs text-[#8b8f98]">Free Plan</p>
+          <p className="text-xs text-[#8b8f98]">{profileCredits} credits</p>
         </div>
         <ChevronDown className={`h-4 w-4 text-[#9298a3] transition-transform ${isProfilePopupOpen ? 'rotate-180' : ''}`} />
       </button>
@@ -75,18 +79,25 @@ export const DashboardSidebar = ({
               <div className="rounded-xl border border-white/70 bg-gradient-to-br from-white/65 via-[#fff8ef]/55 to-[#fff0e4]/60 p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8c5d39]">Plan</p>
-                    <p className="text-sm font-semibold text-[#2f3542]">Free Plan</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8c5d39]">Credits</p>
+                    <p className="text-sm font-semibold text-[#2f3542]">{profileCredits} remaining</p>
                   </div>
-                  <span className="rounded-full bg-[#ff9a38] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
-                    Active
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white ${profileCredits > 20 ? 'bg-[#2d8b46]' : profileCredits > 0 ? 'bg-[#ff9a38]' : 'bg-[#e04848]'}`}>
+                    {profileCredits > 20 ? 'Healthy' : profileCredits > 0 ? 'Low' : 'Empty'}
                   </span>
                 </div>
                 <div className="mt-2 space-y-1 text-[11px] text-[#5f6675]">
-                  <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> Multi-resume dashboard</p>
-                  <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> ATS analysis</p>
-                  <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> Template library</p>
+                  <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> 5 credits per AI rewrite</p>
+                  <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> 5 credits per paragraph refine</p>
+                  <p className="flex items-center gap-1.5"><BadgeCheck className="h-3 w-3 text-[#2d8b46]" /> 20 credits per cover letter</p>
                 </div>
+                <Link
+                  href="/pricing"
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#c96442] px-3 py-2 text-xs font-semibold text-white hover:brightness-110 transition-all"
+                >
+                  <Plus className="h-3 w-3" />
+                  Buy Credits
+                </Link>
               </div>
 
               <button

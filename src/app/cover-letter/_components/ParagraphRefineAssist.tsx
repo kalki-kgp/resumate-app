@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Sparkles, SendHorizonal, X, Undo2, Loader2 } from 'lucide-react';
-import { apiRequest, getStoredAccessToken } from '@/lib/api';
+import { Sparkles, SendHorizonal, X, Undo2, Loader2, AlertCircle, Coins } from 'lucide-react';
+import Link from 'next/link';
+import { ApiError, apiRequest, getStoredAccessToken } from '@/lib/api';
 import type { RefineParagraphResponse } from '@/types';
 
 interface ParagraphRefineAssistProps {
@@ -22,6 +23,7 @@ export const ParagraphRefineAssist = ({
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [insufficientCredits, setInsufficientCredits] = useState(false);
   const previousValueRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -63,8 +65,12 @@ export const ParagraphRefineAssist = ({
       onChange(res.refined_text);
       setPrompt('');
       setIsOpen(false);
-    } catch {
-      // Keep existing text on error
+      setInsufficientCredits(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 402) {
+        setInsufficientCredits(true);
+        setIsOpen(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -116,6 +122,7 @@ export const ParagraphRefineAssist = ({
         >
           <Sparkles size={10} className="text-[#9b6dd7]" />
           Refine
+          <span className="flex items-center gap-0.5 text-[9px] opacity-70"><Coins size={8} />5</span>
         </button>
       </div>
 
@@ -155,6 +162,17 @@ export const ParagraphRefineAssist = ({
               <X size={14} />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Insufficient credits banner */}
+      {insufficientCredits && (
+        <div className="mb-2 flex items-center gap-2 rounded-xl border border-[#f5c6c6] bg-[#fef2f2] px-3 py-2">
+          <AlertCircle size={14} className="text-[#c94242] flex-shrink-0" />
+          <p className="flex-1 text-[11px] text-[#c94242]">Not enough credits to refine.</p>
+          <Link href="/pricing" className="text-[11px] font-semibold text-[#c96442] hover:underline flex-shrink-0">
+            Buy Credits
+          </Link>
         </div>
       )}
 

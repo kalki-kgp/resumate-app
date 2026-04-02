@@ -15,8 +15,10 @@ import {
   Loader2,
   FileText,
   AlertCircle,
+  Coins,
 } from 'lucide-react';
-import { apiRequest, getStoredAccessToken } from '@/lib/api';
+import Link from 'next/link';
+import { ApiError, apiRequest, getStoredAccessToken } from '@/lib/api';
 import type { CoverLetterData, GenerateCoverLetterResponse, SavedCoverLetterResponse } from '@/types';
 import { CoverLetterPreview, ToneSelector } from './_components';
 
@@ -67,6 +69,7 @@ function CoverLetterInner() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(!!savedId);
   const [error, setError] = useState<string | null>(null);
+  const [insufficientCredits, setInsufficientCredits] = useState(false);
   const [coverLetter, setCoverLetter] = useState<CoverLetterData | null>(null);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -176,6 +179,7 @@ function CoverLetterInner() {
 
     setIsGenerating(true);
     setError(null);
+    setInsufficientCredits(false);
 
     try {
       const generateUrl = savedResumeId && !resumeId
@@ -197,8 +201,12 @@ function CoverLetterInner() {
       setCoverLetter(res.cover_letter);
       setHasGenerated(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to generate cover letter';
-      setError(message);
+      if (err instanceof ApiError && err.status === 402) {
+        setInsufficientCredits(true);
+      } else {
+        const message = err instanceof Error ? err.message : 'Failed to generate cover letter';
+        setError(message);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -323,6 +331,17 @@ function CoverLetterInner() {
             </div>
           )}
 
+          {/* Insufficient credits banner */}
+          {insufficientCredits && (
+            <div className="flex items-center gap-2 rounded-xl border border-[#f5c6c6] bg-[#fef2f2] px-3 py-2.5">
+              <AlertCircle size={16} className="text-[#c94242] flex-shrink-0" />
+              <p className="flex-1 text-xs text-[#c94242]">Not enough credits to generate.</p>
+              <Link href="/pricing" className="text-xs font-semibold text-[#c96442] hover:underline flex-shrink-0">
+                Buy Credits
+              </Link>
+            </div>
+          )}
+
           {/* Generate button */}
           <button
             type="button"
@@ -336,9 +355,9 @@ function CoverLetterInner() {
                 Generating...
               </>
             ) : hasGenerated ? (
-              'Regenerate'
+              <>Regenerate <span className="flex items-center gap-0.5 text-xs opacity-80"><Coins size={12} />20</span></>
             ) : (
-              'Generate Cover Letter'
+              <>Generate Cover Letter <span className="flex items-center gap-0.5 text-xs opacity-80"><Coins size={12} />20</span></>
             )}
           </button>
         </div>

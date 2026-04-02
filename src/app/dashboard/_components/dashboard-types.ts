@@ -124,6 +124,8 @@ export type MeResponse = {
   id: string;
   full_name: string;
   email: string;
+  credits: number;
+  purchased_templates: string[];
   created_at: string;
 };
 

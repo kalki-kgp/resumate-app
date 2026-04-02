@@ -33,6 +33,8 @@ class UserPublic(BaseModel):
     id: UUID
     full_name: str
     email: EmailStr
+    credits: int
+    purchased_templates: list[str]
     created_at: datetime
 
 

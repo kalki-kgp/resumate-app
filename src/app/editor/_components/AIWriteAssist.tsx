@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Sparkles, SendHorizonal, X, Undo2, Loader2 } from 'lucide-react';
-import { apiRequest, getStoredAccessToken } from '@/lib/api';
+import { Sparkles, SendHorizonal, X, Undo2, Loader2, AlertCircle, Coins } from 'lucide-react';
+import Link from 'next/link';
+import { ApiError, apiRequest, getStoredAccessToken } from '@/lib/api';
 import type { AIWriteResponse } from '@/types';
 
 interface AIWriteAssistProps {
@@ -33,6 +34,7 @@ export const AIWriteAssist = ({
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [insufficientCredits, setInsufficientCredits] = useState(false);
   const previousValueRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -72,10 +74,13 @@ export const AIWriteAssist = ({
       onValueChange(res.generated_text);
       setShowResult(true);
       setPrompt('');
+      setInsufficientCredits(false);
 
       setTimeout(() => setShowResult(false), 2000);
-    } catch {
-      // Keep existing text on error
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 402) {
+        setInsufficientCredits(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -132,6 +137,7 @@ export const AIWriteAssist = ({
           >
             <Sparkles size={10} className="text-[#9b6dd7]" />
             AI Write
+            <span className="flex items-center gap-0.5 text-[9px] opacity-70"><Coins size={8} />5</span>
           </button>
         </div>
       </div>
@@ -172,6 +178,17 @@ export const AIWriteAssist = ({
               <X size={14} />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Insufficient credits banner */}
+      {insufficientCredits && (
+        <div className="mb-2 flex items-center gap-2 rounded-xl border border-[#f5c6c6] bg-[#fef2f2] px-3 py-2">
+          <AlertCircle size={14} className="text-[#c94242] flex-shrink-0" />
+          <p className="flex-1 text-[11px] text-[#c94242]">Not enough credits for AI write.</p>
+          <Link href="/pricing" className="text-[11px] font-semibold text-[#c96442] hover:underline flex-shrink-0">
+            Buy Credits
+          </Link>
         </div>
       )}
 
