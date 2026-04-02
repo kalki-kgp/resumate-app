@@ -221,6 +221,12 @@ def fill_template_from_extracted_data(extracted_data: dict[str, Any]) -> dict[st
             return None
         client = OpenAI(base_url=settings.CHUTES_BASE_URL, api_key=settings.CHUTES_API_TOKEN)
         model = settings.CHUTES_FILL_MODEL
+    elif provider == "nvidia":
+        if not settings.NVIDIA_API_KEY:
+            logger.warning("NVIDIA_API_KEY not configured for template fill")
+            return None
+        client = OpenAI(base_url=settings.NVIDIA_BASE_URL, api_key=settings.NVIDIA_API_KEY)
+        model = settings.NVIDIA_FILL_MODEL
     else:
         logger.warning("Unknown provider '%s' for template fill", provider)
         return None

@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     RESUME_FILL_PROVIDER: str = "nebius"
     NEBIUS_FILL_MODEL: str = "deepseek-ai/DeepSeek-V3-0324-fast"
     CHUTES_FILL_MODEL: str = "zai-org/GLM-5-TEE"
+    NVIDIA_API_KEY: str | None = None
+    NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1/"
+    NVIDIA_MODEL: str = "mistralai/mistral-large-3-675b-instruct-2512"
+    NVIDIA_FILL_MODEL: str = "mistralai/mistral-large-3-675b-instruct-2512"
     RESUME_ANALYSIS_TOP_P: float = 0.9
     RESUME_ANALYSIS_TOP_K: int = 50
     RESUME_RENDER_SCALE: float = 1.6
