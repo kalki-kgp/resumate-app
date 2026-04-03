@@ -1112,8 +1112,11 @@ export default function DashboardTwoPage() {
                 </div>
               ) : (
                 <div className="mt-4 flex min-h-0 flex-1 flex-col">
-                  <div className="mx-auto flex h-40 w-40 items-center justify-center rounded-full p-3 xl:h-44 xl:w-44" style={ringStyle}>
-                    <div className="flex h-full w-full items-center justify-center rounded-full bg-white text-5xl font-black text-[#1d2619]">
+                  <div
+                    className="mx-auto flex h-40 w-40 flex-shrink-0 aspect-square items-center justify-center rounded-full p-3 xl:h-44 xl:w-44"
+                    style={ringStyle}
+                  >
+                    <div className="flex h-full w-full flex-shrink-0 aspect-square items-center justify-center rounded-full bg-white text-5xl font-black leading-none text-[#1d2619]">
                       {atsScore}%
                     </div>
                   </div>
