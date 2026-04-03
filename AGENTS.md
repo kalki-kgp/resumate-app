@@ -1,3 +1,8 @@
+---
+description: 
+alwaysApply: false
+---
+
 ## Cursor Cloud specific instructions
 
 ### Services overview

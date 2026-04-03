@@ -14,6 +14,7 @@ import {
   Testimonials,
   CTA,
   Footer,
+  SeoContent,
 } from '@/app/home/_components';
 import type { AuthMode, AuthField, AuthFormState } from '@/app/home/_components';
 
@@ -167,6 +168,7 @@ export default function HomePage() {
       <HowItWorks />
       <Testimonials />
       <CTA onOpenAuth={openAuth} />
+      <SeoContent />
       <Footer />
 
       <AuthModal

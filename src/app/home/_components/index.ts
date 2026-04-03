@@ -11,3 +11,4 @@ export { Testimonials } from './Testimonials';
 export { CTA } from './CTA';
 export type { CTAProps } from './CTA';
 export { Footer } from './Footer';
+export { SeoContent } from './SeoContent';
