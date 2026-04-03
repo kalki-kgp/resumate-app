@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = 'http://localhost:8000';
+const DEFAULT_API_BASE_URL = 'https://resumate-api.kalkikgp.tech';
 const ACCESS_TOKEN_STORAGE_KEY = 'resumate_access_token';
 
 export class ApiError extends Error {

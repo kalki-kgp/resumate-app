@@ -1125,10 +1125,10 @@ export default function DashboardTwoPage() {
 
     if (activeSection === 'resumes') {
       return (
-        <section className="space-y-6">
+        <section className="space-y-4">
           {/* Uploaded Resumes */}
           <div>
-            <div className="mb-3 flex items-center gap-2">
+            <div className="mb-2 flex items-center gap-2">
               <span className="rounded-full bg-[#eef0ff] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#6366f1]">Uploaded</span>
               <h2 className="text-lg font-semibold text-[#2a2f3a]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
                 Uploaded Resumes
@@ -1137,7 +1137,7 @@ export default function DashboardTwoPage() {
             <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
               <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
                 <p className="text-xs text-[#8a909b]">PDFs uploaded from your device. Select one to inspect or analyze.</p>
-                <div className="mt-4 space-y-3">
+                <div className="mt-3 max-h-[280px] space-y-2 overflow-y-auto">
                   {dashboardResumes.map((resume) => {
                     const selected = resume.id === selectedDashboardResume?.id;
                     return (
@@ -1180,16 +1180,16 @@ export default function DashboardTwoPage() {
                 </div>
               </article>
 
-              <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
+              <article className="rounded-2xl border border-[#e5e8ec] bg-white p-4 max-h-[340px] overflow-y-auto">
                 <h3 className="text-base font-semibold text-[#2a2f3a]">Resume Details</h3>
                 {selectedDashboardResume ? (
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-3 space-y-2">
                     {selectedDashboardResume.thumbnail_url && (
                       <div className="overflow-hidden rounded-xl border border-[#e7ebf0] bg-[#f6f8fb]">
                         <AuthImage
                           apiPath={selectedDashboardResume.thumbnail_url}
                           alt={`${selectedDashboardResume.title} preview`}
-                          className="h-48 w-full object-cover object-top"
+                          className="h-32 w-full object-cover object-top"
                         />
                       </div>
                     )}
@@ -1253,19 +1253,19 @@ export default function DashboardTwoPage() {
 
           {/* Saved / Created Resumes */}
           <div>
-            <div className="mb-3 flex items-center gap-2">
+            <div className="mb-2 flex items-center gap-2">
               <span className="rounded-full bg-[#eaf8e2] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#2d8b46]">Created</span>
               <h2 className="text-lg font-semibold text-[#2a2f3a]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
                 Saved Resumes
               </h2>
             </div>
             {dashboardSavedResumes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#d8dde4] bg-white py-12 text-center">
-                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eaf8e2]">
-                  <Save className="h-6 w-6 text-[#2d8b46]" />
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#d8dde4] bg-white py-8 text-center">
+                <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eaf8e2]">
+                  <Save className="h-5 w-5 text-[#2d8b46]" />
                 </div>
-                <h3 className="text-base font-semibold text-[#2a2f3a]">No saved resumes yet</h3>
-                <p className="mt-1 max-w-sm text-sm text-[#8a909b]">
+                <h3 className="text-sm font-semibold text-[#2a2f3a]">No saved resumes yet</h3>
+                <p className="mt-1 max-w-sm text-xs text-[#8a909b]">
                   Build a resume in the editor and hit Save to see it here.
                 </p>
                 <button
@@ -1281,7 +1281,7 @@ export default function DashboardTwoPage() {
                 {dashboardSavedResumes.map((sr) => (
                   <article
                     key={sr.id}
-                    className="group relative rounded-2xl border border-[#e5e8ec] bg-white p-5 shadow-[0_4px_12px_rgba(20,24,31,0.04)] transition-all hover:border-[#ccd0d5] hover:shadow-md"
+                    className="group relative rounded-2xl border border-[#e5e8ec] bg-white p-4 shadow-[0_4px_12px_rgba(20,24,31,0.04)] transition-all hover:border-[#ccd0d5] hover:shadow-md"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
@@ -2264,21 +2264,25 @@ export default function DashboardTwoPage() {
               <p className="mt-1 text-sm text-[#7a818d]">{sectionHeading.subtitle}</p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void fetchDashboardData()}
-                className="rounded-full border border-[#dce0e5] bg-white px-4 py-2 text-sm font-semibold text-[#3a414f] hover:bg-[#f4f6f8]"
-              >
-                Refresh
-              </button>
-              <button
-                type="button"
-                data-tour="dashboard-editor-btn"
-                onClick={() => router.push('/editor')}
-                className="rounded-full bg-[#ff8b2f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#f47f22]"
-              >
-                Open Editor
-              </button>
+              {(activeSection === 'overview' || activeSection === 'resumes' || activeSection === 'cover-letters') && (
+                <button
+                  type="button"
+                  onClick={() => void fetchDashboardData()}
+                  className="rounded-full border border-[#dce0e5] bg-white px-4 py-2 text-sm font-semibold text-[#3a414f] hover:bg-[#f4f6f8]"
+                >
+                  Refresh
+                </button>
+              )}
+              {(activeSection === 'overview' || activeSection === 'resumes') && (
+                <button
+                  type="button"
+                  data-tour="dashboard-editor-btn"
+                  onClick={() => router.push('/editor')}
+                  className="rounded-full bg-[#ff8b2f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#f47f22]"
+                >
+                  Open Editor
+                </button>
+              )}
             </div>
           </div>
 
