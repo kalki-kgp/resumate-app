@@ -977,16 +977,6 @@ export default function DashboardTwoPage() {
             ))}
           </div>
 
-          <div className="mb-4 flex flex-shrink-0 items-center justify-between gap-3 rounded-2xl border border-[#ece5d5] bg-[#fff8ea] px-4 py-2.5">
-            <div>
-              <p className="text-sm font-semibold text-[#443727]">Ready to build your resume?</p>
-              <p className="text-xs text-[#8d7861]">Jump into the editor and craft your perfect resume with AI assistance.</p>
-            </div>
-            <button type="button" onClick={() => router.push('/editor')} className="rounded-full bg-[#ff9a38] px-4 py-2 text-xs font-semibold text-white hover:bg-[#f47f22] transition-colors">
-              Create Resume
-            </button>
-          </div>
-
           <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
             <article data-tour="dashboard-resumes" className="flex min-h-0 flex-col rounded-2xl border border-[#e5e8ec] bg-white p-4">
               <div className="mb-3 flex flex-shrink-0 items-center justify-between gap-3">
@@ -1097,21 +1087,21 @@ export default function DashboardTwoPage() {
                 {selectedDashboardResume ? `Selected: ${selectedDashboardResume.title}` : 'Select a resume to inspect'}
               </p>
               {!hasSelectedResume ? (
-                <div className="mt-4 flex flex-1 items-center">
+                <div className="mt-4 flex min-h-0 flex-1 items-center overflow-y-auto pr-1">
                   {renderNoResumeState(
                     'Select a resume to view ATS details',
                     'Upload a resume or pick one from the Recently Opened list.'
                   )}
                 </div>
               ) : !hasSelectedAnalysis ? (
-                <div className="mt-4 flex flex-1 items-center">
+                <div className="mt-4 flex min-h-0 flex-1 items-center overflow-y-auto pr-1">
                   {renderNeedsAnalysisState(
                     'This resume has not been analyzed yet',
                     'Run AI analysis to generate ATS score, category breakdown, and section insights.'
                   )}
                 </div>
               ) : (
-                <div className="mt-4 flex min-h-0 flex-1 flex-col">
+                <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
                   <div
                     className="mx-auto flex h-40 w-40 flex-shrink-0 aspect-square items-center justify-center rounded-full p-3 xl:h-44 xl:w-44"
                     style={ringStyle}
