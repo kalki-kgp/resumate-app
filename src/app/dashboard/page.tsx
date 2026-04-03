@@ -1814,50 +1814,73 @@ export default function DashboardTwoPage() {
       };
 
       return (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {templateCards.map((tpl) => {
             const isOwned = !tpl.premium || purchasedTemplates.includes(tpl.id);
+            const isLocked = tpl.premium && !isOwned;
 
             return (
-              <article key={tpl.id} className={`relative rounded-2xl border p-4 ${tpl.premium ? 'border-[#daa520]/30 bg-gradient-to-b from-white to-[#fffbf0]' : 'border-[#e5e8ec] bg-white'}`}>
-                {tpl.premium && (
-                  <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-[#b8860b] px-2 py-0.5 text-[10px] font-semibold text-white">
-                    <Crown size={10} />
-                    Premium
+              <div
+                key={tpl.id}
+                className={`group relative transition-all duration-500 ${
+                  isLocked ? 'opacity-70' : 'cursor-pointer hover:scale-[1.03]'
+                }`}
+                onClick={() => {
+                  if (isOwned) router.push(`/editor?template=${tpl.id}`);
+                }}
+              >
+                <div
+                  className={`relative rounded-xl overflow-hidden shadow-lg transition-all duration-300 ${
+                    isOwned ? 'ring-1 ring-[#e5e8ec] group-hover:ring-2 group-hover:ring-[#ff8b2f] group-hover:shadow-xl' : ''
+                  }`}
+                >
+                  <div className="bg-white rounded-lg overflow-hidden" style={{ aspectRatio: '3 / 3.2', maxHeight: '220px' }}>
+                    <TemplateThumbnail template={tpl.id} shrink={0.28} />
                   </div>
-                )}
-                <div className="mb-3 rounded-xl border border-[#eceff3] bg-gradient-to-b from-[#f8fafd] to-[#f0f3f7] p-3">
-                  <div className="relative mx-auto flex items-center justify-center overflow-hidden rounded-lg border border-[#dfe4ea] bg-white shadow-[0_10px_18px_rgba(26,34,48,0.10)]">
-                    <TemplateThumbnail template={tpl.id} shrink={0.385} />
-                    {tpl.premium && !isOwned && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a2e]/40 backdrop-blur-[1px]">
-                        <Lock size={24} className="text-white/80" />
-                      </div>
-                    )}
-                  </div>
+
+                  {isLocked && (
+                    <div className="absolute inset-0 bg-[#1a1a2e]/60 backdrop-blur-[2px] flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePurchaseTemplate(tpl.id);
+                        }}
+                        className="bg-[#b8860b] text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-lg hover:brightness-110 transition-all"
+                      >
+                        <Lock size={12} />
+                        <span className="text-xs font-semibold">{tpl.price} Credits</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {!isLocked && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1b1d21]/70 via-[#1b1d21]/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  )}
+
+                  {tpl.premium && isOwned && (
+                    <div className="absolute top-2 left-2 bg-[#b8860b] text-white p-1.5 rounded-full shadow-lg">
+                      <Crown size={10} />
+                    </div>
+                  )}
+
+                  {!isLocked && (
+                    <div className="absolute bottom-3 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="bg-white/95 backdrop-blur-sm text-[#1b1d21] px-4 py-1.5 rounded-full text-xs font-semibold shadow-md">
+                        Use Template
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <p className="text-lg font-semibold text-[#252b34]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
-                  {tpl.name}
-                </p>
-                <p className="mt-1 text-sm text-[#7d8694]">{tpl.tone}</p>
-                {isOwned ? (
-                  <button
-                    type="button"
-                    onClick={() => router.push(`/editor?template=${tpl.id}`)}
-                    className="mt-4 rounded-full border border-[#dfe4eb] bg-[#f8fafc] px-3 py-1.5 text-xs font-semibold text-[#3b4352]"
-                  >
-                    Use Template
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handlePurchaseTemplate(tpl.id)}
-                    className="mt-4 rounded-full bg-[#b8860b] px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110 transition-all"
-                  >
-                    Buy for {tpl.price} Credits
-                  </button>
-                )}
-              </article>
+
+                <div className="mt-3 text-center">
+                  <span className="text-sm font-semibold text-[#252b34]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+                    {tpl.name}
+                  </span>
+                  {tpl.premium && <span className="ml-1.5 text-[10px] text-[#b8860b] font-semibold">PREMIUM</span>}
+                  <p className="mt-0.5 text-xs text-[#7d8694] leading-snug">{tpl.tone}</p>
+                </div>
+              </div>
             );
           })}
         </section>
