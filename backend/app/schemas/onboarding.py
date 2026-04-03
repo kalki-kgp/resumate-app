@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 Stage = Literal["onboarding", "workspace"]
 Phase = Literal["choice", "steps"]
 PathType = Literal["upload", "create"]
+AnalysisRunStatus = Literal["idle", "processing", "completed", "failed"]
 
 
 class OnboardingStep(BaseModel):
@@ -79,3 +80,10 @@ class StepActionRequest(BaseModel):
 class AnalyzeResumeResponse(BaseModel):
     onboarding: OnboardingStateResponse
     analysis: ResumeAnalysisResult
+
+
+class AnalyzeResumeJobResponse(BaseModel):
+    status: AnalysisRunStatus
+    onboarding: OnboardingStateResponse
+    analysis: ResumeAnalysisResult | None = None
+    detail: str | None = None

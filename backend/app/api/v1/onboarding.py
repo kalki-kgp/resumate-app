@@ -6,26 +6,23 @@ from app.api.deps import get_current_user, get_db
 from app.core.config import settings
 from app.models.user import User
 from app.schemas.onboarding import (
-    AnalyzeResumeResponse,
+    AnalyzeResumeJobResponse,
     ChoosePathRequest,
     OnboardingStateResponse,
     StepActionRequest,
 )
+from app.services.onboarding_analysis_jobs import (
+    get_onboarding_analysis_job,
+    start_onboarding_analysis_job,
+)
 from app.services.resume_analysis import (
-    ResumeAnalysisError,
-    analyze_and_extract_resume,
     clear_latest_analysis_result,
     load_latest_analysis_result,
-    pdf_to_base64_png_images,
-    save_latest_analysis_result,
 )
 from app.services.resumes import (
     latest_user_resume,
     parse_resume_analysis,
-    resolve_storage_path,
     save_user_uploaded_resume,
-    set_resume_analysis,
-    set_resume_extracted_data,
 )
 from app.services.onboarding import (
     advance_step,
@@ -59,6 +56,22 @@ def _load_existing_onboarding_analysis(db: Session, user: User):
         if analysis is not None:
             return analysis
     return load_latest_analysis_result(user.id)
+
+
+def _build_analysis_job_response(
+    *,
+    progress,
+    status: str,
+    analysis,
+    detail: str | None = None,
+):
+    onboarding_state = progress_to_response(progress, analysis)
+    return AnalyzeResumeJobResponse(
+        status=status,
+        onboarding=onboarding_state,
+        analysis=analysis,
+        detail=detail,
+    )
 
 
 @router.get("", response_model=OnboardingStateResponse)
@@ -168,7 +181,7 @@ async def onboarding_upload_resume(
     return progress_to_response(progress, analysis=None)
 
 
-@router.post("/analyze-resume", response_model=AnalyzeResumeResponse)
+@router.post("/analyze-resume", response_model=AnalyzeResumeJobResponse)
 def onboarding_analyze_resume(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -183,8 +196,11 @@ def onboarding_analyze_resume(
             and progress.current_step >= 2
             and existing_analysis is not None
         ):
-            onboarding_state = progress_to_response(progress, existing_analysis)
-            return AnalyzeResumeResponse(onboarding=onboarding_state, analysis=existing_analysis)
+            return _build_analysis_job_response(
+                progress=progress,
+                status="completed",
+                analysis=existing_analysis,
+            )
 
     ensure_analysis_step_active(progress)
 
@@ -194,34 +210,61 @@ def onboarding_analyze_resume(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="No uploaded resume found. Upload a resume first.",
         )
-    resume_pdf_path = resolve_storage_path(latest_resume.file_path)
-
-    try:
-        page_images = pdf_to_base64_png_images(
-            resume_pdf_path,
-            max_pages=settings.RESUME_ANALYSIS_MAX_PAGES,
+    job = get_onboarding_analysis_job(current_user.id)
+    if job is not None and job.status == "processing" and job.resume_id == str(latest_resume.id):
+        return _build_analysis_job_response(
+            progress=progress,
+            status="processing",
+            analysis=None,
         )
-        analysis, extracted_data = analyze_and_extract_resume(page_images)
-    except ResumeAnalysisError as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Analysis failed: {exc}") from exc
 
-    save_latest_analysis_result(current_user.id, resume_pdf_path, analysis)
-    set_resume_analysis(db, latest_resume, analysis)
-    if extracted_data is not None:
-        set_resume_extracted_data(db, latest_resume, extracted_data)
+    start_onboarding_analysis_job(current_user.id, latest_resume.id)
+    return _build_analysis_job_response(
+        progress=progress,
+        status="processing",
+        analysis=None,
+    )
 
-    target_role = analysis.recommended_roles[0].title if analysis.recommended_roles else None
+
+@router.get("/analyze-resume-status", response_model=AnalyzeResumeJobResponse)
+def onboarding_analyze_resume_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     progress = get_or_create_onboarding_progress(db, current_user)
-    if progress.current_step == 1:
-        progress = advance_step(db, progress, step_index=1, target_role=target_role)
-    elif not (
-        progress.selected_path == "upload"
-        and progress.phase == "steps"
-        and progress.stage == "onboarding"
-        and progress.current_step >= 2
-    ):
-        ensure_analysis_step_active(progress)
-    onboarding_state = progress_to_response(progress, analysis)
-    return AnalyzeResumeResponse(onboarding=onboarding_state, analysis=analysis)
+    existing_analysis = _load_existing_onboarding_analysis(db, current_user)
+    job = get_onboarding_analysis_job(current_user.id)
+
+    if job is not None:
+        if job.status == "processing":
+            return _build_analysis_job_response(
+                progress=progress,
+                status="processing",
+                analysis=None,
+            )
+        if job.status == "failed":
+            return _build_analysis_job_response(
+                progress=progress,
+                status="failed",
+                analysis=existing_analysis,
+                detail=job.detail,
+            )
+        if job.status == "completed":
+            return _build_analysis_job_response(
+                progress=progress,
+                status="completed",
+                analysis=existing_analysis or job.analysis,
+            )
+
+    if existing_analysis is not None and progress.current_step >= 2:
+        return _build_analysis_job_response(
+            progress=progress,
+            status="completed",
+            analysis=existing_analysis,
+        )
+
+    return _build_analysis_job_response(
+        progress=progress,
+        status="idle",
+        analysis=existing_analysis,
+    )

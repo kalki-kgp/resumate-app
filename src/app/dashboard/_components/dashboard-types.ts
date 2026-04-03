@@ -82,6 +82,13 @@ export type AnalyzeResumeResponse = {
   analysis: ResumeAnalysisResult;
 };
 
+export type AnalyzeResumeJobResponse = {
+  status: 'idle' | 'processing' | 'completed' | 'failed';
+  onboarding: OnboardingStateResponse;
+  analysis: ResumeAnalysisResult | null;
+  detail: string | null;
+};
+
 export type DashboardResume = {
   id: string;
   filename: string;

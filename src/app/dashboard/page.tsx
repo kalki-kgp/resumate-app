@@ -35,7 +35,7 @@ import type {
   RemoteJob,
   ResumeAnalysisResult,
   OnboardingStateResponse,
-  AnalyzeResumeResponse,
+  AnalyzeResumeJobResponse,
   UploadResumeResponse,
   AnalyzeDashboardResumeResponse,
   DashboardResponse,
@@ -148,6 +148,7 @@ export default function DashboardTwoPage() {
   const profilePopupRef = useRef<HTMLDivElement | null>(null);
   const analysisTimerRef = useRef<number | null>(null);
   const dashboardAnalysisTimerRef = useRef<number | null>(null);
+  const onboardingAnalysisRunRef = useRef(0);
 
   const stopAnalysisAnimation = useCallback(() => {
     if (analysisTimerRef.current !== null) {
@@ -162,6 +163,12 @@ export default function DashboardTwoPage() {
       dashboardAnalysisTimerRef.current = null;
     }
   }, []);
+
+  const invalidateOnboardingAnalysis = useCallback(() => {
+    onboardingAnalysisRunRef.current += 1;
+    stopAnalysisAnimation();
+    setIsOnboardingBusy(false);
+  }, [stopAnalysisAnimation]);
 
   const applyOnboardingState = useCallback((state: OnboardingStateResponse) => {
     setStage(state.stage);
@@ -187,6 +194,7 @@ export default function DashboardTwoPage() {
     }
 
     if (state.current_step !== 1) {
+      onboardingAnalysisRunRef.current += 1;
       stopAnalysisAnimation();
       setAnalysisProgress(0);
       setAnalysisStatusText('Ready to run resume analysis.');
@@ -195,6 +203,7 @@ export default function DashboardTwoPage() {
 
   useEffect(() => {
     return () => {
+      onboardingAnalysisRunRef.current += 1;
       stopAnalysisAnimation();
       stopDashboardAnalysisAnimation();
     };
@@ -567,10 +576,12 @@ export default function DashboardTwoPage() {
   };
 
   const handleChooseUpload = async () => {
+    invalidateOnboardingAnalysis();
     await runOnboardingMutation('/api/v1/onboarding/choose', { path: 'upload' });
   };
 
   const handleChooseCreate = async () => {
+    invalidateOnboardingAnalysis();
     const nextState = await runOnboardingMutation('/api/v1/onboarding/choose', { path: 'create' });
     if (nextState) {
       router.push('/editor');
@@ -578,15 +589,19 @@ export default function DashboardTwoPage() {
   };
 
   const handleBackToOptions = async () => {
+    invalidateOnboardingAnalysis();
     await runOnboardingMutation('/api/v1/onboarding/back-to-options');
   };
 
   const handleSkipOnboarding = async () => {
+    invalidateOnboardingAnalysis();
     await runOnboardingMutation('/api/v1/onboarding/skip');
   };
 
   const handleAnalyzeStep = async () => {
     if (!token) return;
+    const runId = onboardingAnalysisRunRef.current + 1;
+    onboardingAnalysisRunRef.current = runId;
 
     setApiError(null);
     setIsOnboardingBusy(true);
@@ -614,10 +629,37 @@ export default function DashboardTwoPage() {
     }, 650);
 
     try {
-      const response = await apiRequest<AnalyzeResumeResponse>('/api/v1/onboarding/analyze-resume', {
+      let response = await apiRequest<AnalyzeResumeJobResponse>('/api/v1/onboarding/analyze-resume', {
         method: 'POST',
         token,
       });
+
+      if (onboardingAnalysisRunRef.current !== runId) return;
+
+      if (response.status === 'processing') {
+        setAnalysisStatusText('Analysis is running in the background. Waiting for results...');
+      }
+
+      while (response.status === 'processing') {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        if (onboardingAnalysisRunRef.current !== runId) return;
+
+        response = await apiRequest<AnalyzeResumeJobResponse>('/api/v1/onboarding/analyze-resume-status', {
+          token,
+        });
+      }
+
+      if (onboardingAnalysisRunRef.current !== runId) return;
+
+      if (response.status === 'failed') {
+        setApiError(response.detail || 'Could not run AI analysis right now. Please try again.');
+        return;
+      }
+
+      if (response.status !== 'completed' || !response.analysis) {
+        setApiError('Analysis is still processing. Please try again in a moment.');
+        return;
+      }
 
       const elapsedMs = Date.now() - startedAt;
       const minimumAnimationMs = 2500;
@@ -625,12 +667,15 @@ export default function DashboardTwoPage() {
         await new Promise((resolve) => setTimeout(resolve, minimumAnimationMs - elapsedMs));
       }
 
+      if (onboardingAnalysisRunRef.current !== runId) return;
+
       setAnalysisProgress(100);
       setAnalysisStatusText('Analysis complete! Moving to role suggestions...');
       setAnalysisResult(response.analysis);
 
       // Brief pause so user sees the 100% completion before advancing
       await new Promise((resolve) => setTimeout(resolve, 1200));
+      if (onboardingAnalysisRunRef.current !== runId) return;
       applyOnboardingState(response.onboarding);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -644,8 +689,10 @@ export default function DashboardTwoPage() {
         setApiError('Could not run AI analysis right now. Please try again.');
       }
     } finally {
-      stopAnalysisAnimation();
-      setIsOnboardingBusy(false);
+      if (onboardingAnalysisRunRef.current === runId) {
+        stopAnalysisAnimation();
+        setIsOnboardingBusy(false);
+      }
     }
   };
 
