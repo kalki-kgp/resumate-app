@@ -19,7 +19,14 @@ from app.services.resume_analysis import (
     pdf_to_base64_png_images,
     save_latest_analysis_result,
 )
-from app.services.resumes import latest_user_resume, save_user_uploaded_resume, set_resume_analysis, set_resume_extracted_data, resolve_storage_path
+from app.services.resumes import (
+    latest_user_resume,
+    parse_resume_analysis,
+    resolve_storage_path,
+    save_user_uploaded_resume,
+    set_resume_analysis,
+    set_resume_extracted_data,
+)
 from app.services.onboarding import (
     advance_step,
     back_to_options,
@@ -43,6 +50,15 @@ def _grant_onboarding_credits(db: Session, user: User) -> None:
         db.add(user)
         db.commit()
         db.refresh(user)
+
+
+def _load_existing_onboarding_analysis(db: Session, user: User):
+    latest_resume = latest_user_resume(db, user.id)
+    if latest_resume is not None:
+        analysis = parse_resume_analysis(latest_resume)
+        if analysis is not None:
+            return analysis
+    return load_latest_analysis_result(user.id)
 
 
 @router.get("", response_model=OnboardingStateResponse)
@@ -158,6 +174,18 @@ def onboarding_analyze_resume(
     db: Session = Depends(get_db),
 ):
     progress = get_or_create_onboarding_progress(db, current_user)
+    if progress.current_step != 1:
+        existing_analysis = _load_existing_onboarding_analysis(db, current_user)
+        if (
+            progress.selected_path == "upload"
+            and progress.phase == "steps"
+            and progress.stage == "onboarding"
+            and progress.current_step >= 2
+            and existing_analysis is not None
+        ):
+            onboarding_state = progress_to_response(progress, existing_analysis)
+            return AnalyzeResumeResponse(onboarding=onboarding_state, analysis=existing_analysis)
+
     ensure_analysis_step_active(progress)
 
     latest_resume = latest_user_resume(db, current_user.id)
@@ -185,6 +213,15 @@ def onboarding_analyze_resume(
         set_resume_extracted_data(db, latest_resume, extracted_data)
 
     target_role = analysis.recommended_roles[0].title if analysis.recommended_roles else None
-    progress = advance_step(db, progress, step_index=1, target_role=target_role)
+    progress = get_or_create_onboarding_progress(db, current_user)
+    if progress.current_step == 1:
+        progress = advance_step(db, progress, step_index=1, target_role=target_role)
+    elif not (
+        progress.selected_path == "upload"
+        and progress.phase == "steps"
+        and progress.stage == "onboarding"
+        and progress.current_step >= 2
+    ):
+        ensure_analysis_step_active(progress)
     onboarding_state = progress_to_response(progress, analysis)
     return AnalyzeResumeResponse(onboarding=onboarding_state, analysis=analysis)

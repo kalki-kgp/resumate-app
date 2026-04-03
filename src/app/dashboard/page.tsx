@@ -513,6 +513,7 @@ export default function DashboardTwoPage() {
   const keywords = selectedDashboardAnalysis?.keywords_to_add ?? [];
   const improvedBullets = selectedDashboardAnalysis?.improved_bullets ?? [];
 
+  const isOverviewSection = activeSection === 'overview';
   const sectionHeading = getSectionHeading(activeSection, displayName);
 
   const runOnboardingMutation = useCallback(
@@ -892,8 +893,8 @@ export default function DashboardTwoPage() {
 
     if (activeSection === 'overview') {
       return (
-        <>
-          <div data-tour="dashboard-actions" className="mb-4 grid gap-3 md:grid-cols-3">
+        <section className="flex h-full min-h-0 flex-col">
+          <div data-tour="dashboard-actions" className="mb-3 grid flex-shrink-0 gap-3 md:grid-cols-3">
             {[
               {
                 title: 'Help me build my resume',
@@ -919,17 +920,17 @@ export default function DashboardTwoPage() {
                 type="button"
                 onClick={item.onClick}
                 disabled={!item.onClick}
-                className="rounded-2xl border border-[#e4e7eb] bg-white px-4 py-4 shadow-[0_8px_16px_rgba(20,24,31,0.05)] text-left transition-all hover:border-[#ccd0d5] hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+                className="rounded-2xl border border-[#e4e7eb] bg-white px-4 py-3 shadow-[0_8px_16px_rgba(20,24,31,0.05)] text-left transition-all hover:border-[#ccd0d5] hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <p className="text-2xl font-semibold leading-tight text-[#282c36]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
+                <p className="text-xl font-semibold leading-tight text-[#282c36]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
                   {item.title}
                 </p>
-                <p className="mt-3 text-xs text-[#8a909b]">{item.subtitle}</p>
+                <p className="mt-2 text-xs text-[#8a909b]">{item.subtitle}</p>
               </button>
             ))}
           </div>
 
-          <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-[#ece5d5] bg-[#fff8ea] px-4 py-3">
+          <div className="mb-4 flex flex-shrink-0 items-center justify-between gap-3 rounded-2xl border border-[#ece5d5] bg-[#fff8ea] px-4 py-2.5">
             <div>
               <p className="text-sm font-semibold text-[#443727]">Ready to build your resume?</p>
               <p className="text-xs text-[#8d7861]">Jump into the editor and craft your perfect resume with AI assistance.</p>
@@ -939,9 +940,9 @@ export default function DashboardTwoPage() {
             </button>
           </div>
 
-          <section className="grid gap-4 xl:grid-cols-[1.3fr_0.8fr]">
-            <article data-tour="dashboard-resumes" className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
-              <div className="mb-3 flex items-center justify-between">
+          <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
+            <article data-tour="dashboard-resumes" className="flex min-h-0 flex-col rounded-2xl border border-[#e5e8ec] bg-white p-4">
+              <div className="mb-3 flex flex-shrink-0 items-center justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-semibold text-[#2a2f3a]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
                     Recently Opened
@@ -963,17 +964,17 @@ export default function DashboardTwoPage() {
                 </div>
               </div>
               {dashboardNotice && (
-                <div className="mb-3 rounded-xl border border-[#e5e8ec] bg-[#f9fafb] px-3 py-2 text-xs text-[#646c79]">
+                <div className="mb-3 flex-shrink-0 rounded-xl border border-[#e5e8ec] bg-[#f9fafb] px-3 py-2 text-xs text-[#646c79]">
                   {dashboardNotice}
                 </div>
               )}
 
               {isDashboardLoading ? (
-                <div className="rounded-xl border border-[#e8ebf0] bg-[#fafbfd] px-4 py-8 text-center text-sm text-[#7d8694]">
+                <div className="flex flex-1 items-center justify-center rounded-xl border border-[#e8ebf0] bg-[#fafbfd] px-4 py-8 text-center text-sm text-[#7d8694]">
                   Loading resumes...
                 </div>
               ) : dashboardResumes.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[#d8dde4] bg-[#fafbfd] px-4 py-8 text-center">
+                <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#d8dde4] bg-[#fafbfd] px-4 py-8 text-center">
                   <p className="text-sm font-semibold text-[#2b313c]">No resume uploaded yet</p>
                   <p className="mt-1 text-xs text-[#8a909b]">Upload your resume in onboarding to see it here.</p>
                   <button
@@ -985,94 +986,96 @@ export default function DashboardTwoPage() {
                   </button>
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {dashboardResumes.map((resume) => {
-                    const selected = selectedDashboardResume?.id === resume.id;
+                <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                  <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+                    {dashboardResumes.map((resume) => {
+                      const selected = selectedDashboardResume?.id === resume.id;
 
-                    return (
-                      <button
-                        key={resume.id}
-                        type="button"
-                        onClick={() => setSelectedDashboardResumeId(resume.id)}
-                        className={`rounded-2xl border p-3 text-left transition-all ${
-                          selected
-                            ? 'border-[#ff9a38] bg-[#fff8f1] shadow-[0_10px_24px_rgba(255,154,56,0.16)]'
-                            : 'border-[#e5e8ec] bg-white hover:border-[#cfd6df]'
-                        }`}
-                      >
-                        <div className="mb-3 overflow-hidden rounded-xl border border-[#eceff3] bg-[#f6f8fb]">
-                          {resume.thumbnail_url ? (
-                            <AuthImage
-                              apiPath={resume.thumbnail_url}
-                              alt={`${resume.title} preview`}
-                              className="h-32 w-full object-cover object-top"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="p-3">
-                              <div className="space-y-1">
-                                <div className="h-1.5 w-3/4 rounded-full bg-[#d7dde7]" />
-                                <div className="h-1.5 w-1/2 rounded-full bg-[#e0e5ec]" />
-                                <div className="h-1.5 w-4/5 rounded-full bg-[#dce2eb]" />
+                      return (
+                        <button
+                          key={resume.id}
+                          type="button"
+                          onClick={() => setSelectedDashboardResumeId(resume.id)}
+                          className={`rounded-2xl border p-3 text-left transition-all ${
+                            selected
+                              ? 'border-[#ff9a38] bg-[#fff8f1] shadow-[0_10px_24px_rgba(255,154,56,0.16)]'
+                              : 'border-[#e5e8ec] bg-white hover:border-[#cfd6df]'
+                          }`}
+                        >
+                          <div className="mb-2 overflow-hidden rounded-xl border border-[#eceff3] bg-[#f6f8fb]">
+                            {resume.thumbnail_url ? (
+                              <AuthImage
+                                apiPath={resume.thumbnail_url}
+                                alt={`${resume.title} preview`}
+                                className="h-24 w-full object-cover object-top"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="p-3">
+                                <div className="space-y-1">
+                                  <div className="h-1.5 w-3/4 rounded-full bg-[#d7dde7]" />
+                                  <div className="h-1.5 w-1/2 rounded-full bg-[#e0e5ec]" />
+                                  <div className="h-1.5 w-4/5 rounded-full bg-[#dce2eb]" />
+                                </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                        <p className="truncate text-sm font-semibold text-[#262c36]">{resume.title}</p>
-                        <p className="mt-1 text-xs text-[#7f8794]">{formatRelativeTime(resume.uploaded_at)}</p>
-                        <div className="mt-3 flex items-center justify-between text-[11px]">
-                          <span className="text-[#8a909b]">{formatFileSize(resume.file_size_bytes)}</span>
-                          {resume.analysis?.ats_score_estimate !== null && resume.analysis?.ats_score_estimate !== undefined ? (
-                            <span className="rounded-full bg-[#edf8e5] px-2 py-0.5 font-semibold text-[#5da727]">
-                              ATS {resume.analysis.ats_score_estimate}%
-                            </span>
-                          ) : (
-                            <span className="rounded-full bg-[#f4f5f7] px-2 py-0.5 font-semibold text-[#8b8f98]">
-                              Not analyzed
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
+                            )}
+                          </div>
+                          <p className="truncate text-sm font-semibold text-[#262c36]">{resume.title}</p>
+                          <p className="mt-1 text-xs text-[#7f8794]">{formatRelativeTime(resume.uploaded_at)}</p>
+                          <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+                            <span className="text-[#8a909b]">{formatFileSize(resume.file_size_bytes)}</span>
+                            {resume.analysis?.ats_score_estimate !== null && resume.analysis?.ats_score_estimate !== undefined ? (
+                              <span className="rounded-full bg-[#edf8e5] px-2 py-0.5 font-semibold text-[#5da727]">
+                                ATS {resume.analysis.ats_score_estimate}%
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-[#f4f5f7] px-2 py-0.5 font-semibold text-[#8b8f98]">
+                                Not analyzed
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </article>
 
-            <article data-tour="dashboard-ats" className="rounded-2xl border border-[#e5e8ec] bg-white p-4">
+            <article data-tour="dashboard-ats" className="flex min-h-0 flex-col rounded-2xl border border-[#e5e8ec] bg-white p-4">
               <h2 className="text-4xl font-bold text-[#181d16]" style={{ fontFamily: 'var(--font-fraunces), serif' }}>
                 Overview
               </h2>
-              <p className="mt-1 text-sm text-[#6c7280]">
+              <p className="mt-1 flex-shrink-0 text-sm text-[#6c7280]">
                 {selectedDashboardResume ? `Selected: ${selectedDashboardResume.title}` : 'Select a resume to inspect'}
               </p>
               {!hasSelectedResume ? (
-                <div className="mt-4">
+                <div className="mt-4 flex flex-1 items-center">
                   {renderNoResumeState(
                     'Select a resume to view ATS details',
                     'Upload a resume or pick one from the Recently Opened list.'
                   )}
                 </div>
               ) : !hasSelectedAnalysis ? (
-                <div className="mt-4">
+                <div className="mt-4 flex flex-1 items-center">
                   {renderNeedsAnalysisState(
                     'This resume has not been analyzed yet',
                     'Run AI analysis to generate ATS score, category breakdown, and section insights.'
                   )}
                 </div>
               ) : (
-                <>
-                  <div className="mx-auto mt-5 flex h-48 w-48 items-center justify-center rounded-full p-3" style={ringStyle}>
+                <div className="mt-4 flex min-h-0 flex-1 flex-col">
+                  <div className="mx-auto flex h-40 w-40 items-center justify-center rounded-full p-3 xl:h-44 xl:w-44" style={ringStyle}>
                     <div className="flex h-full w-full items-center justify-center rounded-full bg-white text-5xl font-black text-[#1d2619]">
                       {atsScore}%
                     </div>
                   </div>
 
-                  <p className="mt-4 text-center text-sm font-semibold text-[#2a3039]">
+                  <p className="mt-3 text-center text-sm font-semibold text-[#2a3039]">
                     Your resume scored {atsScore} out of 100
                   </p>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="mt-3 grid grid-cols-2 gap-2">
                     {[
                       { key: 'impact', label: 'Impact', value: categoryScores.impact },
                       { key: 'brevity', label: 'Brevity', value: categoryScores.brevity },
@@ -1084,7 +1087,7 @@ export default function DashboardTwoPage() {
                         <div key={item.key} className="rounded-xl border border-[#e6e8eb] bg-[#fbfcfd] px-3 py-2">
                           <p className="text-xs font-semibold text-[#6e7583]">{item.label}</p>
                           <div className="mt-1 flex items-center justify-between">
-                            <p className="text-3xl font-bold text-[#181f2a]">{item.value}</p>
+                            <p className="text-2xl font-bold text-[#181f2a]">{item.value}</p>
                             <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${badge.className}`}>
                               {badge.label}
                             </span>
@@ -1094,16 +1097,19 @@ export default function DashboardTwoPage() {
                     })}
                   </div>
 
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3 grid grid-cols-2 gap-2">
                     {[
                       { label: 'Headline', value: sectionScores.headline },
                       { label: 'Summary', value: sectionScores.summary },
                       { label: 'Experience', value: sectionScores.experience },
                       { label: 'Education', value: sectionScores.education },
                     ].map((section) => (
-                      <div key={section.label} className="flex items-center justify-between rounded-xl bg-[#f6f7f8] px-3 py-2">
-                        <span className="text-sm font-semibold text-[#303744]">{section.label}</span>
-                        <span className="text-2xl font-bold text-[#ef8a30]">{section.value}/10</span>
+                      <div key={section.label} className="rounded-xl bg-[#f6f7f8] px-3 py-2">
+                        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#6f7683]">{section.label}</span>
+                        <div className="mt-1 flex items-end justify-between gap-2">
+                          <span className="text-sm font-semibold text-[#303744]">Section Score</span>
+                          <span className="text-xl font-bold text-[#ef8a30]">{section.value}/10</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1115,11 +1121,11 @@ export default function DashboardTwoPage() {
                   >
                     Open in Editor
                   </button>
-                </>
+                </div>
               )}
             </article>
-          </section>
-        </>
+          </div>
+        </section>
       );
     }
 
@@ -2272,7 +2278,7 @@ export default function DashboardTwoPage() {
           profilePopupRef={profilePopupRef}
         />
 
-        <main className="h-full flex-1 overflow-y-auto rounded-[30px] border border-[#e3e5e8] bg-[#fafafa] p-5 shadow-[0_20px_45px_rgba(24,30,43,0.08)] sm:p-6">
+        <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[30px] border border-[#e3e5e8] bg-[#fafafa] p-5 shadow-[0_20px_45px_rgba(24,30,43,0.08)] sm:p-6">
           {apiError && (
             <div className="mb-4 rounded-xl border border-[#f3c8be] bg-[#fff4f1] px-4 py-3 text-sm text-[#9e3f29]">
               {apiError}
@@ -2309,7 +2315,9 @@ export default function DashboardTwoPage() {
             </div>
           </div>
 
-          {renderDashboardSection()}
+          <div className={`min-h-0 flex-1 ${isOverviewSection ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+            {renderDashboardSection()}
+          </div>
         </main>
 
         {actionToast && (
