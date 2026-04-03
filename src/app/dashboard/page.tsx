@@ -196,6 +196,7 @@ export default function DashboardTwoPage() {
     if (state.current_step !== 1) {
       onboardingAnalysisRunRef.current += 1;
       stopAnalysisAnimation();
+      setIsOnboardingBusy(false);
       setAnalysisProgress(0);
       setAnalysisStatusText('Ready to run resume analysis.');
     }
