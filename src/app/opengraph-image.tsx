@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og';
 
-export const runtime = 'edge';
 export const alt = 'ResuMate - AI-Powered Resume Builder';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
@@ -17,74 +16,79 @@ export default function OGImage() {
           justifyContent: 'center',
           alignItems: 'center',
           background: 'linear-gradient(135deg, #faf7f2 0%, #f0e6d8 50%, #faf7f2 100%)',
-          fontFamily: 'system-ui, sans-serif',
           position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        {/* Background decorative blobs */}
+        {/* Soft background circles (no blur — Satori doesn't support filter) */}
         <div
           style={{
             position: 'absolute',
-            top: -60,
-            left: -60,
-            width: 300,
-            height: 300,
+            top: -40,
+            left: -40,
+            width: 400,
+            height: 400,
             borderRadius: '50%',
-            background: 'rgba(201, 100, 66, 0.12)',
-            filter: 'blur(60px)',
+            background: 'radial-gradient(circle, rgba(201,100,66,0.08) 0%, transparent 70%)',
           }}
         />
         <div
           style={{
             position: 'absolute',
-            bottom: -80,
-            right: -40,
-            width: 350,
-            height: 350,
+            bottom: -60,
+            right: -20,
+            width: 450,
+            height: 450,
             borderRadius: '50%',
-            background: 'rgba(45, 90, 61, 0.10)',
-            filter: 'blur(60px)',
+            background: 'radial-gradient(circle, rgba(45,90,61,0.07) 0%, transparent 70%)',
           }}
         />
 
-        {/* Leaf icon */}
+        {/* Leaf icon circle */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 72,
-            height: 72,
-            borderRadius: '50%',
+            width: 80,
+            height: 80,
+            borderRadius: 40,
             backgroundColor: '#2d5a3d',
-            marginBottom: 24,
+            marginBottom: 28,
           }}
         >
           <svg
-            width="36"
-            height="36"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            width="40"
+            height="40"
+            viewBox="0 0 48 48"
           >
-            <path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.78 10-10 10Z" />
-            <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+            <path
+              d="M24 10c-2 4-3 8-3 12 0 6 3 11 7 14 0 0-1-3-1-6 4-2 7-6 8-11-2 3-5 5-8 6 0-5-1-10-3-15z"
+              fill="white"
+              stroke="white"
+              strokeWidth="0.5"
+              strokeLinejoin="round"
+            />
+            <line
+              x1="24"
+              y1="10"
+              x2="21"
+              y2="36"
+              stroke="white"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              opacity="0.6"
+            />
           </svg>
         </div>
 
         {/* Title */}
         <div
           style={{
-            fontSize: 64,
+            fontSize: 72,
             fontWeight: 800,
             color: '#2c1810',
             lineHeight: 1.1,
-            textAlign: 'center',
-            marginBottom: 16,
+            marginBottom: 12,
           }}
         >
           ResuMate
@@ -96,9 +100,7 @@ export default function OGImage() {
             fontSize: 28,
             fontWeight: 500,
             color: '#8b7355',
-            textAlign: 'center',
-            marginBottom: 40,
-            maxWidth: 700,
+            marginBottom: 48,
           }}
         >
           AI-Powered Resume Builder That Gets You Hired
@@ -108,58 +110,101 @@ export default function OGImage() {
         <div
           style={{
             display: 'flex',
-            gap: 48,
-            alignItems: 'center',
+            gap: 24,
           }}
         >
-          {[
-            { value: '50K+', label: 'Resumes Created' },
-            { value: '92%', label: 'ATS Pass Rate' },
-            { value: '3x', label: 'More Interviews' },
-          ].map((stat) => (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '20px 40px',
+              backgroundColor: 'white',
+              borderRadius: 16,
+              border: '1px solid #e8e0d4',
+            }}
+          >
+            <div style={{ fontSize: 40, fontWeight: 800, color: '#c96442' }}>
+              50K+
+            </div>
             <div
-              key={stat.label}
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '16px 32px',
-                backgroundColor: 'rgba(255,255,255,0.7)',
-                borderRadius: 16,
-                border: '1px solid #e8e0d4',
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#8b7355',
+                textTransform: 'uppercase' as const,
+                letterSpacing: 1,
+                marginTop: 4,
               }}
             >
-              <div
-                style={{
-                  fontSize: 36,
-                  fontWeight: 800,
-                  color: '#c96442',
-                }}
-              >
-                {stat.value}
-              </div>
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: '#8b7355',
-                  textTransform: 'uppercase',
-                  letterSpacing: 1,
-                }}
-              >
-                {stat.label}
-              </div>
+              Resumes Created
             </div>
-          ))}
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '20px 40px',
+              backgroundColor: 'white',
+              borderRadius: 16,
+              border: '1px solid #e8e0d4',
+            }}
+          >
+            <div style={{ fontSize: 40, fontWeight: 800, color: '#c96442' }}>
+              92%
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#8b7355',
+                textTransform: 'uppercase' as const,
+                letterSpacing: 1,
+                marginTop: 4,
+              }}
+            >
+              ATS Pass Rate
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '20px 40px',
+              backgroundColor: 'white',
+              borderRadius: 16,
+              border: '1px solid #e8e0d4',
+            }}
+          >
+            <div style={{ fontSize: 40, fontWeight: 800, color: '#c96442' }}>
+              3x
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#8b7355',
+                textTransform: 'uppercase' as const,
+                letterSpacing: 1,
+                marginTop: 4,
+              }}
+            >
+              More Interviews
+            </div>
+          </div>
         </div>
 
-        {/* Bottom accent line */}
+        {/* Bottom accent bar */}
         <div
           style={{
             position: 'absolute',
             bottom: 0,
             left: 0,
-            right: 0,
+            width: '100%',
             height: 6,
             background: 'linear-gradient(to right, #c96442, #2d5a3d)',
           }}
