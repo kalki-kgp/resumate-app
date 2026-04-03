@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     images: [
       {
-        url: '/opengraph-image.png',
+        url: '/og-image.png',
         width: 1200,
         height: 630,
         alt: 'ResuMate - AI-Powered Resume Builder',
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'ResuMate - AI-Powered Resume Builder',
     description: 'Build ATS-friendly resumes in minutes with AI. 92% ATS pass rate, 3x more interviews.',
-    images: ['/opengraph-image.png'],
+    images: ['/og-image.png'],
   },
 };
 
@@ -109,7 +109,7 @@ export default function RootLayout({
                 "AI Bullet Point Optimization",
                 "Job Board Integration"
               ],
-              "screenshot": "https://resumate.paperknife.app/opengraph-image.png",
+              "screenshot": "https://resumate.paperknife.app/og-image.png",
               "creator": {
                 "@type": "Organization",
                 "name": "ResuMate"
