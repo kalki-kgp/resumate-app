@@ -133,7 +133,24 @@ export type MeResponse = {
   email: string;
   credits: number;
   purchased_templates: string[];
+  referral_code: string;
   created_at: string;
+};
+
+export type ReferralEntry = {
+  referred_name: string;
+  credits_awarded: number;
+  created_at: string;
+};
+
+export type ReferralInfo = {
+  referral_code: string;
+  referral_link: string;
+  total_referrals: number;
+  total_credits_earned: number;
+  max_credits: number;
+  next_reward: number;
+  referrals: ReferralEntry[];
 };
 
 export type ExampleJob = {

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fraunces, DM_Sans } from 'next/font/google';
 import DOMPurify from 'isomorphic-dompurify';
-import { ArrowRight, Check, LoaderCircle, Mail, Trash2, ExternalLink, Search, MapPin, Clock, Building2, Briefcase, ChevronDown, Save, Crown, Lock } from 'lucide-react';
+import { ArrowRight, Check, LoaderCircle, Mail, Trash2, ExternalLink, Search, MapPin, Clock, Building2, Briefcase, ChevronDown, ChevronRight, Save, Crown, Lock, Gift } from 'lucide-react';
 import { ApiError, apiRequest, clearStoredAccessToken, getStoredAccessToken } from '@/lib/api';
 import { TemplateThumbnail } from '@/app/editor/_components';
 import { ProductTour } from '@/components/ProductTour';
@@ -14,6 +14,7 @@ import {
   OnboardingWizard,
   DashboardSidebar,
   ResumeSelectionModal,
+  ReferralPopup,
   AuthImage,
   defaultOnboardingSteps,
   exampleJobs,
@@ -41,6 +42,7 @@ import type {
   DashboardResponse,
   MeResponse,
   ExampleJob,
+  ReferralInfo,
 } from '@/app/dashboard/_components';
 
 const fraunces = Fraunces({
@@ -134,6 +136,9 @@ export default function DashboardTwoPage() {
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
   const [actionToast, setActionToast] = useState<{ message: string } | null>(null);
   const [isCoverLetterModalOpen, setIsCoverLetterModalOpen] = useState(false);
+  const [isReferralPopupOpen, setIsReferralPopupOpen] = useState(false);
+  const [referralInfo, setReferralInfo] = useState<ReferralInfo | null>(null);
+  const [isReferralLoading, setIsReferralLoading] = useState(false);
   const [jobListings, setJobListings] = useState<RemoteJob[]>([]);
   const [isJobsLoading, setIsJobsLoading] = useState(false);
   const [jobSearchQuery, setJobSearchQuery] = useState('');
@@ -364,6 +369,21 @@ export default function DashboardTwoPage() {
     if (stage !== 'workspace' || !token) return;
     void fetchDashboardData();
   }, [fetchDashboardData, stage, token]);
+
+  const fetchReferralInfo = useCallback(async () => {
+    if (!token) return;
+    setIsReferralLoading(true);
+    try {
+      const info = await apiRequest<ReferralInfo>('/api/v1/referral/info', { token });
+      setReferralInfo(info);
+    } catch { /* silently ignore */ }
+    finally { setIsReferralLoading(false); }
+  }, [token]);
+
+  const openReferralPopup = useCallback(() => {
+    void fetchReferralInfo();
+    setIsReferralPopupOpen(true);
+  }, [fetchReferralInfo]);
 
   const fetchJobListings = useCallback(async () => {
     setIsJobsLoading(true);
@@ -977,6 +997,34 @@ export default function DashboardTwoPage() {
               </button>
             ))}
           </div>
+
+          {/* Referral banner */}
+          <button
+            type="button"
+            onClick={openReferralPopup}
+            className="group mb-3 flex w-full items-center justify-between rounded-2xl border border-[#ff8b2f]/20 px-5 py-3.5 text-left shadow-[0_4px_12px_rgba(255,139,47,0.08)] transition-all hover:border-[#ff8b2f]/40 hover:shadow-[0_6px_20px_rgba(255,139,47,0.12)]"
+            style={{ background: 'linear-gradient(135deg, #fff9f5 0%, #fff3eb 100%)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-white"
+                style={{ background: 'linear-gradient(135deg, #ff8b2f, #f94f6d)' }}
+              >
+                <Gift size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#2a2f3a]">
+                  Refer & Earn — Invite friends, earn up to 300 credits
+                </p>
+                <p className="text-xs text-[#8a909b]">
+                  Share your unique link and earn credits when friends sign up
+                </p>
+              </div>
+            </div>
+            <div className="flex-shrink-0 rounded-full bg-[#ff8b2f]/10 p-1.5 text-[#ff8b2f] transition-transform group-hover:translate-x-0.5">
+              <ChevronRight size={16} />
+            </div>
+          </button>
 
           <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
             <article data-tour="dashboard-resumes" className="flex min-h-0 flex-col rounded-2xl border border-[#e5e8ec] bg-white p-4">
@@ -2393,6 +2441,13 @@ export default function DashboardTwoPage() {
             mutedColor="#7a818d"
           />
         )}
+
+        <ReferralPopup
+          isOpen={isReferralPopupOpen}
+          onClose={() => setIsReferralPopupOpen(false)}
+          referralInfo={referralInfo}
+          isLoading={isReferralLoading}
+        />
       </div>
     </div>
   );

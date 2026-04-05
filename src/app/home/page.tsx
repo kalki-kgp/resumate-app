@@ -93,6 +93,7 @@ export default function HomePage() {
     setIsSubmittingAuth(true);
 
     try {
+      const referralCode = sessionStorage.getItem('resumate_referral_code');
       const response = await apiRequest<AuthResponse>(
         authMode === 'signin' ? '/api/v1/auth/signin' : '/api/v1/auth/signup',
         {
@@ -104,10 +105,14 @@ export default function HomePage() {
                   full_name: fullName,
                   email,
                   password,
+                  ...(referralCode ? { referral_code: referralCode } : {}),
                 },
         }
       );
 
+      if (authMode === 'signup') {
+        sessionStorage.removeItem('resumate_referral_code');
+      }
       setStoredAccessToken(response.access_token);
       setIsAuthOpen(false);
       router.push('/dashboard');
@@ -121,6 +126,14 @@ export default function HomePage() {
       setIsSubmittingAuth(false);
     }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      sessionStorage.setItem('resumate_referral_code', ref);
+    }
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
