@@ -9,6 +9,7 @@ class SignUpRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=120)
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+    referral_code: str | None = None
 
     @field_validator('password')
     @classmethod
@@ -35,6 +36,7 @@ class UserPublic(BaseModel):
     email: EmailStr
     credits: int
     purchased_templates: list[str]
+    referral_code: str
     created_at: datetime
 
 

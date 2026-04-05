@@ -6,6 +6,7 @@ from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.onboarding import router as onboarding_router
 from app.api.v1.resumes import router as resumes_router
 from app.api.v1.saved_resumes import router as saved_resumes_router
+from app.api.v1.referral import router as referral_router
 from app.api.v1.templates import router as templates_router
 
 api_router = APIRouter()
@@ -16,3 +17,4 @@ api_router.include_router(resumes_router, prefix="/resumes", tags=["resumes"])
 api_router.include_router(saved_resumes_router, prefix="/saved-resumes", tags=["saved-resumes"])
 api_router.include_router(cover_letter_router, prefix="/cover-letter", tags=["cover-letter"])
 api_router.include_router(templates_router, prefix="/templates", tags=["templates"])
+api_router.include_router(referral_router, prefix="/referral", tags=["referral"])

@@ -1,16 +1,19 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_session, get_current_user, get_db
 from app.core.config import settings
 from app.models.auth_session import AuthSession
+from app.models.referral import Referral
 from app.models.user import User
 from app.schemas.auth import AuthResponse, MessageResponse, SignInRequest, SignUpRequest, UserPublic
 from app.utils.rate_limit import auth_rate_limiter
 from app.utils.security import generate_session_token, hash_password, hash_session_token, verify_password
+
+REFERRAL_REWARDS = [50, 100, 150]
 
 router = APIRouter()
 
@@ -47,6 +50,25 @@ def signup(request: Request, payload: SignUpRequest, db: Session = Depends(get_d
     )
     db.add(user)
     db.flush()
+
+    # Process referral code
+    if payload.referral_code:
+        referrer = db.scalar(
+            select(User).where(User.referral_code == payload.referral_code.strip().upper())
+        )
+        if referrer and referrer.id != user.id:
+            existing_count = db.scalar(
+                select(func.count()).select_from(Referral).where(Referral.referrer_id == referrer.id)
+            ) or 0
+            user.referred_by = referrer.id
+            if existing_count < len(REFERRAL_REWARDS):
+                credits = REFERRAL_REWARDS[existing_count]
+                db.add(Referral(
+                    referrer_id=referrer.id,
+                    referred_id=user.id,
+                    credits_awarded=credits,
+                ))
+                referrer.credits += credits
 
     access_token = _create_user_session(db, user.id)
     db.commit()
